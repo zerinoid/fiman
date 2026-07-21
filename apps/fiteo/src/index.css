@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --fi-hue-primary: 190;
+  --fi-hue-accent: 42;
+  --fi-color-bg: hsl(var(--fi-hue-primary), 16%, 8%);
+  --fi-color-surface: hsl(var(--fi-hue-primary), 16%, 12%);
+  --fi-color-surface-2: hsl(var(--fi-hue-primary), 16%, 17%);
+  --fi-color-border: hsl(var(--fi-hue-primary), 16%, 22%);
+  --fi-color-primary: hsl(var(--fi-hue-primary), 72%, 60%);
+  --fi-color-primary-dim: hsl(var(--fi-hue-primary), 72%, 50%);
+  --fi-color-accent: hsl(var(--fi-hue-accent), 88%, 62%);
+  --fi-color-text: hsl(var(--fi-hue-primary), 20%, 92%);
+  --fi-color-text-muted: hsl(var(--fi-hue-primary), 10%, 55%);
+  --fi-color-success: hsl(142, 60%, 52%);
+  --fi-color-warning: hsl(38, 92%, 56%);
+  --fi-color-danger: hsl(4, 78%, 58%);
+  --fi-font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --fi-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --fi-radius-sm: 0.375rem;
+  --fi-radius-md: 0.625rem;
+  --fi-radius-lg: 1rem;
+  --fi-radius-xl: 1.5rem;
+  --fi-space-1: 0.25rem;
+  --fi-space-2: 0.5rem;
+  --fi-space-3: 0.75rem;
+  --fi-space-4: 1rem;
+  --fi-space-6: 1.5rem;
+  --fi-space-8: 2rem;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--fi-color-bg);
+  color: var(--fi-color-text);
+  font-family: var(--fi-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--fi-color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }

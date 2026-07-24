@@ -70,6 +70,18 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
   );
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
+    // 1. Fetch existing transaction to know if it's a parent
+    const { data: existing, error: fetchErr } = await supabase
+      .from('fiorc_transactions')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (fetchErr) throw new Error(fetchErr.message);
+    const oldTx = existing as Transaction;
+    const isParent = !oldTx.parent_id && oldTx.total_installments > 1;
+
+    // 2. Update the parent transaction
     const { data, error: updateErr } = await supabase
       .from('fiorc_transactions')
       .update(updates)
@@ -78,11 +90,30 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
       .single();
 
     if (updateErr) throw new Error(updateErr.message);
-
     const updated = data as Transaction;
+
+    // 3. If parent, cascade specific updates to children
+    if (isParent) {
+      const childUpdates: Partial<Transaction> = {};
+      if (updates.amount !== undefined) childUpdates.amount = updates.amount;
+      if (updates.category !== undefined) childUpdates.category = updates.category;
+      if (updates.description !== undefined) childUpdates.description = updates.description;
+      if (updates.person_id !== undefined) childUpdates.person_id = updates.person_id;
+
+      if (Object.keys(childUpdates).length > 0) {
+        await supabase
+          .from('fiorc_transactions')
+          .update(childUpdates)
+          .eq('parent_id', id);
+      }
+    }
+
     setTransactions(prev => prev.map(t => (t.id === id ? updated : t)));
+    // If it's a parent, refetch entirely so we can get updated children in current view
+    if (isParent) fetchTransactions();
+
     return updated;
-  }, []);
+  }, [fetchTransactions]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     const { error: deleteErr } = await supabase

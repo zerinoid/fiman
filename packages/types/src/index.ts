@@ -97,6 +97,7 @@ export interface Transaction {
   installment_index: number;
   total_installments: number;
   description: string | null;
+  parent_id?: string | null; // FK -> fiorc_transactions.id
   created_at: string;
 }
 

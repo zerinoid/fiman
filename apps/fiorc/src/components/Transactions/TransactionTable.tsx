@@ -66,20 +66,29 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
                 </span>
               </td>
               <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                <button 
-                  className="btn btn-ghost btn-icon btn-sm" 
-                  onClick={() => onEdit(tx)} 
-                  title="Editar"
-                >✏️</button>
-                <button 
-                  className="btn btn-ghost btn-icon btn-sm" 
-                  onClick={() => {
-                    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
-                      onDelete(tx.id);
-                    }
-                  }} 
-                  title="Excluir"
-                >🗑️</button>
+                {tx.parent_id ? (
+                  <span title="Esta é uma parcela projetada. Edite ou exclua a entrada principal para alterá-la." style={{ cursor: 'not-allowed', opacity: 0.5 }}>
+                    <button className="btn btn-ghost btn-icon btn-sm" disabled>✏️</button>
+                    <button className="btn btn-ghost btn-icon btn-sm" disabled>🗑️</button>
+                  </span>
+                ) : (
+                  <>
+                    <button 
+                      className="btn btn-ghost btn-icon btn-sm" 
+                      onClick={() => onEdit(tx)} 
+                      title="Editar"
+                    >✏️</button>
+                    <button 
+                      className="btn btn-ghost btn-icon btn-sm" 
+                      onClick={() => {
+                        if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+                          onDelete(tx.id);
+                        }
+                      }} 
+                      title="Excluir"
+                    >🗑️</button>
+                  </>
+                )}
               </td>
             </tr>
           ))}

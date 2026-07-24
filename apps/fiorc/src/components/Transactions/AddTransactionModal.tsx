@@ -103,10 +103,17 @@ export function AddTransactionModal({
           is_credit_card: isCreditCard,
         });
       } else {
-        if (installments && isCreditCard && nInstall > 1) {
+        const baseAmount = parseFloat(amount);
+        const shouldInstall = installments && (txType === 'income' || isCreditCard);
+
+        if (shouldInstall && nInstall > 1) {
           // Generate N monthly projected records
           const records: NewTransaction[] = [];
           const [yr, mo, dy] = baseDate.split('-').map(Number);
+          
+          // Divide amount for both incomes and expenses, but we generate the parent ID
+          const dividedAmount = baseAmount / nInstall;
+          const parentId = crypto.randomUUID();
 
           for (let i = 0; i < nInstall; i++) {
             const m   = ((mo - 1 + i) % 12) + 1;
@@ -114,18 +121,20 @@ export function AddTransactionModal({
             const pad = (n: number) => String(n).padStart(2, '0');
 
             records.push({
+              id:                i === 0 ? parentId : crypto.randomUUID(),
+              parent_id:         i === 0 ? null : parentId,
               person_id:         personId || null,
               type:              txType,
               category,
-              amount:            parseFloat(amount),
+              amount:            dividedAmount,
               due_date:          `${y}-${pad(m)}-${pad(dy)}`,
               paid_at:           null,
-              is_projection:     true,
-              is_credit_card:    isCreditCard,
+              is_projection:     i > 0, // First one is not necessarily a projection, others are
+              is_credit_card:    txType === 'expense' ? isCreditCard : false,
               installment_index: i + 1,
               total_installments: nInstall,
               description:       description || null,
-            });
+            } as NewTransaction);
           }
           await addTransaction(records);
         } else {
@@ -133,11 +142,11 @@ export function AddTransactionModal({
             person_id:          personId || null,
             type:               txType,
             category,
-            amount:             parseFloat(amount),
+            amount:             baseAmount,
             due_date:           baseDate,
             paid_at:            null,
             is_projection:      false,
-            is_credit_card:     isCreditCard,
+            is_credit_card:     txType === 'expense' ? isCreditCard : false,
             installment_index:  1,
             total_installments: 1,
             description:        description || null,
@@ -251,43 +260,60 @@ export function AddTransactionModal({
             </div>
           )}
 
-          {/* Credit Card & Installments */}
+          {/* Installments & Credit Card */}
           <div className="form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={isCreditCard}
-                onChange={e => setIsCreditCard(e.target.checked)}
-              />
-              <span className="form-label" style={{ margin: 0 }}>Pagar no Cartão de Crédito</span>
-            </label>
+            {txType === 'expense' ? (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={isCreditCard}
+                  onChange={e => setIsCreditCard(e.target.checked)}
+                />
+                <span className="form-label" style={{ margin: 0 }}>Pagar no Cartão de Crédito</span>
+              </label>
+            ) : (
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={installments}
+                  onChange={e => setInstallments(e.target.checked)}
+                />
+                <span className="form-label" style={{ margin: 0 }}>Receita Parcelada / Projetada</span>
+              </label>
+            )}
 
-            {isCreditCard && !transactionToEdit && (
-              <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--fi-color-bg-alt)', borderRadius: 'var(--fi-radius-md)' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: installments ? '0.5rem' : 0 }}>
-                  <input
-                    type="checkbox"
-                    checked={installments}
-                    onChange={e => setInstallments(e.target.checked)}
-                  />
-                  <span className="form-label" style={{ margin: 0 }}>Parcelar / projetar em meses</span>
-                </label>
-
-                {installments && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
-                    <input
-                      type="number"
-                      className="form-input"
-                      style={{ width: '80px' }}
-                      value={nInstall}
-                      onChange={e => setNInstall(Math.max(2, parseInt(e.target.value) || 2))}
-                      min="2"
-                      max="24"
-                    />
+            {!transactionToEdit && (
+              <>
+                {txType === 'expense' && isCreditCard && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--fi-color-bg-alt)', borderRadius: 'var(--fi-radius-md)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: installments ? '0.5rem' : 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={installments}
+                        onChange={e => setInstallments(e.target.checked)}
+                      />
+                      <span className="form-label" style={{ margin: 0 }}>Parcelar em meses</span>
+                    </label>
                   </div>
                 )}
-              </div>
+                
+                {installments && (
+                  <div style={{ marginTop: txType === 'income' ? '0.75rem' : 0, padding: txType === 'income' ? '0.75rem' : 0, background: txType === 'income' ? 'var(--fi-color-bg-alt)' : 'transparent', borderRadius: 'var(--fi-radius-md)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
+                      <input
+                        type="number"
+                        className="form-input"
+                        style={{ width: '80px' }}
+                        value={nInstall}
+                        onChange={e => setNInstall(Math.max(2, parseInt(e.target.value) || 2))}
+                        min="2"
+                        max="24"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

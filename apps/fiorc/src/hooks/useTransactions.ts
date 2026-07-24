@@ -105,7 +105,7 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
         totalProjected += t.amount;
       } else if (t.type === 'income') {
         totalIncome += t.amount;
-      } else {
+      } else if (!t.is_credit_card) {
         totalExpenses += t.amount;
       }
     }

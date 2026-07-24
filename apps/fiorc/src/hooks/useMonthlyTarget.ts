@@ -22,6 +22,21 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     setError(null);
 
     const monthDate = toMonthDate(year, month);
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear  = month === 1 ? year - 1 : year;
+    const prevMonthDate = toMonthDate(prevYear, prevMonth);
+    const nextOfPrevMonth = prevMonth === 12 ? 1 : prevMonth + 1;
+    const nextOfPrevYear  = prevMonth === 12 ? prevYear + 1 : prevYear;
+
+    // Always fetch previous month's credit card transactions
+    const { data: ccTxs } = await supabase
+      .from('fiorc_transactions')
+      .select('amount')
+      .gte('due_date', prevMonthDate)
+      .lt('due_date', toMonthDate(nextOfPrevYear, nextOfPrevMonth))
+      .eq('is_credit_card', true);
+
+    const ccTotal = ccTxs ? ccTxs.reduce((sum, tx) => sum + Number(tx.amount), 0) : 0;
 
     const { data, error: fetchErr } = await supabase
       .from('fiorc_monthly_targets')
@@ -36,17 +51,35 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     }
 
     if (data) {
-      // Ensure commitments is an array
-      setTarget({ ...data, commitments: data.commitments || [] } as MonthlyTarget);
+      let commitments = data.commitments || [];
+      
+      if (ccTotal > 0) {
+        const existingCcIdx = commitments.findIndex((c: CommitmentItem) => c.name === 'Fatura do Cartão');
+        if (existingCcIdx >= 0) {
+          commitments[existingCcIdx] = { ...commitments[existingCcIdx], amount: ccTotal };
+        } else {
+          commitments.push({
+            id: crypto.randomUUID(),
+            name: 'Fatura do Cartão',
+            amount: ccTotal,
+            due_day: 8,
+            is_paid: false,
+          });
+        }
+      } else {
+        const existingCcIdx = commitments.findIndex((c: CommitmentItem) => c.name === 'Fatura do Cartão');
+        if (existingCcIdx >= 0 && !commitments[existingCcIdx].is_paid) {
+          commitments[existingCcIdx] = { ...commitments[existingCcIdx], amount: 0 };
+        }
+      }
+
+      const totalTarget = commitments.reduce((sum: number, c: CommitmentItem) => sum + c.amount, 0);
+      setTarget({ ...data, commitments, total_target: totalTarget } as MonthlyTarget);
       setLoading(false);
       return;
     }
 
     // ── Auto-rollover: seed from previous month if no target exists ──
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear  = month === 1 ? year - 1 : year;
-    const prevMonthDate = toMonthDate(prevYear, prevMonth);
-
     const { data: prev } = await supabase
       .from('fiorc_monthly_targets')
       .select('*')
@@ -62,20 +95,11 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
       }));
     }
 
-    // Fetch previous month credit card transactions
-    const nextOfPrevMonth = prevMonth === 12 ? 1 : prevMonth + 1;
-    const nextOfPrevYear  = prevMonth === 12 ? prevYear + 1 : prevYear;
-    
-    const { data: ccTxs } = await supabase
-      .from('fiorc_transactions')
-      .select('amount')
-      .gte('due_date', prevMonthDate)
-      .lt('due_date', toMonthDate(nextOfPrevYear, nextOfPrevMonth))
-      .eq('is_credit_card', true);
-
-    if (ccTxs && ccTxs.length > 0) {
-      const ccTotal = ccTxs.reduce((sum, tx) => sum + Number(tx.amount), 0);
-      if (ccTotal > 0) {
+    if (ccTotal > 0) {
+      const existingCcIdx = newCommitments.findIndex(c => c.name === 'Fatura do Cartão');
+      if (existingCcIdx >= 0) {
+        newCommitments[existingCcIdx].amount = ccTotal;
+      } else {
         newCommitments.push({
           id: crypto.randomUUID(),
           name: 'Fatura do Cartão',

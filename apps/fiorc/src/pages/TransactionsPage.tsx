@@ -98,7 +98,7 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
         transactionToEdit={txToEdit}
         people={people}
         onSuccess={refetch}
-        defaultMonth={`${year}-${String(month).padStart(2, '0')}-01`}
+        defaultMonth={`${year}-${String(month).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
       />
     </div>
   );

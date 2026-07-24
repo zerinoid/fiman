@@ -1,6 +1,5 @@
 import type { MonthProps } from '../App';
 import { useMonthlyTarget } from '../hooks/useMonthlyTarget';
-import { TargetForm } from '../components/Targets/TargetForm';
 import { CommitmentsBreakdown } from '../components/Targets/CommitmentsBreakdown';
 
 export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
@@ -20,16 +19,12 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--fi-space-8)', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
-        <div className="card">
-          <div className="section-title" style={{ marginBottom: 'var(--fi-space-6)' }}>✏️ Definir Meta</div>
-          <TargetForm target={target} onSave={upsertTarget} loading={loading} />
-        </div>
-
-        <div className="card">
-          <div className="section-title" style={{ marginBottom: 'var(--fi-space-6)' }}>📊 Detalhamento</div>
-          <CommitmentsBreakdown target={target} payCommitment={payCommitment} />
-        </div>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+        {loading ? (
+          <div className="loading-center"><div className="spinner" /></div>
+        ) : (
+          <CommitmentsBreakdown target={target} payCommitment={payCommitment} upsertTarget={upsertTarget} />
+        )}
       </div>
     </div>
   );

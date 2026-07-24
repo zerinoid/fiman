@@ -79,7 +79,7 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     
     if (fetchErr) throw new Error(fetchErr.message);
     const oldTx = existing as Transaction;
-    const isParent = !oldTx.parent_id && oldTx.total_installments > 1;
+    const isParent = !oldTx.parent_id; // Any transaction without a parent can potentially have children
 
     // 2. Update the parent transaction
     const { data, error: updateErr } = await supabase
@@ -92,19 +92,65 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     if (updateErr) throw new Error(updateErr.message);
     const updated = data as Transaction;
 
-    // 3. If parent, cascade specific updates to children
+    // 3. If parent, handle children cascading or recreation
     if (isParent) {
-      const childUpdates: Partial<Transaction> = {};
-      if (updates.amount !== undefined) childUpdates.amount = updates.amount;
-      if (updates.category !== undefined) childUpdates.category = updates.category;
-      if (updates.description !== undefined) childUpdates.description = updates.description;
-      if (updates.person_id !== undefined) childUpdates.person_id = updates.person_id;
+      const oldTotal = oldTx.total_installments || 1;
+      const newTotal = updates.total_installments ?? oldTotal;
 
-      if (Object.keys(childUpdates).length > 0) {
-        await supabase
-          .from('fiorc_transactions')
-          .update(childUpdates)
-          .eq('parent_id', id);
+      if (newTotal !== oldTotal) {
+        // We need to delete old children and create new ones
+        await supabase.from('fiorc_transactions').delete().eq('parent_id', id);
+
+        const newChildren: NewTransaction[] = [];
+        const baseDate = updates.due_date ?? oldTx.due_date;
+        const [yr, mo, dy] = baseDate.split('-').map(Number);
+        const dividedAmount = updates.amount ?? oldTx.amount;
+        const txType = updates.type ?? oldTx.type;
+        const category = updates.category ?? oldTx.category;
+        const personId = updates.person_id ?? oldTx.person_id;
+        const description = updates.description ?? oldTx.description;
+        const isCreditCard = updates.is_credit_card ?? oldTx.is_credit_card;
+
+        for (let i = 1; i < newTotal; i++) {
+          const m = ((mo - 1 + i) % 12) + 1;
+          const y = yr + Math.floor((mo - 1 + i) / 12);
+          const pad = (n: number) => String(n).padStart(2, '0');
+
+          newChildren.push({
+            id: crypto.randomUUID(),
+            parent_id: id,
+            person_id: personId,
+            type: txType,
+            category,
+            amount: dividedAmount,
+            due_date: `${y}-${pad(m)}-${pad(dy)}`,
+            paid_at: null,
+            is_projection: true,
+            is_credit_card: txType === 'expense' ? isCreditCard : false,
+            installment_index: i + 1,
+            total_installments: newTotal,
+            description: description,
+          } as NewTransaction);
+        }
+
+        if (newChildren.length > 0) {
+          await supabase.from('fiorc_transactions').insert(newChildren);
+        }
+      } else if (oldTotal > 1) {
+        // Cascade changes to existing children
+        const childUpdates: Partial<Transaction> = {};
+        if (updates.amount !== undefined) childUpdates.amount = updates.amount;
+        if (updates.category !== undefined) childUpdates.category = updates.category;
+        if (updates.description !== undefined) childUpdates.description = updates.description;
+        if (updates.person_id !== undefined) childUpdates.person_id = updates.person_id;
+        if (updates.total_installments !== undefined) childUpdates.total_installments = updates.total_installments;
+
+        if (Object.keys(childUpdates).length > 0) {
+          await supabase
+            .from('fiorc_transactions')
+            .update(childUpdates)
+            .eq('parent_id', id);
+        }
       }
     }
 

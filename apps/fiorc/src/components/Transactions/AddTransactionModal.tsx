@@ -58,13 +58,24 @@ export function AddTransactionModal({
       if (transactionToEdit) {
         setTxType(transactionToEdit.type);
         setCategory(transactionToEdit.category);
-        setAmount(transactionToEdit.amount.toString());
+        
+        // Show total amount if it's a parent transaction
+        const totalInst = transactionToEdit.total_installments || 1;
+        const totalAmount = transactionToEdit.amount * totalInst;
+        setAmount(totalAmount.toFixed(2));
+        
         setDate(transactionToEdit.due_date);
         setDesc(transactionToEdit.description || '');
         setPersonId(transactionToEdit.person_id || '');
         setIsCreditCard(transactionToEdit.is_credit_card || false);
-        setInstallments(false);
-        setNInstall(2);
+        
+        if (totalInst > 1 && !transactionToEdit.parent_id) {
+          setInstallments(true);
+          setNInstall(totalInst);
+        } else {
+          setInstallments(false);
+          setNInstall(2);
+        }
       } else {
         reset();
       }
@@ -93,14 +104,20 @@ export function AddTransactionModal({
       const baseDate = date || defaultMonth;
 
       if (transactionToEdit) {
+        const isParent = transactionToEdit.total_installments > 1 && !transactionToEdit.parent_id;
+        const finalInstallments = (isParent && installments) ? nInstall : 1;
+        const baseAmount = parseFloat(amount);
+        const dividedAmount = isParent ? baseAmount / finalInstallments : baseAmount;
+
         await updateTransaction(transactionToEdit.id, {
           person_id: personId || null,
           type: txType,
           category,
-          amount: parseFloat(amount),
+          amount: dividedAmount,
           due_date: baseDate,
           description: description || null,
           is_credit_card: isCreditCard,
+          total_installments: finalInstallments,
         });
       } else {
         const baseAmount = parseFloat(amount);
@@ -282,7 +299,7 @@ export function AddTransactionModal({
               </label>
             )}
 
-            {!transactionToEdit && (
+            {(!transactionToEdit || !transactionToEdit.parent_id) && (
               <>
                 {txType === 'expense' && isCreditCard && (
                   <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--fi-color-bg-alt)', borderRadius: 'var(--fi-radius-md)' }}>

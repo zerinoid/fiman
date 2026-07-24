@@ -13,6 +13,8 @@ export interface UseTransactionsReturn {
   totalExpenses: number;
   totalProjected: number;
   addTransaction: (tx: NewTransaction | NewTransaction[]) => Promise<Transaction[]>;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<Transaction>;
+  deleteTransaction: (id: string) => Promise<void>;
   refetch: () => void;
 }
 
@@ -67,6 +69,32 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     [],
   );
 
+  const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {
+    const { data, error: updateErr } = await supabase
+      .from('fiorc_transactions')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (updateErr) throw new Error(updateErr.message);
+
+    const updated = data as Transaction;
+    setTransactions(prev => prev.map(t => (t.id === id ? updated : t)));
+    return updated;
+  }, []);
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    const { error: deleteErr } = await supabase
+      .from('fiorc_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (deleteErr) throw new Error(deleteErr.message);
+
+    setTransactions(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   const derived = useMemo(() => {
     let totalIncome   = 0;
     let totalExpenses = 0;
@@ -90,6 +118,8 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     loading,
     error,
     addTransaction,
+    updateTransaction,
+    deleteTransaction,
     refetch: fetchTransactions,
     ...derived,
   };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { MonthlyTarget } from '@fi/types';
+import type { MonthlyTarget, CommitmentItem } from '@fi/types';
 import { formatCurrency } from '../../utils/categories';
 
 interface TargetFormProps {
@@ -9,27 +9,36 @@ interface TargetFormProps {
 }
 
 export function TargetForm({ target, onSave, loading }: TargetFormProps) {
-  const [rentBase,   setRentBase]   = useState(target?.rent_base   ?? 0);
-  const [condoBase,  setCondoBase]  = useState(target?.condo_base  ?? 0);
-  const [condoCredit,setCondoCredit]= useState(target?.condo_credit ?? 0);
-  const [notes,      setNotes]      = useState(target?.notes        ?? '');
-  const [efDone,     setEfDone]     = useState(target?.emergency_fund_completed ?? false);
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [commitments, setCommitments] = useState<CommitmentItem[]>([]);
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Sync when target loads
   useEffect(() => {
     if (target) {
-      setRentBase(target.rent_base);
-      setCondoBase(target.condo_base);
-      setCondoCredit(target.condo_credit ?? 0);
+      setCommitments(target.commitments || []);
       setNotes(target.notes ?? '');
-      setEfDone(target.emergency_fund_completed);
     }
   }, [target]);
 
-  const total = rentBase + condoBase + (condoCredit ?? 0);
+  const total = commitments.reduce((sum, c) => sum + (c.amount || 0), 0);
+
+  const handleAddCommitment = () => {
+    setCommitments([
+      ...commitments,
+      { id: crypto.randomUUID(), name: '', amount: 0, due_day: 1, is_paid: false }
+    ]);
+  };
+
+  const handleUpdateCommitment = (id: string, updates: Partial<CommitmentItem>) => {
+    setCommitments(commitments.map(c => (c.id === id ? { ...c, ...updates } : c)));
+  };
+
+  const handleRemoveCommitment = (id: string) => {
+    setCommitments(commitments.filter(c => c.id !== id));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,12 +46,9 @@ export function TargetForm({ target, onSave, loading }: TargetFormProps) {
     setError(null);
     try {
       await onSave({
-        rent_base:   rentBase,
-        condo_base:  condoBase,
-        condo_credit: condoCredit,
+        commitments,
         total_target: total,
-        notes:       notes || null,
-        emergency_fund_completed: efDone,
+        notes: notes || null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -59,43 +65,62 @@ export function TargetForm({ target, onSave, loading }: TargetFormProps) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div style={{ display: 'grid', gap: 'var(--fi-space-4)', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <div className="form-group">
-          <label className="form-label" htmlFor="target-rent">Aluguel Base (R$)</label>
-          <input
-            id="target-rent"
-            type="number" step="0.01" min="0"
-            className="form-input"
-            value={rentBase}
-            onChange={e => setRentBase(parseFloat(e.target.value) || 0)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="target-condo">Condomínio Base (R$)</label>
-          <input
-            id="target-condo"
-            type="number" step="0.01" min="0"
-            className="form-input"
-            value={condoBase}
-            onChange={e => setCondoBase(parseFloat(e.target.value) || 0)}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="target-credit">Crédito Antena (R$)</label>
-          <input
-            id="target-credit"
-            type="number" step="0.01"
-            className="form-input"
-            placeholder="-25.81"
-            value={condoCredit}
-            onChange={e => setCondoCredit(parseFloat(e.target.value) || 0)}
-          />
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--fi-space-4)' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Compromissos</h3>
+        <button type="button" className="btn btn-secondary" onClick={handleAddCommitment} style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}>
+          + Adicionar
+        </button>
       </div>
 
-      <div className="form-group" style={{ marginTop: 'var(--fi-space-4)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--fi-space-3)' }}>
+        {commitments.map(c => (
+          <div key={c.id} style={{ display: 'flex', gap: 'var(--fi-space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ flex: '1 1 200px' }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Nome (ex: Conta de Luz)"
+                value={c.name}
+                onChange={e => handleUpdateCommitment(c.id, { name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ flex: '0 1 120px' }}>
+              <input
+                type="number" step="0.01"
+                className="form-input"
+                placeholder="Valor (R$)"
+                value={c.amount}
+                onChange={e => handleUpdateCommitment(c.id, { amount: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ flex: '0 1 100px' }}>
+              <input
+                type="number" min="1" max="31"
+                className="form-input"
+                placeholder="Dia Venc."
+                value={c.due_day}
+                onChange={e => handleUpdateCommitment(c.id, { due_day: parseInt(e.target.value, 10) || 1 })}
+                required
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => handleRemoveCommitment(c.id)}
+              style={{ background: 'none', border: 'none', color: 'var(--fi-color-danger)', cursor: 'pointer', padding: '0.5rem', fontSize: '1.25rem' }}
+              title="Remover"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        {commitments.length === 0 && (
+          <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.875rem' }}>Nenhum compromisso cadastrado.</p>
+        )}
+      </div>
+
+      <div className="form-group" style={{ marginTop: 'var(--fi-space-6)' }}>
         <label className="form-label" htmlFor="target-notes">Notas</label>
         <textarea
           id="target-notes"
@@ -106,17 +131,8 @@ export function TargetForm({ target, onSave, loading }: TargetFormProps) {
         />
       </div>
 
-      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 'var(--fi-space-4) 0' }}>
-        <input
-          type="checkbox"
-          checked={efDone}
-          onChange={e => setEfDone(e.target.checked)}
-        />
-        <span style={{ fontSize: '0.875rem' }}>🛡️ Reserva de Emergência atingida este mês</span>
-      </label>
-
       {/* Live total preview */}
-      <div className="commitment-total" style={{ marginBottom: 'var(--fi-space-4)' }}>
+      <div className="commitment-total" style={{ margin: 'var(--fi-space-6) 0' }}>
         <span className="commitment-total-label">Total da Meta</span>
         <span className="commitment-total-amount">{formatCurrency(total)}</span>
       </div>

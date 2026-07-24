@@ -206,36 +206,30 @@ export type Database = {
       }
       fiorc_monthly_targets: {
         Row: {
-          condo_base: number
-          condo_credit: number | null
+          commitments: Json | null
           created_at: string | null
-          emergency_fund_completed: boolean | null
+          credit_card_total: number
           id: string
           month_year: string
           notes: string | null
-          rent_base: number
           total_target: number
         }
         Insert: {
-          condo_base?: number
-          condo_credit?: number | null
+          commitments?: Json | null
           created_at?: string | null
-          emergency_fund_completed?: boolean | null
+          credit_card_total?: number
           id?: string
           month_year: string
           notes?: string | null
-          rent_base?: number
           total_target?: number
         }
         Update: {
-          condo_base?: number
-          condo_credit?: number | null
+          commitments?: Json | null
           created_at?: string | null
-          emergency_fund_completed?: boolean | null
+          credit_card_total?: number
           id?: string
           month_year?: string
           notes?: string | null
-          rent_base?: number
           total_target?: number
         }
         Relationships: []
@@ -285,6 +279,7 @@ export type Database = {
           due_date: string
           id: string
           installment_index: number | null
+          is_credit_card: boolean | null
           is_projection: boolean | null
           paid_at: string | null
           person_id: string | null
@@ -299,6 +294,7 @@ export type Database = {
           due_date: string
           id?: string
           installment_index?: number | null
+          is_credit_card?: boolean | null
           is_projection?: boolean | null
           paid_at?: string | null
           person_id?: string | null
@@ -313,6 +309,7 @@ export type Database = {
           due_date?: string
           id?: string
           installment_index?: number | null
+          is_credit_card?: boolean | null
           is_projection?: boolean | null
           paid_at?: string | null
           person_id?: string | null
@@ -449,19 +446,19 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
-          role: Database["public"]["Enums"]["user_role_type"]
+          role: Database["public"]["Enums"]["fi_role_type"]
         }
         Insert: {
           created_at?: string | null
           full_name: string
           id: string
-          role?: Database["public"]["Enums"]["user_role_type"]
+          role?: Database["public"]["Enums"]["fi_role_type"]
         }
         Update: {
           created_at?: string | null
           full_name?: string
           id?: string
-          role?: Database["public"]["Enums"]["user_role_type"]
+          role?: Database["public"]["Enums"]["fi_role_type"]
         }
         Relationships: []
       }
@@ -470,17 +467,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      is_admin: { Args: never; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
+      fi_role_type: "admin" | "collaborator"
       transaction_category:
-        | "housing_rent"
-        | "housing_condo"
-        | "utilities"
-        | "variable_expense"
-        | "savings_goal"
+        | "housing"
+        | "food_grocery"
+        | "food_delivery"
+        | "transport_public"
+        | "transport_app"
+        | "health"
+        | "education"
+        | "leisure"
+        | "business"
         | "investment"
-        | "emergency_fund"
+        | "unforeseen"
         | "session"
         | "private_lesson"
         | "study_group"
@@ -619,14 +621,19 @@ export const Constants = {
   },
   public: {
     Enums: {
+      fi_role_type: ["admin", "collaborator"],
       transaction_category: [
-        "housing_rent",
-        "housing_condo",
-        "utilities",
-        "variable_expense",
-        "savings_goal",
+        "housing",
+        "food_grocery",
+        "food_delivery",
+        "transport_public",
+        "transport_app",
+        "health",
+        "education",
+        "leisure",
+        "business",
         "investment",
-        "emergency_fund",
+        "unforeseen",
         "session",
         "private_lesson",
         "study_group",

@@ -14,7 +14,7 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
   const {
     transactions, loading: txLoading,
     totalIncome, totalExpenses, totalProjected,
-    addTransaction, refetch,
+    addTransaction, updateTransaction, refetch,
   } = useTransactions(year, month);
   const { people } = usePeople();
 
@@ -118,6 +118,8 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         addTransaction={addTransaction}
+        updateTransaction={updateTransaction}
+        transactionToEdit={null}
         people={people}
         onSuccess={refetch}
         defaultMonth={`${year}-${String(month).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { MonthProps } from '../App';
-import type { TransactionCategory } from '@fi/types';
+import type { Transaction, TransactionCategory } from '@fi/types';
 import { useTransactions } from '../hooks/useTransactions';
 import { usePeople } from '../hooks/usePeople';
 import { TransactionTable } from '../components/Transactions/TransactionTable';
@@ -10,13 +10,14 @@ import { CATEGORY_LABELS } from '../utils/categories';
 const PAGE_SIZE = 25;
 
 export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
-  const { transactions, loading, addTransaction, refetch } = useTransactions(year, month);
+  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, refetch } = useTransactions(year, month);
   const { people } = usePeople();
 
   const [typeFilter, setTypeFilter]   = useState<'all' | 'income' | 'expense'>('all');
   const [catFilter,  setCatFilter]    = useState<TransactionCategory | ''>('');
   const [page,       setPage]         = useState(1);
   const [modalOpen,  setModalOpen]    = useState(false);
+  const [txToEdit,   setTxToEdit]     = useState<Transaction | null>(null);
 
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
@@ -73,7 +74,12 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
         </select>
       </div>
 
-      <TransactionTable transactions={paged} loading={loading} />
+      <TransactionTable 
+        transactions={paged} 
+        loading={loading} 
+        onEdit={tx => { setTxToEdit(tx); setModalOpen(true); }}
+        onDelete={deleteTransaction}
+      />
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -86,8 +92,10 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
 
       <AddTransactionModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setTxToEdit(null); }}
         addTransaction={addTransaction}
+        updateTransaction={updateTransaction}
+        transactionToEdit={txToEdit}
         people={people}
         onSuccess={refetch}
         defaultMonth={`${year}-${String(month).padStart(2, '0')}-01`}

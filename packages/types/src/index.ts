@@ -12,13 +12,18 @@ export type UserRoleType = 'admin' | 'collaborator';
 export type TransactionType = 'income' | 'expense';
 
 export type TransactionCategory =
-  | 'housing_rent'
-  | 'housing_condo'
-  | 'utilities'
-  | 'variable_expense'
-  | 'savings_goal'
-  | 'investment'
-  | 'emergency_fund'
+  | 'housing'         // Moradia
+  | 'food_grocery'    // Alimentação - Mercado
+  | 'food_delivery'   // Alimentação - Restaurante/Delivery
+  | 'transport_public'// Transporte Público
+  | 'transport_app'   // Transporte Aplicativo
+  | 'health'          // Saúde
+  | 'education'       // Educação
+  | 'leisure'         // Lazer & Assinaturas
+  | 'business'        // Profissional / Negócios
+  | 'investment'      // Investimento & Reserva
+  | 'unforeseen'      // Imprevistos / Manutenção
+  // Incomes
   | 'session'
   | 'private_lesson'
   | 'study_group'
@@ -59,17 +64,21 @@ export interface Person {
 // FIORC — Personal Budget & Cash Flow
 // ----------------------------------------------------------
 
+export interface CommitmentItem {
+  id: string;         // UUID
+  name: string;       // e.g., "Conta de Luz", "Aluguel"
+  amount: number;     // e.g., 150.00
+  due_day: number;    // 1-31
+  is_paid: boolean;
+}
+
 /** Monthly budget target snapshot — tied to a specific month/year. */
 export interface MonthlyTarget {
   id: string;
-  /** First day of the target month, e.g. '2026-08-01' */
-  month_year: string;
-  rent_base: number;
-  condo_base: number;
-  /** Credit from rooftop antenna leasing revenue (may be negative) */
-  condo_credit: number | null;
+  month_year: string;       // YYYY-MM-01
+  commitments: CommitmentItem[];
+  credit_card_total: number;
   total_target: number;
-  emergency_fund_completed: boolean;
   notes: string | null;
   created_at: string;
 }
@@ -82,8 +91,9 @@ export interface Transaction {
   category: TransactionCategory;
   amount: number;
   due_date: string; // DATE string 'YYYY-MM-DD'
-  paid_at: string | null;
+  paid_at: string | null; // YYYY-MM-DD
   is_projection: boolean;
+  is_credit_card: boolean;
   installment_index: number;
   total_installments: number;
   description: string | null;

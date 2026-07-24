@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Person, TransactionCategory } from '@fi/types';
+import type { Person, TransactionCategory, Transaction } from '@fi/types';
 import type { NewTransaction } from '../../hooks/useTransactions';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES,
@@ -10,13 +10,15 @@ interface AddTransactionModalProps {
   open: boolean;
   onClose: () => void;
   addTransaction: (tx: NewTransaction | NewTransaction[]) => Promise<unknown>;
+  updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<unknown>;
+  transactionToEdit: Transaction | null;
   people: Person[];
   onSuccess: () => void;
   defaultMonth: string;
 }
 
 export function AddTransactionModal({
-  open, onClose, addTransaction, people, onSuccess, defaultMonth,
+  open, onClose, addTransaction, updateTransaction, transactionToEdit, people, onSuccess, defaultMonth,
 }: AddTransactionModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -43,6 +45,7 @@ export function AddTransactionModal({
   const [date, setDate]         = useState(defaultMonth);
   const [description, setDesc]  = useState('');
   const [personId, setPersonId] = useState('');
+  const [isCreditCard, setIsCreditCard] = useState(false);
   const [installments, setInstallments] = useState(false);
   const [nInstall, setNInstall] = useState(2);
   const [loading, setLoading]   = useState(false);
@@ -50,15 +53,28 @@ export function AddTransactionModal({
 
   const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
-  // Reset category when type changes
   useEffect(() => {
-    setCategory(txType === 'income' ? 'session' : 'housing_rent');
-  }, [txType]);
+    if (open) {
+      if (transactionToEdit) {
+        setTxType(transactionToEdit.type);
+        setCategory(transactionToEdit.category);
+        setAmount(transactionToEdit.amount.toString());
+        setDate(transactionToEdit.due_date);
+        setDesc(transactionToEdit.description || '');
+        setPersonId(transactionToEdit.person_id || '');
+        setIsCreditCard(transactionToEdit.is_credit_card || false);
+        setInstallments(false);
+        setNInstall(2);
+      } else {
+        reset();
+      }
+    }
+  }, [transactionToEdit, open]);
 
   const reset = () => {
     setTxType('income'); setCategory('session'); setAmount('');
     setDate(defaultMonth); setDesc(''); setPersonId('');
-    setInstallments(false); setNInstall(2); setError(null);
+    setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -76,43 +92,57 @@ export function AddTransactionModal({
     try {
       const baseDate = date || defaultMonth;
 
-      if (installments && nInstall > 1) {
-        // Generate N monthly projected records
-        const records: NewTransaction[] = [];
-        const [yr, mo, dy] = baseDate.split('-').map(Number);
+      if (transactionToEdit) {
+        await updateTransaction(transactionToEdit.id, {
+          person_id: personId || null,
+          type: txType,
+          category,
+          amount: parseFloat(amount),
+          due_date: baseDate,
+          description: description || null,
+          is_credit_card: isCreditCard,
+        });
+      } else {
+        if (installments && isCreditCard && nInstall > 1) {
+          // Generate N monthly projected records
+          const records: NewTransaction[] = [];
+          const [yr, mo, dy] = baseDate.split('-').map(Number);
 
-        for (let i = 0; i < nInstall; i++) {
-          const m   = ((mo - 1 + i) % 12) + 1;
-          const y   = yr + Math.floor((mo - 1 + i) / 12);
-          const pad = (n: number) => String(n).padStart(2, '0');
+          for (let i = 0; i < nInstall; i++) {
+            const m   = ((mo - 1 + i) % 12) + 1;
+            const y   = yr + Math.floor((mo - 1 + i) / 12);
+            const pad = (n: number) => String(n).padStart(2, '0');
 
-          records.push({
-            person_id:         personId || null,
-            type:              txType,
+            records.push({
+              person_id:         personId || null,
+              type:              txType,
+              category,
+              amount:            parseFloat(amount),
+              due_date:          `${y}-${pad(m)}-${pad(dy)}`,
+              paid_at:           null,
+              is_projection:     true,
+              is_credit_card:    isCreditCard,
+              installment_index: i + 1,
+              total_installments: nInstall,
+              description:       description || null,
+            });
+          }
+          await addTransaction(records);
+        } else {
+          await addTransaction({
+            person_id:          personId || null,
+            type:               txType,
             category,
-            amount:            parseFloat(amount),
-            due_date:          `${y}-${pad(m)}-${pad(dy)}`,
-            paid_at:           null,
-            is_projection:     true,
-            installment_index: i + 1,
-            total_installments: nInstall,
-            description:       description || null,
+            amount:             parseFloat(amount),
+            due_date:           baseDate,
+            paid_at:            null,
+            is_projection:      false,
+            is_credit_card:     isCreditCard,
+            installment_index:  1,
+            total_installments: 1,
+            description:        description || null,
           });
         }
-        await addTransaction(records);
-      } else {
-        await addTransaction({
-          person_id:          personId || null,
-          type:               txType,
-          category,
-          amount:             parseFloat(amount),
-          due_date:           baseDate,
-          paid_at:            null,
-          is_projection:      false,
-          installment_index:  1,
-          total_installments: 1,
-          description:        description || null,
-        });
       }
 
       onSuccess();
@@ -127,7 +157,7 @@ export function AddTransactionModal({
   return (
     <dialog ref={dialogRef} onClose={onClose} onClick={handleDialogClick}>
       <div className="dialog-header">
-        <span className="dialog-title">Nova Transação</span>
+        <span className="dialog-title">{transactionToEdit ? 'Editar Transação' : 'Nova Transação'}</span>
         <button className="btn btn-ghost btn-icon" onClick={handleClose} aria-label="Fechar">✕</button>
       </div>
 
@@ -139,10 +169,10 @@ export function AddTransactionModal({
             <div className="type-toggle">
               <button type="button"
                 className={`type-toggle-btn${txType === 'income' ? ' active income' : ''}`}
-                onClick={() => setTxType('income')}>💚 Receita</button>
+                onClick={() => { setTxType('income'); setCategory('session'); }}>💚 Receita</button>
               <button type="button"
                 className={`type-toggle-btn${txType === 'expense' ? ' active expense' : ''}`}
-                onClick={() => setTxType('expense')}>❤️ Despesa</button>
+                onClick={() => { setTxType('expense'); setCategory('housing'); }}>❤️ Despesa</button>
             </div>
           </div>
 
@@ -221,29 +251,42 @@ export function AddTransactionModal({
             </div>
           )}
 
-          {/* Installments */}
+          {/* Credit Card & Installments */}
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
               <input
                 type="checkbox"
-                checked={installments}
-                onChange={e => setInstallments(e.target.checked)}
+                checked={isCreditCard}
+                onChange={e => setIsCreditCard(e.target.checked)}
               />
-              <span className="form-label" style={{ margin: 0 }}>Parcelar / projetar em meses</span>
+              <span className="form-label" style={{ margin: 0 }}>Pagar no Cartão de Crédito</span>
             </label>
 
-            {installments && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-                <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
-                <input
-                  type="number"
-                  className="form-input"
-                  style={{ width: '80px' }}
-                  value={nInstall}
-                  onChange={e => setNInstall(Math.max(2, parseInt(e.target.value) || 2))}
-                  min="2"
-                  max="24"
-                />
+            {isCreditCard && !transactionToEdit && (
+              <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: 'var(--fi-color-bg-alt)', borderRadius: 'var(--fi-radius-md)' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: installments ? '0.5rem' : 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={installments}
+                    onChange={e => setInstallments(e.target.checked)}
+                  />
+                  <span className="form-label" style={{ margin: 0 }}>Parcelar / projetar em meses</span>
+                </label>
+
+                {installments && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
+                    <input
+                      type="number"
+                      className="form-input"
+                      style={{ width: '80px' }}
+                      value={nInstall}
+                      onChange={e => setNInstall(Math.max(2, parseInt(e.target.value) || 2))}
+                      min="2"
+                      max="24"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,9 +1,14 @@
 import type { Transaction } from '@fi/types';
 import { formatCurrency, formatDate, CATEGORY_LABELS, CATEGORY_ICONS } from '../../utils/categories';
 
-interface Props { transactions: Transaction[]; loading: boolean; }
+interface Props { 
+  transactions: Transaction[]; 
+  loading: boolean; 
+  onEdit: (tx: Transaction) => void;
+  onDelete: (id: string) => void;
+}
 
-export function TransactionTable({ transactions, loading }: Props) {
+export function TransactionTable({ transactions, loading, onEdit, onDelete }: Props) {
   if (loading) {
     return <div className="loading-center"><div className="spinner" /></div>;
   }
@@ -27,6 +32,7 @@ export function TransactionTable({ transactions, loading }: Props) {
             <th>Descrição</th>
             <th>Tipo</th>
             <th style={{ textAlign: 'right' }}>Valor</th>
+            <th style={{ width: '80px', textAlign: 'center' }}>Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -50,11 +56,30 @@ export function TransactionTable({ transactions, loading }: Props) {
                 {tx.is_projection && (
                   <span className="badge badge-projection" style={{ marginLeft: '0.25rem' }}>Proj.</span>
                 )}
+                {tx.is_credit_card && (
+                  <span className="badge badge-credit-card" style={{ marginLeft: '0.25rem' }} title="Cartão de Crédito">💳</span>
+                )}
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--fi-font-mono)', fontWeight: 600 }}>
                 <span style={{ color: tx.type === 'income' ? 'var(--fi-color-success)' : 'var(--fi-color-danger)' }}>
                   {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
                 </span>
+              </td>
+              <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                <button 
+                  className="btn btn-ghost btn-icon btn-sm" 
+                  onClick={() => onEdit(tx)} 
+                  title="Editar"
+                >✏️</button>
+                <button 
+                  className="btn btn-ghost btn-icon btn-sm" 
+                  onClick={() => {
+                    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+                      onDelete(tx.id);
+                    }
+                  }} 
+                  title="Excluir"
+                >🗑️</button>
               </td>
             </tr>
           ))}

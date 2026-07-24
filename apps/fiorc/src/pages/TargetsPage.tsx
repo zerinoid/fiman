@@ -4,7 +4,7 @@ import { TargetForm } from '../components/Targets/TargetForm';
 import { CommitmentsBreakdown } from '../components/Targets/CommitmentsBreakdown';
 
 export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
-  const { target, loading, upsertTarget } = useMonthlyTarget(year, month);
+  const { target, loading, upsertTarget, payCommitment } = useMonthlyTarget(year, month);
 
   return (
     <div className="page">
@@ -28,7 +28,7 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
 
         <div className="card">
           <div className="section-title" style={{ marginBottom: 'var(--fi-space-6)' }}>📊 Detalhamento</div>
-          <CommitmentsBreakdown target={target} />
+          <CommitmentsBreakdown target={target} payCommitment={payCommitment} />
         </div>
       </div>
     </div>

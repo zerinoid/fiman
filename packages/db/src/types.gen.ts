@@ -282,6 +282,7 @@ export type Database = {
           is_credit_card: boolean | null
           is_projection: boolean | null
           paid_at: string | null
+          parent_id: string | null
           person_id: string | null
           total_installments: number | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -297,6 +298,7 @@ export type Database = {
           is_credit_card?: boolean | null
           is_projection?: boolean | null
           paid_at?: string | null
+          parent_id?: string | null
           person_id?: string | null
           total_installments?: number | null
           type: Database["public"]["Enums"]["transaction_type"]
@@ -312,11 +314,19 @@ export type Database = {
           is_credit_card?: boolean | null
           is_projection?: boolean | null
           paid_at?: string | null
+          parent_id?: string | null
           person_id?: string | null
           total_installments?: number | null
           type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "fiorc_transactions_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "fiorc_transactions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fiorc_transactions_person_id_fkey"
             columns: ["person_id"]

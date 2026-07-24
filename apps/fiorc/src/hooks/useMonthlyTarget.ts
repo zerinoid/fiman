@@ -51,7 +51,7 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     }
 
     if (data) {
-      let commitments = data.commitments || [];
+      let commitments: CommitmentItem[] = (data.commitments as unknown as CommitmentItem[]) || [];
       
       if (ccTotal > 0) {
         const existingCcIdx = commitments.findIndex((c: CommitmentItem) => c.name === 'Fatura do Cartão');
@@ -74,7 +74,7 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
       }
 
       const totalTarget = commitments.reduce((sum: number, c: CommitmentItem) => sum + c.amount, 0);
-      setTarget({ ...data, commitments, total_target: totalTarget } as MonthlyTarget);
+      setTarget({ ...data, commitments, total_target: totalTarget } as unknown as MonthlyTarget);
       setLoading(false);
       return;
     }
@@ -89,7 +89,8 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     let newCommitments: CommitmentItem[] = [];
 
     if (prev && prev.commitments) {
-      newCommitments = prev.commitments.map((c: CommitmentItem) => ({
+      const prevCommitments = prev.commitments as unknown as CommitmentItem[];
+      newCommitments = prevCommitments.map((c: CommitmentItem) => ({
         ...c,
         is_paid: false,
       }));
@@ -120,7 +121,7 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
         notes: null,
         created_at: '',
         total_target: newCommitments.reduce((sum, c) => sum + c.amount, 0),
-      } as MonthlyTarget);
+      } as unknown as MonthlyTarget);
     } else {
       setTarget(null);
     }
@@ -134,7 +135,7 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     updates: Partial<Omit<MonthlyTarget, 'id' | 'created_at'>>,
   ): Promise<MonthlyTarget> => {
     const monthDate = toMonthDate(year, month);
-    const payload = { ...updates, month_year: monthDate };
+    const payload = { ...updates, month_year: monthDate } as any;
 
     const { data, error: upsertErr } = await supabase
       .from('fiorc_monthly_targets')
@@ -144,7 +145,7 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
 
     if (upsertErr) throw new Error(upsertErr.message);
 
-    const saved = { ...data, commitments: data.commitments || [] } as MonthlyTarget;
+    const saved = { ...data, commitments: (data.commitments as unknown as CommitmentItem[]) || [] } as unknown as MonthlyTarget;
     setTarget(saved);
     return saved;
   };

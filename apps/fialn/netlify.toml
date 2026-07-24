@@ -1,0 +1,12 @@
+[build]
+  command = "cd ../.. && pnpm --filter fialn build"
+  publish = "apps/fialn/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA fallback — all routes serve index.html
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200

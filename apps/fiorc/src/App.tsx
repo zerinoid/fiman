@@ -1,71 +1,93 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from './hooks/useAuth';
+import { LoginPage } from './pages/LoginPage';
+import { DashboardPage } from './pages/DashboardPage';
+import { TransactionsPage } from './pages/TransactionsPage';
+import { TargetsPage } from './pages/TargetsPage';
+import { BoletoPage } from './pages/BoletoPage';
+import { AppShell } from './components/Layout/AppShell';
+import { formatMonthYear } from './utils/categories';
+
+// ---- Hash-based routing ----
+
+export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto';
+
+const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto'];
+
+function getRouteFromHash(): Route {
+  const hash = window.location.hash.replace('#', '') as Route;
+  return VALID_ROUTES.includes(hash) ? hash : 'dashboard';
+}
+
+// ---- Month state shared across pages ----
+
+export interface MonthProps {
+  year: number;
+  month: number;
+  monthLabel: string;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+}
+
+// ---- App ----
 
 export function App() {
-  return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 'var(--fi-space-4)',
-        padding: 'var(--fi-space-8)',
-      }}
-    >
-      <div
-        style={{
-          background: 'var(--fi-color-surface)',
-          border: '1px solid var(--fi-color-border)',
-          borderRadius: 'var(--fi-radius-xl)',
-          padding: 'var(--fi-space-8)',
-          maxWidth: '480px',
-          width: '100%',
-          textAlign: 'center',
-          boxShadow: '0 8px 32px hsl(0 0% 0% / 0.5)',
-        }}
-      >
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: 'var(--fi-radius-lg)',
-            background: 'hsl(var(--fi-hue-primary), 72%, 62%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.5rem',
-            margin: '0 auto var(--fi-space-6)',
-          }}
-        >
-          💰
-        </div>
-        <h1
-          style={{
-            fontSize: '1.75rem',
-            fontWeight: 700,
-            marginBottom: 'var(--fi-space-2)',
-            color: 'var(--fi-color-text)',
-          }}
-        >
-          FIORC
-        </h1>
-        <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.95rem' }}>
-          Orçamento Pessoal &amp; Fluxo de Caixa
-        </p>
-        <div
-          style={{
-            marginTop: 'var(--fi-space-6)',
-            padding: 'var(--fi-space-3) var(--fi-space-4)',
-            background: 'var(--fi-color-surface-2)',
-            borderRadius: 'var(--fi-radius-md)',
-            fontSize: '0.8rem',
-            color: 'var(--fi-color-accent)',
-            fontFamily: 'var(--fi-font-mono)',
-          }}
-        >
-          PRD 00 ✓ — Aguardando PRD 01 (FIORC)
-        </div>
+  const { session, loading, signOut } = useAuth();
+
+  const [route, setRoute] = useState<Route>(getRouteFromHash);
+
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+
+  const monthLabel = formatMonthYear(year, month);
+
+  const onPrevMonth = () => {
+    if (month === 1) { setYear(y => y - 1); setMonth(12); }
+    else setMonth(m => m - 1);
+  };
+
+  const onNextMonth = () => {
+    if (month === 12) { setYear(y => y + 1); setMonth(1); }
+    else setMonth(m => m + 1);
+  };
+
+  // Update route state when browser hash changes (back/forward, nav clicks)
+  useEffect(() => {
+    const onHash = () => setRoute(getRouteFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  const navigate = (to: Route) => {
+    window.location.hash = to;
+    // hashchange fires synchronously in the same task, so setRoute will be
+    // called by the listener. Setting it here prevents a frame of stale UI.
+    setRoute(to);
+  };
+
+  if (loading) {
+    return (
+      <div className="loading-center" style={{ minHeight: '100vh' }}>
+        <div className="spinner spinner-lg" />
+        <span>Carregando…</span>
       </div>
-    </main>
+    );
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  const monthProps: MonthProps = { year, month, monthLabel, onPrevMonth, onNextMonth };
+  const email = session.user?.email ?? '';
+
+  return (
+    <AppShell route={route} navigate={navigate} onSignOut={signOut} email={email}>
+      {route === 'dashboard'    && <DashboardPage    {...monthProps} />}
+      {route === 'transactions' && <TransactionsPage {...monthProps} />}
+      {route === 'targets'      && <TargetsPage      {...monthProps} />}
+      {route === 'boleto'       && <BoletoPage />}
+    </AppShell>
   );
 }

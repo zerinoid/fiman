@@ -1,0 +1,263 @@
+import { useState, useRef, useEffect } from 'react';
+import type { Person, TransactionCategory } from '@fi/types';
+import type { NewTransaction } from '../../hooks/useTransactions';
+import {
+  INCOME_CATEGORIES, EXPENSE_CATEGORIES,
+  CATEGORY_LABELS,
+} from '../../utils/categories';
+
+interface AddTransactionModalProps {
+  open: boolean;
+  onClose: () => void;
+  addTransaction: (tx: NewTransaction | NewTransaction[]) => Promise<unknown>;
+  people: Person[];
+  onSuccess: () => void;
+  defaultMonth: string;
+}
+
+export function AddTransactionModal({
+  open, onClose, addTransaction, people, onSuccess, defaultMonth,
+}: AddTransactionModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  // Sync open state ↔ native dialog
+  useEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (open && !el.open) {
+      el.showModal();
+    } else if (!open && el.open) {
+      el.close();
+    }
+  }, [open]);
+
+  // Close on backdrop click
+  const handleDialogClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+    if (e.target === dialogRef.current) onClose();
+  };
+
+  // Form state
+  const [txType, setTxType] = useState<'income' | 'expense'>('income');
+  const [category, setCategory] = useState<TransactionCategory>('session');
+  const [amount, setAmount]     = useState('');
+  const [date, setDate]         = useState(defaultMonth);
+  const [description, setDesc]  = useState('');
+  const [personId, setPersonId] = useState('');
+  const [installments, setInstallments] = useState(false);
+  const [nInstall, setNInstall] = useState(2);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+
+  const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  // Reset category when type changes
+  useEffect(() => {
+    setCategory(txType === 'income' ? 'session' : 'housing_rent');
+  }, [txType]);
+
+  const reset = () => {
+    setTxType('income'); setCategory('session'); setAmount('');
+    setDate(defaultMonth); setDesc(''); setPersonId('');
+    setInstallments(false); setNInstall(2); setError(null);
+  };
+
+  const handleClose = () => { reset(); onClose(); };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Informe um valor válido.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const baseDate = date || defaultMonth;
+
+      if (installments && nInstall > 1) {
+        // Generate N monthly projected records
+        const records: NewTransaction[] = [];
+        const [yr, mo, dy] = baseDate.split('-').map(Number);
+
+        for (let i = 0; i < nInstall; i++) {
+          const m   = ((mo - 1 + i) % 12) + 1;
+          const y   = yr + Math.floor((mo - 1 + i) / 12);
+          const pad = (n: number) => String(n).padStart(2, '0');
+
+          records.push({
+            person_id:         personId || null,
+            type:              txType,
+            category,
+            amount:            parseFloat(amount),
+            due_date:          `${y}-${pad(m)}-${pad(dy)}`,
+            paid_at:           null,
+            is_projection:     true,
+            installment_index: i + 1,
+            total_installments: nInstall,
+            description:       description || null,
+          });
+        }
+        await addTransaction(records);
+      } else {
+        await addTransaction({
+          person_id:          personId || null,
+          type:               txType,
+          category,
+          amount:             parseFloat(amount),
+          due_date:           baseDate,
+          paid_at:            null,
+          is_projection:      false,
+          installment_index:  1,
+          total_installments: 1,
+          description:        description || null,
+        });
+      }
+
+      onSuccess();
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao salvar');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <dialog ref={dialogRef} onClose={onClose} onClick={handleDialogClick}>
+      <div className="dialog-header">
+        <span className="dialog-title">Nova Transação</span>
+        <button className="btn btn-ghost btn-icon" onClick={handleClose} aria-label="Fechar">✕</button>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="dialog-body">
+          {/* Type */}
+          <div className="form-group">
+            <label className="form-label">Tipo</label>
+            <div className="type-toggle">
+              <button type="button"
+                className={`type-toggle-btn${txType === 'income' ? ' active income' : ''}`}
+                onClick={() => setTxType('income')}>💚 Receita</button>
+              <button type="button"
+                className={`type-toggle-btn${txType === 'expense' ? ' active expense' : ''}`}
+                onClick={() => setTxType('expense')}>❤️ Despesa</button>
+            </div>
+          </div>
+
+          {/* Category */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-category">Categoria</label>
+            <select
+              id="modal-category"
+              className="form-input"
+              value={category}
+              onChange={e => setCategory(e.target.value as TransactionCategory)}
+            >
+              {categories.map(c => (
+                <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Amount */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-amount">Valor (R$)</label>
+            <input
+              id="modal-amount"
+              type="number"
+              className="form-input"
+              placeholder="0,00"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              step="0.01"
+              min="0.01"
+              required
+            />
+          </div>
+
+          {/* Date */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-date">Data</label>
+            <input
+              id="modal-date"
+              type="date"
+              className="form-input"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              required
+            />
+          </div>
+
+          {/* Description */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-desc">Descrição (opcional)</label>
+            <input
+              id="modal-desc"
+              type="text"
+              className="form-input"
+              placeholder="Ex: Sessão fulano, 09/jul"
+              value={description}
+              onChange={e => setDesc(e.target.value)}
+            />
+          </div>
+
+          {/* Person */}
+          {people.length > 0 && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="modal-person">Pessoa (opcional)</label>
+              <select
+                id="modal-person"
+                className="form-input"
+                value={personId}
+                onChange={e => setPersonId(e.target.value)}
+              >
+                <option value="">— Nenhuma —</option>
+                {people.map(p => (
+                  <option key={p.id} value={p.id}>{p.full_name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Installments */}
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={installments}
+                onChange={e => setInstallments(e.target.checked)}
+              />
+              <span className="form-label" style={{ margin: 0 }}>Parcelar / projetar em meses</span>
+            </label>
+
+            {installments && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
+                <input
+                  type="number"
+                  className="form-input"
+                  style={{ width: '80px' }}
+                  value={nInstall}
+                  onChange={e => setNInstall(Math.max(2, parseInt(e.target.value) || 2))}
+                  min="2"
+                  max="24"
+                />
+              </div>
+            )}
+          </div>
+
+          {error && <p className="form-error">{error}</p>}
+        </div>
+
+        <div className="dialog-footer">
+          <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
+          <button id="btn-modal-submit" type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? <><span className="spinner" /> Salvando…</> : 'Salvar'}
+          </button>
+        </div>
+      </form>
+    </dialog>
+  );
+}

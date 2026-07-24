@@ -1,6 +1,6 @@
 [build]
   command = "cd ../.. && pnpm --filter fiorc build"
-  publish = "dist"
+  publish = "apps/fiorc/dist"
 
 [build.environment]
   NODE_VERSION = "20"

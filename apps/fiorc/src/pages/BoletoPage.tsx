@@ -55,7 +55,6 @@ export function BoletoPage() {
         rent_amount:             result.rent_amount,
         condo_measured:          result.condo_measured,
         condo_credit_prev_month: result.condo_credit_prev_month,
-        total_payable:           result.total_payable,
       });
 
     setConfirming(false);

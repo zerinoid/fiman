@@ -208,7 +208,7 @@ ALTER TABLE public.fiatt_client_records  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fiatt_sessions        ENABLE ROW LEVEL SECURITY;
 
 -- ==========================================
--- 7. HELPER FUNCTION: is_admin()
+-- 7. HELPER FUNCTION: private.is_admin()
 -- ==========================================
 -- SECURITY NOTE:
 --   • SECURITY DEFINER is required here so the function can query
@@ -218,30 +218,31 @@ ALTER TABLE public.fiatt_sessions        ENABLE ROW LEVEL SECURITY;
 --   • auth.uid() IS NOT NULL guard ensures unauthenticated sessions
 --     always return FALSE.
 
-CREATE OR REPLACE FUNCTION public.is_admin()
+-- Private schema for internal security functions (hidden from PostgREST Data API)
+CREATE SCHEMA IF NOT EXISTS private;
+
+CREATE OR REPLACE FUNCTION private.is_admin()
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-    -- Short-circuit for unauthenticated requests.
-    IF auth.uid() IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    RETURN EXISTS (
-        SELECT 1
-        FROM public.profiles
-        WHERE id = auth.uid()
-          AND role = 'admin'
-    );
+  IF auth.uid() IS NULL THEN
+    RETURN FALSE;
+  END IF;
+  
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND role = 'admin'
+  );
 END;
 $$;
 
--- Lock down execute: only authenticated users may call is_admin().
-REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC;
-GRANT  EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+-- Lock down execute
+REVOKE EXECUTE ON FUNCTION private.is_admin() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION private.is_admin() TO postgres, service_role;
 
 -- ==========================================
 -- 8. RLS POLICIES

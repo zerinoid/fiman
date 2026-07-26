@@ -23,6 +23,7 @@ export const EXPENSE_CATEGORIES: TransactionCategory[] = [
   'business',
   'investment',
   'unforeseen',
+  'pet',
 ];
 
 // ---- Labels ----
@@ -45,6 +46,7 @@ export const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   workshop: 'Workshop',
   performance: 'Performance',
   freelance_dev: 'Freelance (Dev)',
+  pet: 'Pets',
 };
 
 // ---- Icons ----
@@ -67,6 +69,7 @@ export const CATEGORY_ICONS: Record<TransactionCategory, string> = {
   workshop: '🎪',
   performance: '🎭',
   freelance_dev: '💻',
+  pet: '🐾',
 };
 
 // ---- Formatters ----

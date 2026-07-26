@@ -5,14 +5,15 @@ import { DashboardPage } from './pages/DashboardPage';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { TargetsPage } from './pages/TargetsPage';
 import { BoletoPage } from './pages/BoletoPage';
+import { QuickAddPage } from './pages/QuickAddPage';
 import { AppShell } from './components/Layout/AppShell';
 import { formatMonthYear } from './utils/categories';
 
 // ---- Hash-based routing ----
 
-export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto';
+export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add';
 
-const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto'];
+const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add'];
 
 function getRouteFromHash(): Route {
   const hash = window.location.hash.replace('#', '') as Route;
@@ -88,6 +89,7 @@ export function App() {
       {route === 'transactions' && <TransactionsPage {...monthProps} />}
       {route === 'targets'      && <TargetsPage      {...monthProps} />}
       {route === 'boleto'       && <BoletoPage />}
+      {route === 'add'          && <QuickAddPage     {...monthProps} />}
     </AppShell>
   );
 }

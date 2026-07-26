@@ -39,11 +39,14 @@ export function AddTransactionModal({
   };
 
   // Form state
-  const [txType, setTxType] = useState<'income' | 'expense'>('income');
-  const [category, setCategory] = useState<TransactionCategory>('session');
+  const [txType, setTxType] = useState<'income' | 'expense'>('expense');
+  const [category, setCategory] = useState<TransactionCategory>('food_grocery');
   const [amount, setAmount]     = useState('');
   const [date, setDate]         = useState(defaultMonth);
+  const [time, setTime]         = useState('');
   const [description, setDesc]  = useState('');
+  const [tags, setTags]         = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [personId, setPersonId] = useState('');
   const [isCreditCard, setIsCreditCard] = useState(false);
   const [installments, setInstallments] = useState(false);
@@ -65,6 +68,13 @@ export function AddTransactionModal({
         setAmount(totalAmount.toFixed(2));
         
         setDate(transactionToEdit.due_date);
+        if (transactionToEdit.transaction_datetime) {
+          const dt = new Date(transactionToEdit.transaction_datetime);
+          setTime(dt.toTimeString().substring(0, 5));
+        } else {
+          setTime('');
+        }
+        setTags(transactionToEdit.tags || []);
         setDesc(transactionToEdit.description || '');
         setPersonId(transactionToEdit.person_id || '');
         setIsCreditCard(transactionToEdit.is_credit_card || false);
@@ -83,9 +93,24 @@ export function AddTransactionModal({
   }, [transactionToEdit, open]);
 
   const reset = () => {
-    setTxType('income'); setCategory('session'); setAmount('');
-    setDate(defaultMonth); setDesc(''); setPersonId('');
+    setTxType('expense'); setCategory('food_grocery'); setAmount('');
+    setDate(defaultMonth); setTime(''); setDesc(''); setPersonId(''); setTags([]); setTagInput('');
     setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
+  };
+
+  const processTags = (inputStr: string) => {
+    const rawTags = inputStr.split(/[,;]/);
+    const newTagsList = [...tags];
+    let changed = false;
+    for (const raw of rawTags) {
+      const val = raw.trim();
+      if (val && !newTagsList.includes(val)) {
+        newTagsList.push(val);
+        changed = true;
+      }
+    }
+    if (changed) setTags(newTagsList);
+    setTagInput('');
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -102,6 +127,11 @@ export function AddTransactionModal({
 
     try {
       const baseDate = date || defaultMonth;
+      let transaction_datetime = null;
+      if (time) {
+        const dt = new Date(`${baseDate}T${time}:00`);
+        transaction_datetime = dt.toISOString();
+      }
 
       if (transactionToEdit) {
         const isParent = transactionToEdit.total_installments > 1 && !transactionToEdit.parent_id;
@@ -116,6 +146,8 @@ export function AddTransactionModal({
           amount: dividedAmount,
           due_date: baseDate,
           description: description || null,
+          transaction_datetime,
+          tags: tags.length > 0 ? tags : undefined,
           is_credit_card: isCreditCard,
           total_installments: finalInstallments,
         });
@@ -151,6 +183,8 @@ export function AddTransactionModal({
               installment_index: i + 1,
               total_installments: nInstall,
               description:       description || null,
+              transaction_datetime: i === 0 ? transaction_datetime : null,
+              tags: tags.length > 0 ? tags : undefined,
             } as NewTransaction);
           }
           await addTransaction(records);
@@ -167,6 +201,8 @@ export function AddTransactionModal({
             installment_index:  1,
             total_installments: 1,
             description:        description || null,
+            transaction_datetime,
+            tags: tags.length > 0 ? tags : undefined,
           });
         }
       }
@@ -233,17 +269,29 @@ export function AddTransactionModal({
             />
           </div>
 
-          {/* Date */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="modal-date">Data</label>
-            <input
-              id="modal-date"
-              type="date"
-              className="form-input"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              required
-            />
+          {/* Date and Time */}
+          <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+            <div style={{ flex: 1 }}>
+              <label className="form-label" htmlFor="modal-date">Data</label>
+              <input
+                id="modal-date"
+                type="date"
+                className="form-input"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="form-label" htmlFor="modal-time">Hora Exata (opcional)</label>
+              <input
+                id="modal-time"
+                type="time"
+                className="form-input"
+                value={time}
+                onChange={e => setTime(e.target.value)}
+              />
+            </div>
           </div>
 
           {/* Description */}
@@ -257,6 +305,42 @@ export function AddTransactionModal({
               value={description}
               onChange={e => setDesc(e.target.value)}
             />
+          </div>
+
+          {/* Tags */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-tags">Tags (opcional)</label>
+            <input
+              id="modal-tags"
+              type="text"
+              className="form-input"
+              placeholder="ex: rolê, ifood, farmácia"
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+                  e.preventDefault();
+                  processTags(tagInput);
+                }
+              }}
+              onBlur={() => {
+                if (tagInput.trim()) {
+                  processTags(tagInput);
+                }
+              }}
+            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
+              {tags.map(t => (
+                <span key={t} style={{
+                  background: 'var(--fi-color-primary-light)', color: 'var(--fi-color-primary-dark)',
+                  padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem',
+                  display: 'flex', alignItems: 'center', gap: '0.25rem'
+                }}>
+                  {t}
+                  <button type="button" onClick={() => setTags(tags.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>×</button>
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* Person */}

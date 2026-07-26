@@ -29,7 +29,8 @@ export type TransactionCategory =
   | 'study_group'
   | 'workshop'
   | 'performance'
-  | 'freelance_dev';
+  | 'freelance_dev'
+  | 'pet';
 
 // ----------------------------------------------------------
 // CORE / AUTH
@@ -99,6 +100,8 @@ export interface Transaction {
   description: string | null;
   parent_id?: string | null; // FK -> fiorc_transactions.id
   created_at: string;
+  transaction_datetime?: string | null;
+  tags?: string[];
 }
 
 /** Parsed boleto data from a rent PDF/image (OCR extraction). */

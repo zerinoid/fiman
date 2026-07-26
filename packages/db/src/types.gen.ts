@@ -286,6 +286,8 @@ export type Database = {
           person_id: string | null
           total_installments: number | null
           type: Database["public"]["Enums"]["transaction_type"]
+          transaction_datetime: string | null
+          tags: string[] | null
         }
         Insert: {
           amount: number
@@ -302,6 +304,8 @@ export type Database = {
           person_id?: string | null
           total_installments?: number | null
           type: Database["public"]["Enums"]["transaction_type"]
+          transaction_datetime?: string | null
+          tags?: string[] | null
         }
         Update: {
           amount?: number
@@ -318,6 +322,8 @@ export type Database = {
           person_id?: string | null
           total_installments?: number | null
           type?: Database["public"]["Enums"]["transaction_type"]
+          transaction_datetime?: string | null
+          tags?: string[] | null
         }
         Relationships: [
           {
@@ -499,6 +505,7 @@ export type Database = {
         | "workshop"
         | "performance"
         | "freelance_dev"
+        | "pet"
       transaction_type: "income" | "expense"
       user_role_type: "admin" | "collaborator"
     }
@@ -650,6 +657,7 @@ export const Constants = {
         "workshop",
         "performance",
         "freelance_dev",
+        "pet",
       ],
       transaction_type: ["income", "expense"],
       user_role_type: ["admin", "collaborator"],

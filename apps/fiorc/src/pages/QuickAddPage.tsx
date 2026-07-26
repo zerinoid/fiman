@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import type { TransactionCategory, NewTransaction } from '@fi/types';
+import type { TransactionCategory } from '@fi/types';
+import type { NewTransaction } from '../hooks/useTransactions';
 import { useTransactions } from '../hooks/useTransactions';
 import { EXPENSE_CATEGORIES, CATEGORY_LABELS } from '../utils/categories';
 import { MonthProps } from '../App';
@@ -11,8 +12,10 @@ export function QuickAddPage({ year, month }: MonthProps) {
   const [category, setCategory] = useState<TransactionCategory>('food_grocery');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [isCreditCard, setIsCreditCard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const amountRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLInputElement>(null);
@@ -47,9 +50,6 @@ export function QuickAddPage({ year, month }: MonthProps) {
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
       e.preventDefault();
-      // Add the current input char if it's not Enter, though keydown fires before value updates.
-      // So we just process whatever is in tagInput plus the key if it's a separator.
-      // Actually, e.key is not in tagInput yet. We can just process tagInput.
       processTags(tagInput);
     }
   };
@@ -65,6 +65,7 @@ export function QuickAddPage({ year, month }: MonthProps) {
 
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
 
     try {
       const now = new Date();
@@ -77,9 +78,9 @@ export function QuickAddPage({ year, month }: MonthProps) {
         category,
         amount: parseFloat(amount),
         due_date: baseDate,
-        paid_at: baseDate, // Quick add assumes it's paid right now
+        paid_at: isCreditCard ? null : baseDate, // Credit card expenses are not paid directly from balance
         is_projection: false,
-        is_credit_card: false,
+        is_credit_card: isCreditCard,
         installment_index: 1,
         total_installments: 1,
         description: description || null,
@@ -89,24 +90,11 @@ export function QuickAddPage({ year, month }: MonthProps) {
 
       await addTransaction(newTx);
       
-      // Reset form on success, stay on page for more quick adds or redirect
-      setAmount('');
-      setDesc('');
-      setTags([]);
-      setTagInput('');
-      amountRef.current?.focus();
-      
-      // Flash success briefly
-      const btn = document.getElementById('quick-add-btn');
-      if (btn) {
-        const originalText = btn.innerText;
-        btn.innerText = 'Adicionado! ✓';
-        btn.style.backgroundColor = 'var(--fi-color-success)';
-        setTimeout(() => {
-          btn.innerText = originalText;
-          btn.style.backgroundColor = '';
-        }, 2000);
-      }
+      setSuccessMsg('Despesa registrada com sucesso! Redirecionando...');
+
+      setTimeout(() => {
+        window.location.hash = 'transactions';
+      }, 1000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao salvar');
     } finally {
@@ -122,6 +110,22 @@ export function QuickAddPage({ year, month }: MonthProps) {
         </button>
         <h2 style={{ marginLeft: '1rem' }}>Nova Despesa Rápida</h2>
       </header>
+
+      {successMsg && (
+        <div style={{
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          borderRadius: '8px',
+          backgroundColor: 'rgba(34, 197, 94, 0.15)',
+          border: '1px solid rgba(34, 197, 94, 0.4)',
+          color: '#22c55e',
+          fontWeight: 600,
+          textAlign: 'center',
+          fontSize: '1.1rem'
+        }}>
+          {successMsg}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         {/* Amount - Huge input */}
@@ -170,6 +174,22 @@ export function QuickAddPage({ year, month }: MonthProps) {
               <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
             ))}
           </select>
+        </div>
+
+        {/* Credit Card Option */}
+        <div className="form-group">
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none', padding: '0.5rem 0' }}>
+            <input
+              type="checkbox"
+              id="quick-credit-card"
+              checked={isCreditCard}
+              onChange={e => setIsCreditCard(e.target.checked)}
+              style={{ width: '1.25rem', height: '1.25rem', cursor: 'pointer' }}
+            />
+            <span className="form-label" style={{ margin: 0, fontSize: '1rem', cursor: 'pointer' }}>
+              💳 Pagar no Cartão de Crédito
+            </span>
+          </label>
         </div>
 
         {/* Tags */}

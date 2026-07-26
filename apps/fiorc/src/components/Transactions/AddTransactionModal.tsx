@@ -17,6 +17,13 @@ interface AddTransactionModalProps {
   defaultMonth: string;
 }
 
+function getCurrentLocalTime(): string {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 export function AddTransactionModal({
   open, onClose, addTransaction, updateTransaction, transactionToEdit, people, onSuccess, defaultMonth,
 }: AddTransactionModalProps) {
@@ -43,7 +50,7 @@ export function AddTransactionModal({
   const [category, setCategory] = useState<TransactionCategory>('food_grocery');
   const [amount, setAmount]     = useState('');
   const [date, setDate]         = useState(defaultMonth);
-  const [time, setTime]         = useState('');
+  const [time, setTime]         = useState(getCurrentLocalTime);
   const [description, setDesc]  = useState('');
   const [tags, setTags]         = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -70,9 +77,11 @@ export function AddTransactionModal({
         setDate(transactionToEdit.due_date);
         if (transactionToEdit.transaction_datetime) {
           const dt = new Date(transactionToEdit.transaction_datetime);
-          setTime(dt.toTimeString().substring(0, 5));
+          const hours = String(dt.getHours()).padStart(2, '0');
+          const minutes = String(dt.getMinutes()).padStart(2, '0');
+          setTime(`${hours}:${minutes}`);
         } else {
-          setTime('');
+          setTime(getCurrentLocalTime());
         }
         setTags(transactionToEdit.tags || []);
         setDesc(transactionToEdit.description || '');
@@ -94,7 +103,7 @@ export function AddTransactionModal({
 
   const reset = () => {
     setTxType('expense'); setCategory('food_grocery'); setAmount('');
-    setDate(defaultMonth); setTime(''); setDesc(''); setPersonId(''); setTags([]); setTagInput('');
+    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setPersonId(''); setTags([]); setTagInput('');
     setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
   };
 

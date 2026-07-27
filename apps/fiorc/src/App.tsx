@@ -16,6 +16,11 @@ export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add';
 const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add'];
 
 function getRouteFromHash(): Route {
+  const searchParams = new URLSearchParams(window.location.search);
+  const shortcutRoute = searchParams.get('shortcut') || searchParams.get('route');
+  if (shortcutRoute && VALID_ROUTES.includes(shortcutRoute as Route)) {
+    return shortcutRoute as Route;
+  }
   const hash = window.location.hash.replace('#', '') as Route;
   return VALID_ROUTES.includes(hash) ? hash : 'dashboard';
 }

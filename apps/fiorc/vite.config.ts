@@ -13,13 +13,14 @@ export default defineConfig({
         description: 'FIORC — Orçamento Pessoal',
         theme_color: '#1a1a1a',
         background_color: '#1a1a1a',
-        display: 'standalone',
+        scope: '/',
+        start_url: '/',
         shortcuts: [
           {
             name: "Nova Despesa",
             short_name: "Despesa",
             description: "Adicionar uma nova despesa rapidamente",
-            url: "/#add"
+            url: "/?shortcut=add"
           }
         ]
       }

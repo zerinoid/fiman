@@ -7,14 +7,18 @@ type Session = Awaited<ReturnType<SupabaseClient['auth']['getSession']>>['data']
 export interface UseAuthReturn {
   session: Session | null;
   loading: boolean;
+  isPasswordRecovery: boolean;
   signInWithOtp: (email: string) => Promise<{ error: Error | null }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>;
+  resetPasswordForEmail: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
     // Hydrate from existing session (handles magic-link redirect token too)
@@ -24,9 +28,12 @@ export function useAuth(): UseAuthReturn {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
         setLoading(false);
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+        }
       },
     );
 
@@ -53,9 +60,33 @@ export function useAuth(): UseAuthReturn {
     return { error };
   };
 
+  const resetPasswordForEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/?shortcut=update-password#update-password`,
+    });
+    return { error };
+  };
+
+  const updatePassword = async (password: string) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (!error) {
+      setIsPasswordRecovery(false);
+    }
+    return { error };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
-  return { session, loading, signInWithOtp, signInWithPassword, signOut };
+  return {
+    session,
+    loading,
+    isPasswordRecovery,
+    signInWithOtp,
+    signInWithPassword,
+    resetPasswordForEmail,
+    updatePassword,
+    signOut,
+  };
 }

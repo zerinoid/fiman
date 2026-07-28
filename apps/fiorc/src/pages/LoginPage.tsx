@@ -122,7 +122,7 @@ export function LoginPage() {
               )}
             </button>
 
-            <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', marginTop: '1.25rem' }}>
               <button
                 type="button"
                 className="btn btn-ghost btn-sm"
@@ -133,6 +133,15 @@ export function LoginPage() {
                 style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)' }}
               >
                 {mode === 'password' ? '✨ Entrar com Link Mágico' : '🔑 Entrar com Senha'}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => window.location.hash = 'reset-password'}
+                style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}
+              >
+                Criar ou redefinir senha
               </button>
             </div>
           </form>

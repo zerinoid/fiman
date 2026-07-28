@@ -6,14 +6,15 @@ import { TransactionsPage } from './pages/TransactionsPage';
 import { TargetsPage } from './pages/TargetsPage';
 import { BoletoPage } from './pages/BoletoPage';
 import { QuickAddPage } from './pages/QuickAddPage';
+import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
 import { AppShell } from './components/Layout/AppShell';
 import { formatMonthYear } from './utils/categories';
 
 // ---- Hash-based routing ----
 
-export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add';
+export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add' | 'reset-password' | 'update-password';
 
-const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add'];
+const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add', 'reset-password', 'update-password'];
 
 function getRouteFromHash(): Route {
   const searchParams = new URLSearchParams(window.location.search);
@@ -38,7 +39,7 @@ export interface MonthProps {
 // ---- App ----
 
 export function App() {
-  const { session, loading, signOut } = useAuth();
+  const { session, loading, isPasswordRecovery, signOut } = useAuth();
 
   const [route, setRoute] = useState<Route>(getRouteFromHash);
 
@@ -79,6 +80,15 @@ export function App() {
         <span>Carregando…</span>
       </div>
     );
+  }
+
+  // Handle password reset/recovery views
+  if (route === 'reset-password') {
+    return <UpdatePasswordPage mode="reset-request" />;
+  }
+
+  if (isPasswordRecovery || route === 'update-password') {
+    return <UpdatePasswordPage mode="update-password" />;
   }
 
   if (!session) {

@@ -17,13 +17,23 @@ export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add' 
 const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add', 'reset-password', 'update-password'];
 
 function getRouteFromHash(): Route {
+  // 1. If explicit hash is present in URL (e.g. #transactions, #add), honor hash first
+  const rawHash = window.location.hash.replace('#', '') as Route;
+  if (rawHash && VALID_ROUTES.includes(rawHash)) {
+    return rawHash;
+  }
+
+  // 2. Otherwise check search params (e.g. ?shortcut=add or ?route=add from PWA launcher)
   const searchParams = new URLSearchParams(window.location.search);
   const shortcutRoute = searchParams.get('shortcut') || searchParams.get('route');
   if (shortcutRoute && VALID_ROUTES.includes(shortcutRoute as Route)) {
+    // Clean up query param from URL bar so subsequent hash navigations work cleanly on first click
+    const cleanUrl = window.location.pathname + '#' + shortcutRoute;
+    window.history.replaceState(null, '', cleanUrl);
     return shortcutRoute as Route;
   }
-  const hash = window.location.hash.replace('#', '') as Route;
-  return VALID_ROUTES.includes(hash) ? hash : 'dashboard';
+
+  return 'dashboard';
 }
 
 // ---- Month state shared across pages ----

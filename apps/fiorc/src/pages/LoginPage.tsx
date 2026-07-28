@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 export function LoginPage() {
-  const { signInWithOtp } = useAuth();
+  const { signInWithOtp, signInWithPassword } = useAuth();
+  const [mode, setMode]       = useState<'password' | 'otp'>('password');
   const [email, setEmail]     = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
   const [error, setError]     = useState<string | null>(null);
@@ -13,14 +15,20 @@ export function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error: signInErr } = await signInWithOtp(email.trim());
-    setLoading(false);
-
-    if (signInErr) {
-      // Supabase returns an error when user doesn't exist (shouldCreateUser: false)
-      setError('Email não encontrado. Verifique com o administrador.');
+    if (mode === 'password') {
+      const { error: signInErr } = await signInWithPassword(email.trim(), password);
+      setLoading(false);
+      if (signInErr) {
+        setError('E-mail ou senha incorretos. Verifique suas credenciais.');
+      }
     } else {
-      setSent(true);
+      const { error: signInErr } = await signInWithOtp(email.trim());
+      setLoading(false);
+      if (signInErr) {
+        setError('E-mail não encontrado. Verifique com o administrador.');
+      } else {
+        setSent(true);
+      }
     }
   };
 
@@ -41,7 +49,7 @@ export function LoginPage() {
           textAlign: 'center',
           color: 'var(--fi-color-text-muted)',
           fontSize: '0.875rem',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem',
         }}>
           Orçamento Pessoal &amp; Fluxo de Caixa
         </p>
@@ -49,7 +57,7 @@ export function LoginPage() {
         {sent ? (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📬</div>
-            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Verifique seu email</p>
+            <p style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Verifique seu e-mail</p>
             <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.875rem' }}>
               Enviamos um link de acesso para <strong>{email}</strong>.<br />
               Clique no link para entrar.
@@ -59,14 +67,14 @@ export function LoginPage() {
               style={{ marginTop: '1.5rem' }}
               onClick={() => { setSent(false); setEmail(''); }}
             >
-              Tentar outro email
+              Tentar outro e-mail
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label className="form-label" htmlFor="login-email">
-                Endereço de email
+                Endereço de e-mail
               </label>
               <input
                 id="login-email"
@@ -81,16 +89,52 @@ export function LoginPage() {
               />
             </div>
 
+            {mode === 'password' && (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" htmlFor="login-password">
+                  Senha
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  className="form-input"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+            )}
+
             {error && <p className="form-error" style={{ marginBottom: '1rem' }}>{error}</p>}
 
             <button
               id="btn-login-submit"
               type="submit"
               className="btn btn-primary btn-lg w-full"
-              disabled={loading || !email.trim()}
+              disabled={loading || !email.trim() || (mode === 'password' && !password)}
             >
-              {loading ? <><span className="spinner" /> Enviando…</> : 'Enviar link de acesso'}
+              {loading ? (
+                <><span className="spinner" /> {mode === 'password' ? 'Entrando…' : 'Enviando…'}</>
+              ) : (
+                mode === 'password' ? 'Entrar' : 'Enviar link de acesso'
+              )}
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  setMode(m => m === 'password' ? 'otp' : 'password');
+                  setError(null);
+                }}
+                style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)' }}
+              >
+                {mode === 'password' ? '✨ Entrar com Link Mágico' : '🔑 Entrar com Senha'}
+              </button>
+            </div>
           </form>
         )}
       </div>

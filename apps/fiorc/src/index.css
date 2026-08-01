@@ -1015,3 +1015,19 @@ tbody td { padding: var(--fi-space-3) var(--fi-space-4); color: var(--fi-color-t
 .mt-4       { margin-top: var(--fi-space-4); }
 .mt-6       { margin-top: var(--fi-space-6); }
 .w-full     { width: 100%; }
+
+/* ==========================================
+   TRUE MASONRY WATERFALL GRID
+   ========================================== */
+.masonry-grid {
+  column-width: 280px;
+  column-gap: 1rem;
+}
+
+.masonry-grid > * {
+  break-inside: avoid;
+  margin-bottom: 1rem;
+  display: inline-block;
+  width: 100%;
+  vertical-align: top;
+}

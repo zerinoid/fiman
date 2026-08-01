@@ -15,6 +15,46 @@ interface Props {
   upsertTarget?: (updates: Partial<Omit<MonthlyTarget, 'id' | 'created_at'>>) => Promise<MonthlyTarget>;
 }
 
+const DEFAULT_FIXED_ITEMS: Omit<CommitmentItem, 'id'>[] = [
+  { name: 'Aluguel + Condomínio', amount: 0, due_day: 10, is_paid: false, category_type: 'fixed', split_rule: 'weighted_rent', is_active: true },
+  { name: 'Fatura do Cartão', amount: 0, due_day: 8, is_paid: false, category_type: 'fixed', split_rule: 'none', is_active: true },
+  { name: 'Conta de Luz', amount: 0, due_day: 15, is_paid: false, category_type: 'fixed', split_rule: 'equal_roommates', is_active: true },
+  { name: 'Internet Claro', amount: 0, due_day: 20, is_paid: false, category_type: 'fixed', split_rule: 'equal_roommates', is_active: true },
+  { name: 'TIM Celular', amount: 0, due_day: 5, is_paid: false, category_type: 'fixed', split_rule: 'mobile_shared', is_active: true },
+  { name: 'Estudo Shibari (Assinatura)', amount: 0, due_day: 1, is_paid: false, category_type: 'fixed', split_rule: 'none', is_active: true },
+];
+
+function isDefaultItemPresent(defName: string, commitments: CommitmentItem[]): boolean {
+  const defLower = defName.toLowerCase();
+
+  return commitments.some(c => {
+    const nameLower = c.name.toLowerCase();
+
+    if (nameLower === defLower) return true;
+
+    if (defLower.includes('aluguel') && (nameLower.includes('aluguel') || nameLower.includes('condomínio') || nameLower.includes('condominio'))) {
+      return true;
+    }
+    if (defLower.includes('luz') && (nameLower.includes('luz') || nameLower.includes('energia') || nameLower.includes('eletricidade'))) {
+      return true;
+    }
+    if (defLower.includes('internet') && (nameLower.includes('internet') || nameLower.includes('claro') || nameLower.includes('net'))) {
+      return true;
+    }
+    if (defLower.includes('tim') && (nameLower.includes('tim') || nameLower.includes('celular'))) {
+      return true;
+    }
+    if (defLower.includes('shibari') && (nameLower.includes('shibari') || nameLower.includes('rope'))) {
+      return true;
+    }
+    if (defLower.includes('cartão') && (nameLower.includes('cartão') || nameLower.includes('cartao') || nameLower.includes('fatura'))) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
 export function CommitmentsBreakdown({
   target,
   activeRoommatesCount,
@@ -34,6 +74,18 @@ export function CommitmentsBreakdown({
   const [commitmentToEdit, setCommitmentToEdit] = useState<CommitmentItem | null>(null);
 
   const rawCommitments = target?.commitments || [];
+
+  // Merge default fixed commitments ONLY IF not already present (using fuzzy matching)
+  const mergedCommitments: CommitmentItem[] = [...rawCommitments];
+  for (const defItem of DEFAULT_FIXED_ITEMS) {
+    const exists = isDefaultItemPresent(defItem.name, rawCommitments);
+    if (!exists) {
+      mergedCommitments.push({
+        id: `default-${defItem.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        ...defItem,
+      });
+    }
+  }
 
   const handleQuitar = async (c: CommitmentItem) => {
     if (!payCommitment) return;
@@ -92,8 +144,12 @@ export function CommitmentsBreakdown({
     if (!upsertTarget) return;
 
     let updatedCommitments: CommitmentItem[];
-    if (commitmentToEdit) {
-      updatedCommitments = rawCommitments.map(existing => existing.id === c.id ? c : existing);
+    const isExistingInRaw = rawCommitments.some(existing => existing.id === c.id || existing.name.toLowerCase().trim() === c.name.toLowerCase().trim());
+
+    if (isExistingInRaw) {
+      updatedCommitments = rawCommitments.map(existing =>
+        (existing.id === c.id || existing.name.toLowerCase().trim() === c.name.toLowerCase().trim()) ? c : existing
+      );
     } else {
       updatedCommitments = [...rawCommitments, c];
     }
@@ -120,101 +176,127 @@ export function CommitmentsBreakdown({
     setModalOpen(true);
   };
 
-  // Group commitments by category type
-  const categorized: Record<CommitmentType, CommitmentItem[]> = {
-    fixed: [],
-    toggleable: [],
-    variable: [],
+  const getTypeStyle = (catType: CommitmentType = 'fixed') => {
+    switch (catType) {
+      case 'toggleable':
+        return {
+          border: '1px solid rgba(245, 158, 11, 0.4)',
+          badgeBg: 'rgba(245, 158, 11, 0.15)',
+          badgeColor: '#f59e0b',
+          badgeText: '⚡ Desligável',
+        };
+      case 'variable':
+        return {
+          border: '1px solid rgba(168, 85, 247, 0.4)',
+          badgeBg: 'rgba(168, 85, 247, 0.15)',
+          badgeColor: '#c084fc',
+          badgeText: '🎓 Variável',
+        };
+      case 'fixed':
+      default:
+        return {
+          border: '1px solid rgba(59, 130, 246, 0.35)',
+          badgeBg: 'rgba(59, 130, 246, 0.15)',
+          badgeColor: '#60a5fa',
+          badgeText: '📌 Fixo',
+        };
+    }
   };
 
-  for (const c of rawCommitments) {
-    const inferred = inferSplitRuleAndCategory(c.name);
-    const cat = c.category_type || inferred.categoryType;
-    categorized[cat].push(c);
-  }
-
-  const renderCategoryGroup = (title: string, icon: string, items: CommitmentItem[], description: string) => {
-    if (items.length === 0) return null;
-
-    return (
-      <div className="section" style={{ marginBottom: 'var(--fi-space-6)' }}>
-        <div style={{ marginBottom: 'var(--fi-space-3)' }}>
-          <h3 style={{ fontSize: '1.125rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-            <span>{icon}</span> {title}
-          </h3>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--fi-color-text-muted)', margin: '0.25rem 0 0 0' }}>
-            {description}
-          </p>
+  return (
+    <div>
+      {/* Total Card */}
+      {target && (
+        <div className="card commitment-total" style={{ marginBottom: 'var(--fi-space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div className="commitment-total-label">💳 Sua Cota Total de Metas</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>Custo pessoal líquido após aplicação das regras de rateio</div>
+          </div>
+          <span className="commitment-total-amount" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--fi-color-primary)' }}>
+            {formatCurrency(target.total_target)}
+          </span>
         </div>
+      )}
 
-        {/* Asymmetric Masonry Grid */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1rem',
-            alignItems: 'start',
-          }}
-        >
-          {items.map(c => {
-            const isCcFatura = c.name === 'Fatura do Cartão';
-            const isActive = c.is_active !== false;
-            const rule = c.split_rule || inferSplitRuleAndCategory(c.name).splitRule;
-            const split = calculateSplitShare(c.amount, rule, activeRoommatesCount);
+      {/* Unified Masonry Grid */}
+      <div className="masonry-grid">
+        {mergedCommitments.map(c => {
+          const isCcFatura = c.name === 'Fatura do Cartão';
+          const isActive = c.is_active !== false;
+          const isUnpopulated = c.amount === 0;
+          const inferred = inferSplitRuleAndCategory(c.name);
+          const catType = c.category_type || inferred.categoryType;
+          const rule = c.split_rule || inferred.splitRule;
+          const typeStyle = getTypeStyle(catType);
+          const split = calculateSplitShare(c.amount, rule, activeRoommatesCount);
 
-            return (
-              <div
-                key={c.id}
-                style={{
-                  background: 'var(--fi-color-bg-card, rgba(255,255,255,0.03))',
-                  borderRadius: 'var(--fi-radius-lg, 12px)',
-                  border: c.is_paid
-                    ? '1px solid rgba(16, 185, 129, 0.3)'
-                    : !isActive
-                    ? '1px dashed var(--fi-color-border, rgba(255,255,255,0.15))'
-                    : '1px solid var(--fi-color-border, rgba(255,255,255,0.1))',
-                  padding: '1.25rem',
-                  opacity: !isActive ? 0.6 : 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem',
-                  transition: 'all 0.2s ease',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                }}
-              >
-                {/* Card Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.25rem' }}>
-                      {!isActive ? '⏸️' : c.is_paid ? '✅' : '⏳'}
+          return (
+            <div
+              key={c.id}
+              style={{
+                background: 'var(--fi-color-bg-card, rgba(255,255,255,0.03))',
+                borderRadius: 'var(--fi-radius-lg, 12px)',
+                border: c.is_paid
+                  ? '1px solid rgba(16, 185, 129, 0.4)'
+                  : !isActive
+                  ? '1px dashed var(--fi-color-border, rgba(255,255,255,0.15))'
+                  : isUnpopulated
+                  ? '1px dashed rgba(245, 158, 11, 0.5)'
+                  : typeStyle.border,
+                padding: '1.25rem',
+                opacity: !isActive ? 0.55 : 1,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+              }}
+            >
+              {/* Card Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontSize: '1.25rem' }}>
+                    {!isActive ? '⏸️' : c.is_paid ? '✅' : isUnpopulated ? '⚠️' : '⏳'}
+                  </span>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, textDecoration: c.is_paid ? 'line-through' : 'none' }}>
+                      {c.name}
+                    </h4>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
+                      Dia {c.due_day}
                     </span>
-                    <div>
-                      <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, textDecoration: c.is_paid ? 'line-through' : 'none' }}>
-                        {c.name}
-                      </h4>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
-                        Vencimento dia {c.due_day}
-                      </span>
-                    </div>
                   </div>
-
-                  {/* Toggle active switch for toggleable commitments */}
-                  {c.category_type === 'toggleable' && (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      onClick={() => handleToggleActive(c)}
-                      title={isActive ? 'Suspender este mês' : 'Ativar este mês'}
-                      style={{ fontSize: '0.75rem', padding: '0.2rem 0.5rem', borderRadius: '12px', background: isActive ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.15)', color: isActive ? '#ef4444' : '#10b981' }}
-                    >
-                      {isActive ? 'Suspender' : 'Ativar'}
-                    </button>
-                  )}
                 </div>
 
-                {/* Values & Rule */}
+                <span
+                  style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    padding: '0.2rem 0.5rem',
+                    borderRadius: '12px',
+                    background: typeStyle.badgeBg,
+                    color: typeStyle.badgeColor,
+                  }}
+                >
+                  {typeStyle.badgeText}
+                </span>
+              </div>
+
+              {/* Unpopulated CTA Warning if 0 amount */}
+              {isUnpopulated ? (
+                <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, marginBottom: '0.375rem' }}>
+                    Valor não preenchido neste mês
+                  </div>
+                  <button className="btn btn-secondary btn-sm" style={{ width: '100%', fontSize: '0.75rem' }} onClick={() => openEditModal(c)}>
+                    ✏️ Definir valor
+                  </button>
+                </div>
+              ) : (
+                /* Values & Rule */
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Valor Total da Conta:</span>
+                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Total Conta:</span>
                     <span style={{ fontWeight: 600 }}>{formatCurrency(c.amount)}</span>
                   </div>
 
@@ -226,40 +308,56 @@ export function CommitmentsBreakdown({
                   </div>
 
                   <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.375rem', marginTop: '0.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sua Cota Pessoal:</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sua Cota:</span>
                     <span style={{ fontSize: '1.125rem', fontWeight: 700, color: c.is_paid ? 'var(--fi-color-success, #10b981)' : 'var(--fi-color-text)' }}>
                       {formatCurrency(split.userCalculatedShare)}
                     </span>
                   </div>
                 </div>
+              )}
 
-                {/* Receivables breakdown if applicable */}
-                {(split.receivables.roommate_b || split.receivables.roommate_c || split.receivables.mother) ? (
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                    <span style={{ fontWeight: 600 }}>A receber:</span>
-                    {split.receivables.roommate_b ? <div>• Morador B: {formatCurrency(split.receivables.roommate_b)}</div> : null}
-                    {split.receivables.roommate_c ? <div>• Morador C: {formatCurrency(split.receivables.roommate_c)}</div> : null}
-                    {split.receivables.mother ? <div>• Mãe: {formatCurrency(split.receivables.mother)}</div> : null}
-                  </div>
-                ) : null}
+              {/* Receivables breakdown */}
+              {!isUnpopulated && (split.receivables.roommate_b || split.receivables.roommate_c || split.receivables.mother) ? (
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <span style={{ fontWeight: 600 }}>A receber:</span>
+                  {split.receivables.roommate_b ? <div>• Morador B: {formatCurrency(split.receivables.roommate_b)}</div> : null}
+                  {split.receivables.roommate_c ? <div>• Morador C: {formatCurrency(split.receivables.roommate_c)}</div> : null}
+                  {split.receivables.mother ? <div>• Mãe: {formatCurrency(split.receivables.mother)}</div> : null}
+                </div>
+              ) : null}
 
-                {/* Actions */}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              {/* Actions Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div>
+                  {catType === 'toggleable' && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => handleToggleActive(c)}
+                      style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', color: isActive ? '#ef4444' : '#10b981' }}
+                    >
+                      {isActive ? 'Suspender' : 'Ativar'}
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.375rem' }}>
                   {upsertTarget && !isCcFatura && (
                     <>
                       <button className="btn btn-ghost btn-icon" onClick={() => openEditModal(c)} title="Editar">✏️</button>
-                      <button className="btn btn-ghost btn-icon" style={{ color: 'var(--fi-color-danger)' }} onClick={() => handleDelete(c)} title="Deletar">🗑️</button>
+                      {!c.id.startsWith('default-') && (
+                        <button className="btn btn-ghost btn-icon" style={{ color: 'var(--fi-color-danger)' }} onClick={() => handleDelete(c)} title="Deletar">🗑️</button>
+                      )}
                     </>
                   )}
 
-                  {!c.is_paid && payCommitment && isActive && (
+                  {!isUnpopulated && !c.is_paid && payCommitment && isActive && (
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleQuitar(c)}
                       disabled={payingId === c.id}
                       title="Quitar"
                     >
-                      {payingId === c.id ? 'Quitando…' : '💳 Quitar'}
+                      {payingId === c.id ? '...' : '💳 Quitar'}
                     </button>
                   )}
 
@@ -271,56 +369,40 @@ export function CommitmentsBreakdown({
                       disabled={payingId === c.id}
                       title="Reverter Pagamento"
                     >
-                      {payingId === c.id ? 'Revertendo…' : '🔄 Reverter'}
+                      {payingId === c.id ? '...' : '🔄 Reverter'}
                     </button>
                   )}
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--fi-space-6)' }}>
-        <div>
-          <h2 className="section-title" style={{ margin: 0 }}>📊 Compromissos Estabelecidos</h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--fi-color-text-muted)', margin: '0.25rem 0 0 0' }}>
-            Grade de metas com cálculo de rateio para {activeRoommatesCount} moradores
-          </p>
-        </div>
-        {upsertTarget && (
-          <button className="btn btn-primary btn-sm" onClick={openAddModal}>
-            + Adicionar Metas
-          </button>
-        )}
-      </div>
-
-      {!target ? (
-        <div className="empty-state">
-          <span className="empty-state-icon">📋</span>
-          <p className="empty-state-text">Defina a meta para ver os compromissos.</p>
-        </div>
-      ) : (
-        <>
-          {renderCategoryGroup('Compromissos Fixos Recorrentes', '📌', categorized.fixed, 'Moradia, serviços básicos e assinaturas fixas.')}
-          {renderCategoryGroup('Compromissos Desligáveis / Opcionais', '⚡', categorized.toggleable, 'Metas que podem ser suspensas em meses mais apertados.')}
-          {renderCategoryGroup('Compromissos Variáveis / Cursos', '🎓', categorized.variable, 'Cursos, workshops e investimentos educacionais pontuais.')}
-
-          <div className="card commitment-total" style={{ marginTop: 'var(--fi-space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <div className="commitment-total-label">💳 Sua Cota Total a Pagar</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>Custo pessoal líquido após aplicação das regras de rateio</div>
             </div>
-            <span className="commitment-total-amount" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--fi-color-primary)' }}>
-              {formatCurrency(target.total_target)}
-            </span>
-          </div>
-        </>
-      )}
+          );
+        })}
+
+        {/* Final "+ Adicionar Meta" card tile slot */}
+        <div
+          onClick={openAddModal}
+          style={{
+            background: 'rgba(255,255,255,0.01)',
+            borderRadius: 'var(--fi-radius-lg, 12px)',
+            border: '2px dashed var(--fi-color-border, rgba(255,255,255,0.15))',
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            minHeight: '220px',
+            transition: 'all 0.2s ease',
+            color: 'var(--fi-color-text-muted)',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--fi-color-primary)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--fi-color-border, rgba(255,255,255,0.15))')}
+        >
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>➕</div>
+          <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--fi-color-text)' }}>Adicionar Meta</div>
+          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Criar compromisso fixo ou opcional</div>
+        </div>
+      </div>
 
       <CommitmentModal
         open={modalOpen}

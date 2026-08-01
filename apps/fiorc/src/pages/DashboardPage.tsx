@@ -3,14 +3,17 @@ import type { MonthProps } from '../App';
 import { useMonthlyTarget } from '../hooks/useMonthlyTarget';
 import { useTransactions } from '../hooks/useTransactions';
 import { usePeople } from '../hooks/usePeople';
+import { useHouseSettings } from '../hooks/useHouseSettings';
 import { MonthSummaryCard } from '../components/Dashboard/MonthSummaryCard';
 import { GoalProgressBar } from '../components/Dashboard/GoalProgressBar';
 import { RecentTransactionsList } from '../components/Dashboard/RecentTransactionsList';
+import { ReceivablesSummaryCard } from '../components/Targets/ReceivablesSummaryCard';
 import { AddTransactionModal } from '../components/Transactions/AddTransactionModal';
 import { formatCurrency } from '../utils/categories';
 
 export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
-  const { target, loading: targetLoading } = useMonthlyTarget(year, month);
+  const { activeRoommatesCount } = useHouseSettings();
+  const { target, loading: targetLoading } = useMonthlyTarget(year, month, activeRoommatesCount);
   const {
     transactions, loading: txLoading,
     totalIncome, totalExpenses, totalProjected,
@@ -23,6 +26,7 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
   const totalTarget = target?.total_target ?? 0;
   const progressPct = totalTarget > 0 ? Math.min((totalIncome / totalTarget) * 100, 100) : 0;
   const loading = targetLoading || txLoading;
+  const commitments = target?.commitments || [];
 
   return (
     <div className="page">
@@ -84,6 +88,12 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
               pct={progressPct}
             />
           </div>
+
+          {/* ── Receivables Summary ─────────────── */}
+          <ReceivablesSummaryCard
+            commitments={commitments}
+            activeRoommatesCount={activeRoommatesCount}
+          />
 
           {/* ── Recent Transactions ────────── */}
           <div className="section">

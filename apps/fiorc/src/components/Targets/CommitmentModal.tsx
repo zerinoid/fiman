@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import type { CommitmentItem } from '@fi/types';
+import type { CommitmentItem, CommitmentType, SplitRuleType } from '@fi/types';
+import { inferSplitRuleAndCategory } from '../../utils/splitting';
 
 interface CommitmentModalProps {
   open: boolean;
@@ -30,11 +31,13 @@ export function CommitmentModal({
   };
 
   // Form state
-  const [name, setName]     = useState('');
-  const [amount, setAmount] = useState('');
-  const [dueDay, setDueDay] = useState(5); // Default day 5 as requested
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [name, setName]         = useState('');
+  const [amount, setAmount]     = useState('');
+  const [dueDay, setDueDay]     = useState(5);
+  const [categoryType, setCategoryType] = useState<CommitmentType>('fixed');
+  const [splitRule, setSplitRule]       = useState<SplitRuleType>('none');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -42,6 +45,9 @@ export function CommitmentModal({
         setName(commitmentToEdit.name);
         setAmount(commitmentToEdit.amount.toString());
         setDueDay(commitmentToEdit.due_day);
+        const inferred = inferSplitRuleAndCategory(commitmentToEdit.name);
+        setCategoryType(commitmentToEdit.category_type || inferred.categoryType);
+        setSplitRule(commitmentToEdit.split_rule || inferred.splitRule);
       } else {
         reset();
       }
@@ -52,7 +58,18 @@ export function CommitmentModal({
     setName('');
     setAmount('');
     setDueDay(5);
+    setCategoryType('fixed');
+    setSplitRule('none');
     setError(null);
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    if (!commitmentToEdit) {
+      const inferred = inferSplitRuleAndCategory(val);
+      setCategoryType(inferred.categoryType);
+      setSplitRule(inferred.splitRule);
+    }
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -70,13 +87,16 @@ export function CommitmentModal({
     try {
       const parsedAmount = parseFloat(amount);
       const parsedDay = Math.max(1, Math.min(31, dueDay));
-      
+
       const newCommitment: CommitmentItem = {
         id: commitmentToEdit ? commitmentToEdit.id : crypto.randomUUID(),
         name,
         amount: parsedAmount,
         due_day: parsedDay,
         is_paid: commitmentToEdit ? commitmentToEdit.is_paid : false,
+        category_type: categoryType,
+        split_rule: splitRule,
+        is_active: commitmentToEdit ? (commitmentToEdit.is_active !== false) : true,
       };
 
       await onSave(newCommitment);
@@ -104,16 +124,16 @@ export function CommitmentModal({
               id="commit-name"
               type="text"
               className="form-input"
-              placeholder="ex: Conta de Luz"
+              placeholder="ex: Conta de Luz / Aluguel"
               value={name}
-              onChange={e => setName(e.target.value)}
+              onChange={e => handleNameChange(e.target.value)}
               required
             />
           </div>
 
           {/* Amount */}
           <div className="form-group">
-            <label className="form-label" htmlFor="commit-amount">Valor (R$)</label>
+            <label className="form-label" htmlFor="commit-amount">Valor Total da Conta (R$)</label>
             <input
               id="commit-amount"
               type="number"
@@ -125,6 +145,37 @@ export function CommitmentModal({
               min="0.01"
               required
             />
+          </div>
+
+          {/* Category Type */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="commit-category">Tipo de Compromisso</label>
+            <select
+              id="commit-category"
+              className="form-input"
+              value={categoryType}
+              onChange={e => setCategoryType(e.target.value as CommitmentType)}
+            >
+              <option value="fixed">Fixos Recorrentes (Aluguel, Luz, Internet, TIM)</option>
+              <option value="toggleable">Desligáveis / Opcionais (Reserva, Investimento, Quarto Vago)</option>
+              <option value="variable">Variáveis / Cursos (Workshops, Estudos)</option>
+            </select>
+          </div>
+
+          {/* Split Rule */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="commit-split">Regra de Divisão</label>
+            <select
+              id="commit-split"
+              className="form-input"
+              value={splitRule}
+              onChange={e => setSplitRule(e.target.value as SplitRuleType)}
+            >
+              <option value="none">Integral / Pessoal (100% você)</option>
+              <option value="equal_roommates">Divisão Igualitária de Casa (Luz, Internet, Limpeza - 33.3% ou 50%)</option>
+              <option value="weighted_rent">Aluguel + Condomínio (31% você | 34.5% B | 34.5% C ou 65.5% Quarto Vago)</option>
+              <option value="mobile_shared">Plano TIM Celular (50% você | 50% Mãe)</option>
+            </select>
           </div>
 
           {/* Due Day */}

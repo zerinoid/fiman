@@ -65,12 +65,35 @@ export interface Person {
 // FIORC — Personal Budget & Cash Flow
 // ----------------------------------------------------------
 
+export type CommitmentType = 'fixed' | 'toggleable' | 'variable';
+export type SplitRuleType = 'none' | 'equal_roommates' | 'weighted_rent' | 'mobile_shared';
+
+export interface ReceivablesBreakdown {
+  roommate_b?: number;
+  roommate_c?: number;
+  mother?: number;
+  [key: string]: number | undefined;
+}
+
 export interface CommitmentItem {
   id: string;         // UUID
   name: string;       // e.g., "Conta de Luz", "Aluguel"
-  amount: number;     // e.g., 150.00
+  amount: number;     // Total bill amount (e.g., 150.00)
   due_day: number;    // 1-31
   is_paid: boolean;
+  category_type?: CommitmentType;
+  split_rule?: SplitRuleType;
+  user_calculated_share?: number;
+  receivables?: ReceivablesBreakdown;
+  is_active?: boolean;
+  transaction_id?: string | null;
+}
+
+export interface HouseSettings {
+  id?: string;
+  user_id?: string;
+  active_roommates_count: 2 | 3;
+  updated_at?: string;
 }
 
 /** Monthly budget target snapshot — tied to a specific month/year. */

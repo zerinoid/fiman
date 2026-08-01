@@ -204,6 +204,99 @@ export type Database = {
           },
         ]
       }
+      fiorc_house_settings: {
+        Row: {
+          id: string
+          user_id: string
+          active_roommates_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          active_roommates_count?: number
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          active_roommates_count?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      fiorc_commitments: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          category_type: string
+          split_rule: string
+          default_amount: number
+          due_day: number
+          is_active: boolean
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          category_type?: string
+          split_rule?: string
+          default_amount?: number
+          due_day?: number
+          is_active?: boolean
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          category_type?: string
+          split_rule?: string
+          default_amount?: number
+          due_day?: number
+          is_active?: boolean
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      fiorc_monthly_commitments: {
+        Row: {
+          id: string
+          commitment_id: string
+          month_year: string
+          total_amount: number
+          user_calculated_share: number
+          is_paid: boolean
+          is_active: boolean
+          transaction_id: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          commitment_id: string
+          month_year: string
+          total_amount: number
+          user_calculated_share: number
+          is_paid?: boolean
+          is_active?: boolean
+          transaction_id?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          commitment_id?: string
+          month_year?: string
+          total_amount?: number
+          user_calculated_share?: number
+          is_paid?: boolean
+          is_active?: boolean
+          transaction_id?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
       fiorc_monthly_targets: {
         Row: {
           commitments: Json | null

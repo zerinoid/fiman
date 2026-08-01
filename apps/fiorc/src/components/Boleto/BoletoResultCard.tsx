@@ -18,7 +18,7 @@ export function BoletoResultCard({ result, onConfirm, onReset, confirming }: Pro
   const rows = [
     { label: 'Aluguel',               value: result.rent_amount,             key: 'rent' },
     { label: 'med. condomínio',       value: result.condo_measured,          key: 'condo' },
-    { label: 'cred. cond. mês passado', value: result.condo_credit_prev_month, key: 'credit' },
+    { label: 'cred. / dif. cond. mês passado', value: result.condo_credit_prev_month, key: 'credit' },
   ];
 
   return (

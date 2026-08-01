@@ -22,7 +22,7 @@ const RESPONSE_SCHEMA = {
   properties: {
     rent_amount:             { type: 'number', description: 'Valor do Aluguel (campo "Aluguel" no boleto)' },
     condo_measured:          { type: 'number', description: 'Condomínio medido — campo "med. condominio"' },
-    condo_credit_prev_month: { type: 'number', description: 'Crédito do condomínio do mês passado — campo "cred. cond. mes passado". Geralmente negativo.' },
+    condo_credit_prev_month: { type: 'number', description: 'Crédito ou diferença do condomínio do mês passado — campos "cred. cond. mes passado" (geralmente negativo) ou "dif. cond. mes pas." (geralmente positivo).' },
     total_payable:           { type: 'number', description: 'Soma total a pagar = rent_amount + condo_measured + condo_credit_prev_month' },
   },
   required: ['rent_amount', 'condo_measured', 'condo_credit_prev_month', 'total_payable'],
@@ -34,7 +34,7 @@ Você é um extrator preciso de dados de boletos de aluguel residencial brasilei
 Analise o documento e extraia EXATAMENTE os seguintes campos:
 1. **rent_amount**: valor do campo "Aluguel" (aluguel base, sem condomínio)
 2. **condo_measured**: valor do campo "med. condominio" ou "condomínio medido"
-3. **condo_credit_prev_month**: valor do campo "cred. cond. mes passado" (crédito de antena/terraço — normalmente um valor NEGATIVO)
+3. **condo_credit_prev_month**: valor do campo "cred. cond. mes passado" (crédito — normalmente valor NEGATIVO) ou "dif. cond. mes pas." (diferença/ajuste do condomínio — normalmente valor POSITIVO)
 4. **total_payable**: soma total = rent_amount + condo_measured + condo_credit_prev_month
 
 Use os valores numéricos exatos (ponto como separador decimal).

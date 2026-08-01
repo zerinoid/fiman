@@ -77,6 +77,18 @@ export function HistoricalIngestionModal({ open, onClose, onImport }: Props) {
           });
         }
 
+        if (item.tim !== undefined || item.celular !== undefined) {
+          commitments.push({
+            id: crypto.randomUUID(),
+            name: 'TIM Celular',
+            amount: item.tim || item.celular || 0,
+            due_day: 10,
+            is_paid: true,
+            category_type: 'fixed',
+            split_rule: 'mobile_shared',
+          });
+        }
+
         return { month_year, commitments };
       });
 

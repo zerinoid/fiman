@@ -18,6 +18,35 @@ export interface UseTransactionsReturn {
   refetch: () => void;
 }
 
+export function getTxTimestamp(tx: Transaction): number {
+  if (tx.transaction_datetime) {
+    const t = new Date(tx.transaction_datetime).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (tx.created_at) {
+    const t = new Date(tx.created_at).getTime();
+    if (!isNaN(t)) return t;
+  }
+  return 0;
+}
+
+export function sortTransactions(txs: Transaction[]): Transaction[] {
+  return [...txs].sort((a, b) => {
+    // 1. Primary sort: due_date descending ('YYYY-MM-DD')
+    if (a.due_date !== b.due_date) {
+      return b.due_date.localeCompare(a.due_date);
+    }
+    // 2. Secondary sort: timestamp descending (transaction_datetime or created_at)
+    const timeA = getTxTimestamp(a);
+    const timeB = getTxTimestamp(b);
+    if (timeA !== timeB) {
+      return timeB - timeA;
+    }
+    // 3. Fallback: id
+    return (b.id || '').localeCompare(a.id || '');
+  });
+}
+
 export function useTransactions(year: number, month: number): UseTransactionsReturn {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,12 +66,14 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
       .select('*')
       .gte('due_date', startDate)
       .lt('due_date', endDate)
-      .order('due_date', { ascending: false });
+      .order('due_date', { ascending: false })
+      .order('transaction_datetime', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false });
 
     if (fetchErr) {
       setError(fetchErr.message);
     } else {
-      setTransactions((data ?? []) as Transaction[]);
+      setTransactions(sortTransactions((data ?? []) as Transaction[]));
     }
 
     setLoading(false);
@@ -62,8 +93,8 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
       if (insertErr) throw new Error(insertErr.message);
 
       const inserted = (data ?? []) as Transaction[];
-      // Optimistic prepend — only keep those in the current month view
-      setTransactions(prev => [...inserted, ...prev]);
+      // Keep sorted view
+      setTransactions(prev => sortTransactions([...inserted, ...prev]));
       return inserted;
     },
     [],
@@ -154,7 +185,7 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
       }
     }
 
-    setTransactions(prev => prev.map(t => (t.id === id ? updated : t)));
+    setTransactions(prev => sortTransactions(prev.map(t => (t.id === id ? updated : t))));
     // If it's a parent, refetch entirely so we can get updated children in current view
     if (isParent) fetchTransactions();
 

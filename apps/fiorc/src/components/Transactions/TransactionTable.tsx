@@ -27,7 +27,7 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
       <table>
         <thead>
           <tr>
-            <th>Data</th>
+            <th>Data e Hora</th>
             <th>Categoria</th>
             <th>Descrição</th>
             <th>Tipo</th>
@@ -36,11 +36,21 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
           </tr>
         </thead>
         <tbody>
-          {transactions.map(tx => (
-            <tr key={tx.id}>
-              <td style={{ whiteSpace: 'nowrap', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}>
-                {formatDate(tx.due_date)}
-              </td>
+          {transactions.map(tx => {
+            const timeStr = tx.transaction_datetime
+              ? new Date(tx.transaction_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+              : null;
+
+            return (
+              <tr key={tx.id}>
+                <td style={{ whiteSpace: 'nowrap', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}>
+                  <div>{formatDate(tx.due_date)}</div>
+                  {timeStr && (
+                    <div style={{ fontSize: '0.72rem', opacity: 0.75, marginTop: '2px' }}>
+                      {timeStr}
+                    </div>
+                  )}
+                </td>
               <td>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                   {CATEGORY_ICONS[tx.category]} {CATEGORY_LABELS[tx.category]}
@@ -91,7 +101,8 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
                 )}
               </td>
             </tr>
-          ))}
+          );
+        })}
         </tbody>
       </table>
     </div>

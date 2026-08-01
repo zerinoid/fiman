@@ -15,27 +15,38 @@ export function RecentTransactionsList({ transactions }: Props) {
 
   return (
     <div className="tx-list">
-      {transactions.map(tx => (
-        <div key={tx.id} className="tx-item">
-          <div className={`tx-icon ${tx.type}`}>
-            {CATEGORY_ICONS[tx.category] ?? '💵'}
-          </div>
-          <div className="tx-info">
-            <div className="tx-name">
-              {tx.description ?? CATEGORY_LABELS[tx.category]}
+      {transactions.map(tx => {
+        const timeStr = tx.transaction_datetime
+          ? new Date(tx.transaction_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+          : null;
+
+        return (
+          <div key={tx.id} className="tx-item">
+            <div className={`tx-icon ${tx.type}`}>
+              {CATEGORY_ICONS[tx.category] ?? '💵'}
             </div>
-            <div className="tx-meta">
-              {formatDate(tx.due_date)}
-              {tx.is_projection && (
-                <span className="badge badge-projection" style={{ marginLeft: '0.5rem' }}>Projeção</span>
-              )}
+            <div className="tx-info">
+              <div className="tx-name">
+                {tx.description ?? CATEGORY_LABELS[tx.category]}
+              </div>
+              <div className="tx-meta">
+                <span>{formatDate(tx.due_date)}</span>
+                {timeStr && (
+                  <span style={{ marginLeft: '0.4rem', opacity: 0.85 }}>
+                    • {timeStr}
+                  </span>
+                )}
+                {tx.is_projection && (
+                  <span className="badge badge-projection" style={{ marginLeft: '0.5rem' }}>Projeção</span>
+                )}
+              </div>
+            </div>
+            <div className={`tx-amount ${tx.type}`}>
+              {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
             </div>
           </div>
-          <div className={`tx-amount ${tx.type}`}>
-            {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

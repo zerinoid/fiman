@@ -57,18 +57,21 @@ ALTER TABLE public.fiorc_commitments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.fiorc_monthly_commitments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
+DROP POLICY IF EXISTS "fiorc_house_settings: admin full access" ON public.fiorc_house_settings;
 CREATE POLICY "fiorc_house_settings: admin full access"
     ON public.fiorc_house_settings FOR ALL
     TO authenticated
     USING (private.is_admin())
     WITH CHECK (private.is_admin());
 
+DROP POLICY IF EXISTS "fiorc_commitments: admin full access" ON public.fiorc_commitments;
 CREATE POLICY "fiorc_commitments: admin full access"
     ON public.fiorc_commitments FOR ALL
     TO authenticated
     USING (private.is_admin())
     WITH CHECK (private.is_admin());
 
+DROP POLICY IF EXISTS "fiorc_monthly_commitments: admin full access" ON public.fiorc_monthly_commitments;
 CREATE POLICY "fiorc_monthly_commitments: admin full access"
     ON public.fiorc_monthly_commitments FOR ALL
     TO authenticated

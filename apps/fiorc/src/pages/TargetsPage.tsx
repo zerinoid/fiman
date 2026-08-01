@@ -3,7 +3,7 @@ import { useMonthlyTarget } from '../hooks/useMonthlyTarget';
 import { CommitmentsBreakdown } from '../components/Targets/CommitmentsBreakdown';
 
 export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
-  const { target, loading, upsertTarget, payCommitment } = useMonthlyTarget(year, month);
+  const { target, loading, upsertTarget, payCommitment, unpayCommitment } = useMonthlyTarget(year, month);
 
   return (
     <div className="page">
@@ -23,7 +23,7 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
         ) : (
-          <CommitmentsBreakdown target={target} payCommitment={payCommitment} upsertTarget={upsertTarget} />
+          <CommitmentsBreakdown target={target} payCommitment={payCommitment} unpayCommitment={unpayCommitment} upsertTarget={upsertTarget} />
         )}
       </div>
     </div>

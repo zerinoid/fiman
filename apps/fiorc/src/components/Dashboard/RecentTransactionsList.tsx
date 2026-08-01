@@ -1,5 +1,5 @@
 import type { Transaction } from '@fi/types';
-import { CATEGORY_ICONS, CATEGORY_LABELS, formatCurrency, formatDate } from '../../utils/categories';
+import { CATEGORY_ICONS, CATEGORY_LABELS, formatCurrency, formatDate, formatTxDate } from '../../utils/categories';
 
 interface Props { transactions: Transaction[]; }
 
@@ -30,14 +30,19 @@ export function RecentTransactionsList({ transactions }: Props) {
                 {tx.description ?? CATEGORY_LABELS[tx.category]}
               </div>
               <div className="tx-meta">
-                <span>{formatDate(tx.due_date)}</span>
+                <span>{formatTxDate(tx)}</span>
                 {timeStr && (
                   <span style={{ marginLeft: '0.4rem', opacity: 0.85 }}>
                     • {timeStr}
                   </span>
                 )}
+                {tx.is_credit_card && (
+                  <span className="badge badge-credit-card" style={{ marginLeft: '0.4rem' }} title={`Fatura com vencimento em ${formatDate(tx.due_date)}`}>
+                    💳 Fatura {formatDate(tx.due_date).substring(0, 5)}
+                  </span>
+                )}
                 {tx.is_projection && (
-                  <span className="badge badge-projection" style={{ marginLeft: '0.5rem' }}>Projeção</span>
+                  <span className="badge badge-projection" style={{ marginLeft: '0.4rem' }}>Projeção</span>
                 )}
               </div>
             </div>

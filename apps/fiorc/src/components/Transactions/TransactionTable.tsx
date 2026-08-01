@@ -1,5 +1,5 @@
 import type { Transaction } from '@fi/types';
-import { formatCurrency, formatDate, CATEGORY_LABELS, CATEGORY_ICONS } from '../../utils/categories';
+import { formatCurrency, formatDate, formatTxDate, CATEGORY_LABELS, CATEGORY_ICONS } from '../../utils/categories';
 
 interface Props { 
   transactions: Transaction[]; 
@@ -44,7 +44,7 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
             return (
               <tr key={tx.id}>
                 <td style={{ whiteSpace: 'nowrap', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}>
-                  <div>{formatDate(tx.due_date)}</div>
+                  <div>{formatTxDate(tx)}</div>
                   {timeStr && (
                     <div style={{ fontSize: '0.72rem', opacity: 0.75, marginTop: '2px' }}>
                       {timeStr}
@@ -67,7 +67,9 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
                   <span className="badge badge-projection" style={{ marginLeft: '0.25rem' }}>Proj.</span>
                 )}
                 {tx.is_credit_card && (
-                  <span className="badge badge-credit-card" style={{ marginLeft: '0.25rem' }} title="Cartão de Crédito">💳</span>
+                  <span className="badge badge-credit-card" style={{ marginLeft: '0.25rem' }} title={`Fatura com vencimento em ${formatDate(tx.due_date)}`}>
+                    💳 Fatura {formatDate(tx.due_date).substring(0, 5)}
+                  </span>
                 )}
               </td>
               <td style={{ textAlign: 'right', fontFamily: 'var(--fi-font-mono)', fontWeight: 600 }}>

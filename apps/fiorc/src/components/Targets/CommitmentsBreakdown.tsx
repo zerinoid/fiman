@@ -8,10 +8,11 @@ import { CommitmentModal } from './CommitmentModal';
 interface Props { 
   target: MonthlyTarget | null;
   payCommitment?: (id: string) => Promise<void>;
+  unpayCommitment?: (id: string, name: string) => Promise<void>;
   upsertTarget?: (updates: Partial<Omit<MonthlyTarget, 'id' | 'created_at'>>) => Promise<MonthlyTarget>;
 }
 
-export function CommitmentsBreakdown({ target, payCommitment, upsertTarget }: Props) {
+export function CommitmentsBreakdown({ target, payCommitment, unpayCommitment, upsertTarget }: Props) {
   // We extract year/month from the target's month_year if available to use in useTransactions
   const year = target ? parseInt(target.month_year.substring(0, 4), 10) : new Date().getFullYear();
   const month = target ? parseInt(target.month_year.substring(5, 7), 10) : new Date().getMonth() + 1;
@@ -30,6 +31,7 @@ export function CommitmentsBreakdown({ target, payCommitment, upsertTarget }: Pr
     setPayingId(c.id);
     try {
       const txDate = toMonthDate(year, month).substring(0, 8) + String(c.due_day).padStart(2, '0');
+      const nowIso = new Date().toISOString();
       
       await addTransaction({
         person_id: null,
@@ -37,6 +39,7 @@ export function CommitmentsBreakdown({ target, payCommitment, upsertTarget }: Pr
         category: 'housing', // Fallback
         amount: c.amount,
         due_date: txDate,
+        transaction_datetime: nowIso,
         paid_at: new Date().toISOString().split('T')[0],
         is_projection: false,
         is_credit_card: false,
@@ -48,6 +51,18 @@ export function CommitmentsBreakdown({ target, payCommitment, upsertTarget }: Pr
       await payCommitment(c.id);
     } catch (err) {
       console.error('Failed to quitar:', err);
+    } finally {
+      setPayingId(null);
+    }
+  };
+
+  const handleReverter = async (c: CommitmentItem) => {
+    if (!unpayCommitment || !window.confirm(`Deseja reverter o pagamento de "${c.name}"? O registro de pagamento desta meta será excluído.`)) return;
+    setPayingId(c.id);
+    try {
+      await unpayCommitment(c.id, c.name);
+    } catch (err) {
+      console.error('Failed to reverter:', err);
     } finally {
       setPayingId(null);
     }
@@ -112,67 +127,82 @@ export function CommitmentsBreakdown({ target, payCommitment, upsertTarget }: Pr
       ) : (
         <>
           <div className="commitments-grid">
-            {commitments.map(c => (
-              <div key={c.id} className="commitment-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid var(--fi-color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span style={{ fontSize: '1.25rem' }}>{c.is_paid ? '✅' : '⏳'}</span>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span className="commitment-label" style={{ margin: 0 }}>
-                      {c.name}
-                    </span>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
-                      Dia {c.due_day}
-                    </span>
+            {commitments.map(c => {
+              const isCcFatura = c.name === 'Fatura do Cartão';
+
+              return (
+                <div key={c.id} className="commitment-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid var(--fi-color-border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.25rem' }}>{c.is_paid ? '✅' : '⏳'}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span className="commitment-label" style={{ margin: 0 }}>
+                        {c.name}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
+                        Dia {c.due_day}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fi-space-3)' }}>
-                  <span
-                    className="commitment-amount"
-                    style={{
-                      color: c.amount < 0 ? 'var(--fi-color-success)' : 'var(--fi-color-text)',
-                      textDecoration: c.is_paid ? 'line-through' : 'none'
-                    }}
-                  >
-                    {formatCurrency(c.amount)}
-                  </span>
                   
-                  <div style={{ display: 'flex', gap: '0.25rem' }}>
-                    {upsertTarget && (
-                      <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fi-space-3)' }}>
+                    <span
+                      className="commitment-amount"
+                      style={{
+                        color: c.amount < 0 ? 'var(--fi-color-success)' : 'var(--fi-color-text)',
+                        textDecoration: c.is_paid ? 'line-through' : 'none'
+                      }}
+                    >
+                      {formatCurrency(c.amount)}
+                    </span>
+                    
+                    <div style={{ display: 'flex', gap: '0.25rem' }}>
+                      {upsertTarget && !isCcFatura && (
+                        <>
+                          <button
+                            className="btn btn-ghost btn-icon"
+                            style={{ padding: '0.25rem', fontSize: '1rem' }}
+                            onClick={() => openEditModal(c)}
+                            title="Editar"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-icon"
+                            style={{ padding: '0.25rem', fontSize: '1rem', color: 'var(--fi-color-danger)' }}
+                            onClick={() => handleDelete(c.id)}
+                            title="Deletar"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
+                      {!c.is_paid && payCommitment && (
                         <button
                           className="btn btn-ghost btn-icon"
-                          style={{ padding: '0.25rem', fontSize: '1rem' }}
-                          onClick={() => openEditModal(c)}
-                          title="Editar"
+                          style={{ padding: '0.25rem', fontSize: '1rem', marginLeft: '0.25rem' }}
+                          onClick={() => handleQuitar(c)}
+                          disabled={payingId === c.id}
+                          title="Quitar"
                         >
-                          ✏️
+                          {payingId === c.id ? '...' : '💳'}
                         </button>
+                      )}
+                      {c.is_paid && unpayCommitment && (
                         <button
                           className="btn btn-ghost btn-icon"
-                          style={{ padding: '0.25rem', fontSize: '1rem', color: 'var(--fi-color-danger)' }}
-                          onClick={() => handleDelete(c.id)}
-                          title="Deletar"
+                          style={{ padding: '0.25rem', fontSize: '1rem', marginLeft: '0.25rem', color: 'var(--fi-color-warning)' }}
+                          onClick={() => handleReverter(c)}
+                          disabled={payingId === c.id}
+                          title="Reverter Pagamento"
                         >
-                          🗑️
+                          {payingId === c.id ? '...' : '🔄'}
                         </button>
-                      </>
-                    )}
-                    {!c.is_paid && payCommitment && (
-                      <button
-                        className="btn btn-ghost btn-icon"
-                        style={{ padding: '0.25rem', fontSize: '1rem', marginLeft: '0.25rem' }}
-                        onClick={() => handleQuitar(c)}
-                        disabled={payingId === c.id}
-                        title="Quitar"
-                      >
-                        {payingId === c.id ? '...' : '💳'}
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {commitments.length === 0 && (
               <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.875rem' }}>Nenhum compromisso.</p>
             )}

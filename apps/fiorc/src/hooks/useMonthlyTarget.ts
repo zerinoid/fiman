@@ -9,6 +9,7 @@ export interface UseMonthlyTargetReturn {
   error: string | null;
   upsertTarget: (updates: Partial<Omit<MonthlyTarget, 'id' | 'created_at'>>) => Promise<MonthlyTarget>;
   payCommitment: (commitmentId: string) => Promise<void>;
+  unpayCommitment: (commitmentId: string, commitmentName: string) => Promise<void>;
   refetch: () => void;
 }
 
@@ -22,18 +23,20 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     setError(null);
 
     const monthDate = toMonthDate(year, month);
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear  = month === 12 ? year + 1 : year;
+    const nextMonthDate = toMonthDate(nextYear, nextMonth);
+
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear  = month === 1 ? year - 1 : year;
     const prevMonthDate = toMonthDate(prevYear, prevMonth);
-    const nextOfPrevMonth = prevMonth === 12 ? 1 : prevMonth + 1;
-    const nextOfPrevYear  = prevMonth === 12 ? prevYear + 1 : prevYear;
 
-    // Always fetch previous month's credit card transactions
+    // Fetch credit card transactions due in this target month (e.g. due_date in August for August's Fatura)
     const { data: ccTxs } = await supabase
       .from('fiorc_transactions')
       .select('amount')
-      .gte('due_date', prevMonthDate)
-      .lt('due_date', toMonthDate(nextOfPrevYear, nextOfPrevMonth))
+      .gte('due_date', monthDate)
+      .lt('due_date', nextMonthDate)
       .eq('is_credit_card', true);
 
     const ccTotal = ccTxs ? ccTxs.reduce((sum, tx) => sum + Number(tx.amount), 0) : 0;
@@ -163,5 +166,30 @@ export function useMonthlyTarget(year: number, month: number): UseMonthlyTargetR
     });
   };
 
-  return { target, loading, error, upsertTarget, payCommitment, refetch: fetchTarget };
+  const unpayCommitment = async (commitmentId: string, commitmentName: string): Promise<void> => {
+    if (!target) return;
+    
+    const updatedCommitments = target.commitments.map(c => 
+      c.id === commitmentId ? { ...c, is_paid: false } : c
+    );
+    
+    await upsertTarget({
+      ...target,
+      commitments: updatedCommitments,
+    });
+
+    const monthDate = toMonthDate(year, month);
+    const nextMonth = month === 12 ? 1 : month + 1;
+    const nextYear  = month === 12 ? year + 1 : year;
+    const nextMonthDate = toMonthDate(nextYear, nextMonth);
+
+    await supabase
+      .from('fiorc_transactions')
+      .delete()
+      .eq('description', commitmentName)
+      .gte('due_date', monthDate)
+      .lt('due_date', nextMonthDate);
+  };
+
+  return { target, loading, error, upsertTarget, payCommitment, unpayCommitment, refetch: fetchTarget };
 }

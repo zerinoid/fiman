@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { TransactionCategory } from '@fi/types';
 import type { NewTransaction } from '../hooks/useTransactions';
 import { useTransactions } from '../hooks/useTransactions';
-import { EXPENSE_CATEGORIES, CATEGORY_LABELS } from '../utils/categories';
+import { EXPENSE_CATEGORIES, CATEGORY_LABELS, calculateCreditCardDueDate } from '../utils/categories';
 import { MonthProps } from '../App';
 
 export function QuickAddPage({ year, month }: MonthProps) {
@@ -77,7 +77,7 @@ export function QuickAddPage({ year, month }: MonthProps) {
         type: 'expense',
         category,
         amount: parseFloat(amount),
-        due_date: baseDate,
+        due_date: isCreditCard ? calculateCreditCardDueDate(baseDate) : baseDate,
         paid_at: isCreditCard ? null : baseDate, // Credit card expenses are not paid directly from balance
         is_projection: false,
         is_credit_card: isCreditCard,

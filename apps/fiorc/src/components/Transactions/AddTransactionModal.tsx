@@ -3,7 +3,7 @@ import type { Person, TransactionCategory, Transaction } from '@fi/types';
 import type { NewTransaction } from '../../hooks/useTransactions';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES,
-  CATEGORY_LABELS,
+  CATEGORY_LABELS, calculateCreditCardDueDate,
 } from '../../utils/categories';
 
 interface AddTransactionModalProps {
@@ -74,13 +74,18 @@ export function AddTransactionModal({
         const totalAmount = transactionToEdit.amount * totalInst;
         setAmount(totalAmount.toFixed(2));
         
-        setDate(transactionToEdit.due_date);
         if (transactionToEdit.transaction_datetime) {
           const dt = new Date(transactionToEdit.transaction_datetime);
+          const y = dt.getFullYear();
+          const m = String(dt.getMonth() + 1).padStart(2, '0');
+          const d = String(dt.getDate()).padStart(2, '0');
+          setDate(`${y}-${m}-${d}`);
+
           const hours = String(dt.getHours()).padStart(2, '0');
           const minutes = String(dt.getMinutes()).padStart(2, '0');
           setTime(`${hours}:${minutes}`);
         } else {
+          setDate(transactionToEdit.due_date);
           setTime(getCurrentLocalTime());
         }
         setTags(transactionToEdit.tags || []);
@@ -140,7 +145,14 @@ export function AddTransactionModal({
       if (time) {
         const dt = new Date(`${baseDate}T${time}:00`);
         transaction_datetime = dt.toISOString();
+      } else {
+        const dt = new Date(`${baseDate}T12:00:00`);
+        transaction_datetime = dt.toISOString();
       }
+
+      const computedDueDate = (txType === 'expense' && isCreditCard)
+        ? calculateCreditCardDueDate(baseDate)
+        : baseDate;
 
       if (transactionToEdit) {
         const isParent = transactionToEdit.total_installments > 1 && !transactionToEdit.parent_id;
@@ -153,7 +165,7 @@ export function AddTransactionModal({
           type: txType,
           category,
           amount: dividedAmount,
-          due_date: baseDate,
+          due_date: computedDueDate,
           description: description || null,
           transaction_datetime,
           tags: tags.length > 0 ? tags : undefined,
@@ -168,15 +180,25 @@ export function AddTransactionModal({
           // Generate N monthly projected records
           const records: NewTransaction[] = [];
           const [yr, mo, dy] = baseDate.split('-').map(Number);
-          
-          // Divide amount for both incomes and expenses, but we generate the parent ID
           const dividedAmount = baseAmount / nInstall;
           const parentId = crypto.randomUUID();
 
+          const firstCcDueDate = calculateCreditCardDueDate(baseDate);
+          const [ccYr, ccMo] = firstCcDueDate.split('-').map(Number);
+
           for (let i = 0; i < nInstall; i++) {
-            const m   = ((mo - 1 + i) % 12) + 1;
-            const y   = yr + Math.floor((mo - 1 + i) / 12);
-            const pad = (n: number) => String(n).padStart(2, '0');
+            let itemDueDate: string;
+            if (txType === 'expense' && isCreditCard) {
+              const m = ((ccMo - 1 + i) % 12) + 1;
+              const y = ccYr + Math.floor((ccMo - 1 + i) / 12);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              itemDueDate = `${y}-${pad(m)}-08`;
+            } else {
+              const m = ((mo - 1 + i) % 12) + 1;
+              const y = yr + Math.floor((mo - 1 + i) / 12);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              itemDueDate = `${y}-${pad(m)}-${pad(dy)}`;
+            }
 
             records.push({
               id:                i === 0 ? parentId : crypto.randomUUID(),
@@ -185,7 +207,7 @@ export function AddTransactionModal({
               type:              txType,
               category,
               amount:            dividedAmount,
-              due_date:          `${y}-${pad(m)}-${pad(dy)}`,
+              due_date:          itemDueDate,
               paid_at:           null,
               is_projection:     i > 0, // First one is not necessarily a projection, others are
               is_credit_card:    txType === 'expense' ? isCreditCard : false,
@@ -203,7 +225,7 @@ export function AddTransactionModal({
             type:               txType,
             category,
             amount:             baseAmount,
-            due_date:           baseDate,
+            due_date:           computedDueDate,
             paid_at:            null,
             is_projection:      false,
             is_credit_card:     txType === 'expense' ? isCreditCard : false,

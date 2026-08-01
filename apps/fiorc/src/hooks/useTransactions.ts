@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Transaction } from '@fi/types';
 import { supabase } from '../lib/supabase';
-import { toMonthDate } from '../utils/categories';
 
 export type NewTransaction = Omit<Transaction, 'id' | 'created_at'>;
 
@@ -27,20 +26,38 @@ export function getTxTimestamp(tx: Transaction): number {
     const t = new Date(tx.created_at).getTime();
     if (!isNaN(t)) return t;
   }
+  if (tx.due_date) {
+    const t = new Date(tx.due_date + 'T12:00:00').getTime();
+    if (!isNaN(t)) return t;
+  }
   return 0;
+}
+
+export function isTxInMonth(tx: Transaction, year: number, month: number): boolean {
+  if (tx.transaction_datetime) {
+    const dt = new Date(tx.transaction_datetime);
+    return dt.getFullYear() === year && (dt.getMonth() + 1) === month;
+  }
+  if (tx.due_date) {
+    const [y, m] = tx.due_date.split('-').map(Number);
+    return y === year && m === month;
+  }
+  return false;
 }
 
 export function sortTransactions(txs: Transaction[]): Transaction[] {
   return [...txs].sort((a, b) => {
-    // 1. Primary sort: due_date descending ('YYYY-MM-DD')
-    if (a.due_date !== b.due_date) {
-      return b.due_date.localeCompare(a.due_date);
-    }
-    // 2. Secondary sort: timestamp descending (transaction_datetime or created_at)
+    // 1. Primary sort: timestamp (transaction_datetime / created_at) descending
     const timeA = getTxTimestamp(a);
     const timeB = getTxTimestamp(b);
     if (timeA !== timeB) {
       return timeB - timeA;
+    }
+    // 2. Secondary sort: created_at descending
+    const catA = a.created_at || '';
+    const catB = b.created_at || '';
+    if (catA !== catB) {
+      return catB.localeCompare(catA);
     }
     // 3. Fallback: id
     return (b.id || '').localeCompare(a.id || '');
@@ -56,24 +73,18 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     setLoading(true);
     setError(null);
 
-    const startDate = toMonthDate(year, month);
-    const nextMonth = month === 12 ? 1 : month + 1;
-    const nextYear  = month === 12 ? year + 1 : year;
-    const endDate   = toMonthDate(nextYear, nextMonth);
-
     const { data, error: fetchErr } = await supabase
       .from('fiorc_transactions')
       .select('*')
-      .gte('due_date', startDate)
-      .lt('due_date', endDate)
-      .order('due_date', { ascending: false })
       .order('transaction_datetime', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
+      .order('due_date', { ascending: false });
 
     if (fetchErr) {
       setError(fetchErr.message);
     } else {
-      setTransactions(sortTransactions((data ?? []) as Transaction[]));
+      const all = (data ?? []) as Transaction[];
+      const monthTxs = all.filter(t => isTxInMonth(t, year, month));
+      setTransactions(sortTransactions(monthTxs));
     }
 
     setLoading(false);
@@ -93,11 +104,11 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
       if (insertErr) throw new Error(insertErr.message);
 
       const inserted = (data ?? []) as Transaction[];
-      // Keep sorted view
-      setTransactions(prev => sortTransactions([...inserted, ...prev]));
+      // Keep sorted view filtered to current month
+      setTransactions(prev => sortTransactions([...inserted, ...prev].filter(t => isTxInMonth(t, year, month))));
       return inserted;
     },
-    [],
+    [year, month],
   );
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<Transaction>) => {

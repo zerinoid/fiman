@@ -146,6 +146,32 @@ export interface RentBoleto {
 // FIALN — Student Tracking
 // ----------------------------------------------------------
 
+export type ModalityType = 'quarterly_group' | 'private_bundle' | 'single_group' | 'single_private';
+export type EnrollmentStatus = 'active' | 'paused' | 'cancelled' | 'completed';
+
+export interface GroupClassroom {
+  id: string;
+  name: string;
+  weekday: number; // 1 = Mon, 3 = Wed
+  level: string;
+  description: string | null;
+  created_at: string;
+}
+
+export interface StudentEnrollment {
+  id: string;
+  person_id: string;
+  group_id: string | null;
+  modality: ModalityType;
+  status: EnrollmentStatus;
+  start_date: string;
+  end_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  group?: GroupClassroom | null;
+}
+
 /** Extended profile for a person who is a student (Shibari). */
 export interface StudentProfile {
   id: string;
@@ -193,6 +219,7 @@ export interface Attendance {
   present: boolean;
   payment_type: 'quarterly_plan' | 'single_class' | 'private_lesson' | null;
   transaction_id: string | null; // FK → fiorc_transactions.id
+  enrollment_id: string | null; // FK → fialn_enrollments.id
   created_at: string;
 }
 

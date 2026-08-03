@@ -3,6 +3,7 @@ import type { StudentWithProfile } from '../hooks/useStudents';
 interface StudentCardProps {
   student: StudentWithProfile;
   lastLessonDate: string | null;
+  activeGroupNames?: string[];
   onClick: () => void;
 }
 
@@ -26,7 +27,7 @@ function formatRelativeDate(isoDate: string | null): string {
   return `Última aula: ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 }
 
-export function StudentCard({ student, lastLessonDate, onClick }: StudentCardProps) {
+export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick }: StudentCardProps) {
   const initials = getInitials(student.full_name);
   const relDate = formatRelativeDate(lastLessonDate);
   const hasProfile = student.profile !== null;
@@ -46,13 +47,22 @@ export function StudentCard({ student, lastLessonDate, onClick }: StudentCardPro
       <div className="student-info">
         <div className="student-name">{student.full_name}</div>
         <div className="student-meta">{relDate}</div>
+        {activeGroupNames && activeGroupNames.length > 0 && (
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+            {activeGroupNames.map((g) => (
+              <span key={g} className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
+                {g}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
         {hasProfile ? (
-          <span className="badge badge-primary">Perfil ✓</span>
+          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>Perfil ✓</span>
         ) : (
-          <span className="badge badge-neutral">Sem perfil</span>
+          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>Sem perfil</span>
         )}
         {student.profile?.financial_status && (
           <span
@@ -75,3 +85,5 @@ export function StudentCard({ student, lastLessonDate, onClick }: StudentCardPro
     </div>
   );
 }
+
+export default StudentCard;

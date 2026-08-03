@@ -12,33 +12,89 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      fialn_enrollments: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          group_id: string | null
+          id: string
+          modality: Database["public"]["Enums"]["fialn_modality_type"]
+          notes: string | null
+          person_id: string
+          start_date: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          group_id?: string | null
+          id?: string
+          modality: Database["public"]["Enums"]["fialn_modality_type"]
+          notes?: string | null
+          person_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          group_id?: string | null
+          id?: string
+          modality?: Database["public"]["Enums"]["fialn_modality_type"]
+          notes?: string | null
+          person_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fialn_enrollments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_enrollments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fialn_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          level: string
+          name: string
+          weekday: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          level: string
+          name: string
+          weekday: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          level?: string
+          name?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
       fialn_lessons: {
         Row: {
           action_items: string | null
@@ -204,98 +260,113 @@ export type Database = {
           },
         ]
       }
-      fiorc_house_settings: {
+      fiorc_commitments: {
         Row: {
+          category_type: Database["public"]["Enums"]["commitment_type"]
+          created_at: string | null
+          default_amount: number
+          due_day: number
           id: string
-          user_id: string
-          active_roommates_count: number
-          updated_at: string | null
+          is_active: boolean
+          name: string
+          split_rule: Database["public"]["Enums"]["split_rule_type"]
+          user_id: string | null
         }
         Insert: {
+          category_type?: Database["public"]["Enums"]["commitment_type"]
+          created_at?: string | null
+          default_amount?: number
+          due_day?: number
           id?: string
-          user_id: string
-          active_roommates_count?: number
-          updated_at?: string | null
+          is_active?: boolean
+          name: string
+          split_rule?: Database["public"]["Enums"]["split_rule_type"]
+          user_id?: string | null
         }
         Update: {
+          category_type?: Database["public"]["Enums"]["commitment_type"]
+          created_at?: string | null
+          default_amount?: number
+          due_day?: number
           id?: string
-          user_id?: string
-          active_roommates_count?: number
-          updated_at?: string | null
+          is_active?: boolean
+          name?: string
+          split_rule?: Database["public"]["Enums"]["split_rule_type"]
+          user_id?: string | null
         }
         Relationships: []
       }
-      fiorc_commitments: {
+      fiorc_house_settings: {
         Row: {
+          active_roommates_count: number
           id: string
-          user_id: string
-          name: string
-          category_type: string
-          split_rule: string
-          default_amount: number
-          due_day: number
-          is_active: boolean
-          created_at: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
+          active_roommates_count?: number
           id?: string
-          user_id: string
-          name: string
-          category_type?: string
-          split_rule?: string
-          default_amount?: number
-          due_day?: number
-          is_active?: boolean
-          created_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
+          active_roommates_count?: number
           id?: string
-          user_id?: string
-          name?: string
-          category_type?: string
-          split_rule?: string
-          default_amount?: number
-          due_day?: number
-          is_active?: boolean
-          created_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
       fiorc_monthly_commitments: {
         Row: {
+          commitment_id: string | null
+          created_at: string | null
           id: string
-          commitment_id: string
+          is_active: boolean
+          is_paid: boolean
           month_year: string
           total_amount: number
-          user_calculated_share: number
-          is_paid: boolean
-          is_active: boolean
           transaction_id: string | null
-          created_at: string | null
+          user_calculated_share: number
         }
         Insert: {
+          commitment_id?: string | null
+          created_at?: string | null
           id?: string
-          commitment_id: string
+          is_active?: boolean
+          is_paid?: boolean
           month_year: string
           total_amount: number
-          user_calculated_share: number
-          is_paid?: boolean
-          is_active?: boolean
           transaction_id?: string | null
-          created_at?: string | null
+          user_calculated_share: number
         }
         Update: {
+          commitment_id?: string | null
+          created_at?: string | null
           id?: string
-          commitment_id?: string
+          is_active?: boolean
+          is_paid?: boolean
           month_year?: string
           total_amount?: number
-          user_calculated_share?: number
-          is_paid?: boolean
-          is_active?: boolean
           transaction_id?: string | null
-          created_at?: string | null
+          user_calculated_share?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fiorc_monthly_commitments_commitment_id_fkey"
+            columns: ["commitment_id"]
+            isOneToOne: false
+            referencedRelation: "fiorc_commitments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiorc_monthly_commitments_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "fiorc_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       fiorc_monthly_targets: {
         Row: {
@@ -312,7 +383,7 @@ export type Database = {
           created_at?: string | null
           credit_card_total?: number
           id?: string
-          month_year: string
+          month_year?: string
           notes?: string | null
           total_target?: number
         }
@@ -345,7 +416,7 @@ export type Database = {
           created_at?: string | null
           file_path?: string | null
           id?: string
-          month_year: string
+          month_year?: string
           raw_ocr_json?: Json | null
           rent_amount: number
           total_payable?: number | null
@@ -377,10 +448,10 @@ export type Database = {
           paid_at: string | null
           parent_id: string | null
           person_id: string | null
-          total_installments: number | null
-          type: Database["public"]["Enums"]["transaction_type"]
-          transaction_datetime: string | null
           tags: string[] | null
+          total_installments: number | null
+          transaction_datetime: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Insert: {
           amount: number
@@ -395,10 +466,10 @@ export type Database = {
           paid_at?: string | null
           parent_id?: string | null
           person_id?: string | null
-          total_installments?: number | null
-          type: Database["public"]["Enums"]["transaction_type"]
-          transaction_datetime?: string | null
           tags?: string[] | null
+          total_installments?: number | null
+          transaction_datetime?: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
         }
         Update: {
           amount?: number
@@ -413,10 +484,10 @@ export type Database = {
           paid_at?: string | null
           parent_id?: string | null
           person_id?: string | null
-          total_installments?: number | null
-          type?: Database["public"]["Enums"]["transaction_type"]
-          transaction_datetime?: string | null
           tags?: string[] | null
+          total_installments?: number | null
+          transaction_datetime?: string | null
+          type?: Database["public"]["Enums"]["transaction_type"]
         }
         Relationships: [
           {
@@ -439,6 +510,7 @@ export type Database = {
         Row: {
           class_id: string | null
           created_at: string | null
+          enrollment_id: string | null
           id: string
           payment_type: string | null
           person_id: string | null
@@ -448,6 +520,7 @@ export type Database = {
         Insert: {
           class_id?: string | null
           created_at?: string | null
+          enrollment_id?: string | null
           id?: string
           payment_type?: string | null
           person_id?: string | null
@@ -457,6 +530,7 @@ export type Database = {
         Update: {
           class_id?: string | null
           created_at?: string | null
+          enrollment_id?: string | null
           id?: string
           payment_type?: string | null
           person_id?: string | null
@@ -469,6 +543,13 @@ export type Database = {
             columns: ["class_id"]
             isOneToOne: false
             referencedRelation: "fiteo_class_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiteo_attendance_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_enrollments"
             referencedColumns: ["id"]
           },
           {
@@ -576,10 +657,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      fialn_create_plan_installments: {
+        Args: {
+          p_amount_per_installment: number
+          p_category: Database["public"]["Enums"]["transaction_category"]
+          p_description: string
+          p_first_due_date: string
+          p_person_id: string
+          p_total_installments: number
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          installment_index: number | null
+          is_credit_card: boolean | null
+          is_projection: boolean | null
+          paid_at: string | null
+          parent_id: string | null
+          person_id: string | null
+          tags: string[] | null
+          total_installments: number | null
+          transaction_datetime: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "fiorc_transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
     }
     Enums: {
+      commitment_type: "fixed" | "optional" | "occasional"
       fi_role_type: "admin" | "collaborator"
+      fialn_modality_type:
+        | "quarterly_group"
+        | "private_bundle"
+        | "single_group"
+        | "single_private"
+      split_rule_type:
+        | "none"
+        | "equal_roommates"
+        | "weighted_rent"
+        | "mobile_shared"
       transaction_category:
         | "housing"
         | "food_grocery"
@@ -592,13 +717,13 @@ export type Database = {
         | "business"
         | "investment"
         | "unforeseen"
+        | "pet"
         | "session"
         | "private_lesson"
         | "study_group"
         | "workshop"
         | "performance"
         | "freelance_dev"
-        | "pet"
       transaction_type: "income" | "expense"
       user_role_type: "admin" | "collaborator"
     }
@@ -726,12 +851,22 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
+      commitment_type: ["fixed", "optional", "occasional"],
       fi_role_type: ["admin", "collaborator"],
+      fialn_modality_type: [
+        "quarterly_group",
+        "private_bundle",
+        "single_group",
+        "single_private",
+      ],
+      split_rule_type: [
+        "none",
+        "equal_roommates",
+        "weighted_rent",
+        "mobile_shared",
+      ],
       transaction_category: [
         "housing",
         "food_grocery",
@@ -744,13 +879,13 @@ export const Constants = {
         "business",
         "investment",
         "unforeseen",
+        "pet",
         "session",
         "private_lesson",
         "study_group",
         "workshop",
         "performance",
         "freelance_dev",
-        "pet",
       ],
       transaction_type: ["income", "expense"],
       user_role_type: ["admin", "collaborator"],

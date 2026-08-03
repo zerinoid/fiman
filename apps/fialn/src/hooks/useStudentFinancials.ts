@@ -20,6 +20,7 @@ export interface UseStudentFinancialsReturn {
   attendance: AttendanceRecord[];
   loading: boolean;
   error: string | null;
+  refresh: () => void;
 }
 
 export function useStudentFinancials(personId: string | null): UseStudentFinancialsReturn {
@@ -98,5 +99,5 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
 
   useEffect(() => { fetchFinancials(); }, [fetchFinancials]);
 
-  return { incomeTransactions, attendance, loading, error };
+  return { incomeTransactions, attendance, loading, error, refresh: fetchFinancials };
 }

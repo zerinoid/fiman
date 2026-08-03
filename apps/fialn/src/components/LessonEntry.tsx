@@ -73,3 +73,5 @@ export function LessonEntry({ lesson }: LessonEntryProps) {
     </div>
   );
 }
+
+export default LessonEntry;

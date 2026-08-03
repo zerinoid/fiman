@@ -123,3 +123,5 @@ export function TechnicalRadar({ profile, saving, error, onSave }: TechnicalRada
     </div>
   );
 }
+
+export default TechnicalRadar;

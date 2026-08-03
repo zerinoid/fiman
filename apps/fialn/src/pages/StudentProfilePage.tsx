@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useLessons } from '../hooks/useLessons';
 import { useStudentFinancials } from '../hooks/useStudentFinancials';
+import { useGroupsAndEnrollments } from '../hooks/useGroupsAndEnrollments';
 import { LessonEntry } from '../components/LessonEntry';
 import { TechnicalRadar } from '../components/TechnicalRadar';
+import { EnrollModal } from '../components/EnrollModal';
 import type { Navigate } from '../App';
 
 type ProfileTab = 'timeline' | 'radar' | 'financeiro';
@@ -30,14 +32,23 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
   private_lesson: 'Aula Particular',
 };
 
+const MODALITY_LABELS: Record<string, string> = {
+  quarterly_group: 'Plano Trimestral Grupo',
+  private_bundle: 'Pacote Particular',
+  single_group: 'Aula Avulsa Grupo',
+  single_private: 'Aula Particular Avulsa',
+};
+
 export function StudentProfilePage({ personId, navigate }: StudentProfilePageProps) {
   const [activeTab, setActiveTab] = useState<ProfileTab>('timeline');
   const [person, setPerson] = useState<Person | null>(null);
   const [personLoading, setPersonLoading] = useState(true);
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   const { profile, loading: profileLoading, saving, error: saveError, saveProfile } = useStudentProfile(personId);
   const { lessons, loading: lessonsLoading } = useLessons(personId);
-  const { incomeTransactions, attendance, loading: financialsLoading, error: finError } = useStudentFinancials(personId);
+  const { incomeTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
+  const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollmentStatus } = useGroupsAndEnrollments(personId);
 
   useEffect(() => {
     setPersonLoading(true);
@@ -81,6 +92,8 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const pendingIncome = incomeTransactions.filter((tx) => tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
   const confirmedIncome = incomeTransactions.filter((tx) => !tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
 
+  const activeEnrollments = enrollments.filter((e) => e.status === 'active');
+
   return (
     <div className="page-wrapper">
       {/* Back + header */}
@@ -103,17 +116,96 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           </div>
         </div>
 
-        <button
-          id="profile-quick-log-btn"
-          className="btn btn-primary btn-sm"
-          onClick={() => {
-            window.location.hash = `log?person_id=${personId}`;
-            navigate('log');
-          }}
-        >
-          ✏️ Registrar Aula
-        </button>
+        <div className="flex-gap-2">
+          <button
+            id="profile-enroll-btn"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowEnrollModal(true)}
+          >
+            ➕ Nova Matrícula
+          </button>
+          <button
+            id="profile-quick-log-btn"
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              window.location.hash = `log?person_id=${personId}`;
+              navigate('log');
+            }}
+          >
+            ✏️ Registrar Aula
+          </button>
+        </div>
       </div>
+
+      {/* Active Enrollments Banner */}
+      <div className="card card-sm mb-6">
+        <div className="flex-between">
+          <div className="section-title">Matrículas & Turmas Ativas</div>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}>
+            + Adicionar
+          </button>
+        </div>
+
+        {activeEnrollments.length === 0 ? (
+          <p className="text-xs text-muted mt-2">Nenhuma matrícula ativa no momento.</p>
+        ) : (
+          <div className="stack-2 mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+            {activeEnrollments.map((en) => (
+              <div
+                key={en.id}
+                style={{
+                  background: 'var(--fi-color-surface-2)',
+                  border: '1px solid var(--fi-color-border)',
+                  borderRadius: 'var(--fi-radius-md)',
+                  padding: '0.5rem 0.75rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.85rem',
+                }}
+              >
+                <span className="badge badge-primary">
+                  {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                </span>
+                {en.group && (
+                  <span className="text-muted text-xs">
+                    ({en.group.weekday === 1 ? 'Segundas' : 'Quartas'})
+                  </span>
+                )}
+                <span className="text-xs text-mono" style={{ color: 'var(--fi-color-accent)' }}>
+                  {MODALITY_LABELS[en.modality]}
+                </span>
+                <button
+                  type="button"
+                  title="Concluir matrícula"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', marginLeft: '0.25rem' }}
+                  onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                >
+                  ✓
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {showEnrollModal && (
+        <EnrollModal
+          personId={personId}
+          studentName={person.full_name}
+          groups={groups}
+          saving={enrollmentSaving}
+          onClose={() => setShowEnrollModal(false)}
+          onSubmit={async (payload) => {
+            const ok = await createEnrollment(payload);
+            if (ok) {
+              refreshFinancials(); // Refresh financials tab so newly generated RPC projections display!
+            }
+            return ok;
+          }}
+        />
+      )}
 
       {/* Tabs */}
       <div className="tabs">

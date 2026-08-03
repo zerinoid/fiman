@@ -14,6 +14,10 @@ interface LastLessonMap {
   [personId: string]: string | null;
 }
 
+interface GroupsMap {
+  [personId: string]: string[];
+}
+
 function useLastLessonDates(personIds: string[]): LastLessonMap {
   const [map, setMap] = useState<LastLessonMap>({});
 
@@ -28,7 +32,6 @@ function useLastLessonDates(personIds: string[]): LastLessonMap {
 
     if (!data) return;
 
-    // Keep only the latest per person
     const latest: LastLessonMap = {};
     for (const row of data) {
       const pid = row.person_id;
@@ -37,6 +40,43 @@ function useLastLessonDates(personIds: string[]): LastLessonMap {
       }
     }
     setMap(latest);
+  }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  return map;
+}
+
+function useActiveGroupsMap(personIds: string[]): GroupsMap {
+  const [map, setMap] = useState<GroupsMap>({});
+
+  const fetch = useCallback(async () => {
+    if (personIds.length === 0) return;
+
+    const { data } = await supabase
+      .from('fialn_enrollments')
+      .select(`
+        person_id,
+        modality,
+        group:fialn_groups(name)
+      `)
+      .in('person_id', personIds)
+      .eq('status', 'active');
+
+    if (!data) return;
+
+    const result: GroupsMap = {};
+    for (const row of data) {
+      const pid = row.person_id;
+      if (!pid) continue;
+      const groupObj = row.group as unknown as { name: string } | null;
+      const name = groupObj?.name ?? (row.modality === 'private_bundle' ? 'Pacote Particular' : null);
+      if (name) {
+        if (!result[pid]) result[pid] = [];
+        if (!result[pid].includes(name)) result[pid].push(name);
+      }
+    }
+    setMap(result);
   }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
@@ -54,6 +94,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
 
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
+  const groupsMap = useActiveGroupsMap(personIds);
 
   const filtered = students.filter((s) =>
     s.full_name.toLowerCase().includes(query.toLowerCase()),
@@ -126,6 +167,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
               key={student.id}
               student={student}
               lastLessonDate={lastLessonMap[student.id] ?? null}
+              activeGroupNames={groupsMap[student.id]}
               onClick={() => openProfile(student.id)}
             />
           ))}

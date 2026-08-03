@@ -31,13 +31,13 @@ export function CommitmentModal({
   };
 
   // Form state
-  const [name, setName]         = useState('');
-  const [amount, setAmount]     = useState('');
-  const [dueDay, setDueDay]     = useState(5);
-  const [categoryType, setCategoryType] = useState<CommitmentType>('fixed');
+  const [name, setName]                 = useState('');
+  const [amount, setAmount]             = useState('');
+  const [dueDay, setDueDay]             = useState(5);
+  const [categoryType, setCategoryType] = useState<CommitmentType>('occasional');
   const [splitRule, setSplitRule]       = useState<SplitRuleType>('none');
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -46,7 +46,10 @@ export function CommitmentModal({
         setAmount(commitmentToEdit.amount.toString());
         setDueDay(commitmentToEdit.due_day);
         const inferred = inferSplitRuleAndCategory(commitmentToEdit.name);
-        setCategoryType(commitmentToEdit.category_type || inferred.categoryType);
+        let cat = commitmentToEdit.category_type || inferred.categoryType;
+        if ((cat as string) === 'toggleable') cat = 'optional';
+        if ((cat as string) === 'variable') cat = 'occasional';
+        setCategoryType(cat);
         setSplitRule(commitmentToEdit.split_rule || inferred.splitRule);
       } else {
         reset();
@@ -58,7 +61,7 @@ export function CommitmentModal({
     setName('');
     setAmount('');
     setDueDay(5);
-    setCategoryType('fixed');
+    setCategoryType('occasional');
     setSplitRule('none');
     setError(null);
   };
@@ -108,6 +111,8 @@ export function CommitmentModal({
     }
   };
 
+  const isSpecialRule = splitRule === 'weighted_rent' || splitRule === 'mobile_shared';
+
   return (
     <dialog ref={dialogRef} onClose={onClose} onClick={handleDialogClick}>
       <div className="dialog-header">
@@ -147,7 +152,7 @@ export function CommitmentModal({
             />
           </div>
 
-          {/* Category Type */}
+          {/* Category Type Selector */}
           <div className="form-group">
             <label className="form-label" htmlFor="commit-category">Tipo de Compromisso</label>
             <select
@@ -156,26 +161,58 @@ export function CommitmentModal({
               value={categoryType}
               onChange={e => setCategoryType(e.target.value as CommitmentType)}
             >
-              <option value="fixed">Fixos Recorrentes (Aluguel, Luz, Internet, TIM)</option>
-              <option value="toggleable">Desligáveis / Opcionais (Reserva, Investimento, Quarto Vago)</option>
-              <option value="variable">Variáveis / Cursos (Workshops, Estudos)</option>
+              <option value="occasional">Ocasional</option>
+              <option value="optional">Opcional</option>
+              <option value="fixed">Fixo</option>
             </select>
           </div>
 
-          {/* Split Rule */}
+          {/* Split Rule Toggle Control */}
           <div className="form-group">
-            <label className="form-label" htmlFor="commit-split">Regra de Divisão</label>
-            <select
-              id="commit-split"
-              className="form-input"
-              value={splitRule}
-              onChange={e => setSplitRule(e.target.value as SplitRuleType)}
-            >
-              <option value="none">Integral / Pessoal (100% você)</option>
-              <option value="equal_roommates">Divisão Igualitária de Casa (Luz, Internet, Limpeza - 33.3% ou 50%)</option>
-              <option value="weighted_rent">Aluguel + Condomínio (31% você | 34.5% B | 34.5% C ou 65.5% Quarto Vago)</option>
-              <option value="mobile_shared">Plano TIM Celular (50% você | 50% Mãe)</option>
-            </select>
+            <label className="form-label">Regra de Divisão</label>
+            {isSpecialRule ? (
+              <div
+                style={{
+                  padding: '0.6rem 0.75rem',
+                  borderRadius: '8px',
+                  background: 'rgba(245, 158, 11, 0.15)',
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  color: '#f59e0b',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                }}
+              >
+                ⭐ Regra Especial ({splitRule === 'weighted_rent' ? 'Aluguel (Cotas Irregulares)' : 'TIM Celular (50% Mãe)'})
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  background: 'rgba(0,0,0,0.3)',
+                  padding: '0.25rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  gap: '0.25rem',
+                }}
+              >
+                <button
+                  type="button"
+                  className={`btn btn-sm ${splitRule === 'none' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, padding: '0.4rem' }}
+                  onClick={() => setSplitRule('none')}
+                >
+                  👤 Individual
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${splitRule === 'equal_roommates' ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ flex: 1, fontSize: '0.8rem', fontWeight: 600, padding: '0.4rem' }}
+                  onClick={() => setSplitRule('equal_roommates')}
+                >
+                  👥 Coletiva
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Due Day */}

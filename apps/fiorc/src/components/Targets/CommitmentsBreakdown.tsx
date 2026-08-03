@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { MonthlyTarget, CommitmentItem, CommitmentType } from '@fi/types';
+import type { MonthlyTarget, CommitmentItem, CommitmentType, SplitRuleType } from '@fi/types';
 import { formatCurrency } from '../../utils/categories';
 import { useTransactions } from '../../hooks/useTransactions';
 import { toMonthDate } from '../../utils/categories';
@@ -22,7 +22,7 @@ const DEFAULT_FIXED_ITEMS: Omit<CommitmentItem, 'id'>[] = [
   { name: 'Conta de Luz', amount: 0, due_day: 15, is_paid: false, category_type: 'fixed', split_rule: 'equal_roommates', is_active: true },
   { name: 'Internet Claro', amount: 0, due_day: 20, is_paid: false, category_type: 'fixed', split_rule: 'equal_roommates', is_active: true },
   { name: 'TIM Celular', amount: 0, due_day: 5, is_paid: false, category_type: 'fixed', split_rule: 'mobile_shared', is_active: true },
-  { name: 'Estudo Shibari (Assinatura)', amount: 0, due_day: 1, is_paid: false, category_type: 'fixed', split_rule: 'none', is_active: true },
+  { name: 'Estudo Shibari (Assinatura)', amount: 15, due_day: 1, is_paid: false, category_type: 'fixed', split_rule: 'none', is_active: true },
 ];
 
 function isDefaultItemPresent(defName: string, commitments: CommitmentItem[]): boolean {
@@ -56,6 +56,31 @@ function isDefaultItemPresent(defName: string, commitments: CommitmentItem[]): b
   });
 }
 
+function getRuleIcon(rule: SplitRuleType = 'none') {
+  switch (rule) {
+    case 'equal_roommates':
+      return { icon: '👥', label: 'COLETIVO' };
+    case 'weighted_rent':
+    case 'mobile_shared':
+      return { icon: '⭐', label: 'REGRA ESPECIAL' };
+    case 'none':
+    default:
+      return { icon: '👤', label: 'INDIVIDUAL' };
+  }
+}
+
+function getTypeIcon(catType: CommitmentType = 'fixed') {
+  switch (catType) {
+    case 'optional':
+      return { icon: '⚡', label: 'Opcional', isFixed: false };
+    case 'occasional':
+      return { icon: '🎲', label: 'Ocasional', isFixed: false };
+    case 'fixed':
+    default:
+      return { icon: '📌', label: 'Fixo', isFixed: true };
+  }
+}
+
 export function CommitmentsBreakdown({
   target,
   activeRoommatesCount,
@@ -77,7 +102,7 @@ export function CommitmentsBreakdown({
 
   const rawCommitments = target?.commitments || [];
 
-  // Merge default fixed commitments ONLY IF not already present (using fuzzy matching)
+  // Merge default fixed commitments ONLY IF not already present
   const mergedCommitments: CommitmentItem[] = [...rawCommitments];
   for (const defItem of DEFAULT_FIXED_ITEMS) {
     const exists = isDefaultItemPresent(defItem.name, rawCommitments);
@@ -182,33 +207,6 @@ export function CommitmentsBreakdown({
     setModalOpen(true);
   };
 
-  const getTypeStyle = (catType: CommitmentType = 'fixed') => {
-    switch (catType) {
-      case 'toggleable':
-        return {
-          border: '1px solid rgba(245, 158, 11, 0.4)',
-          badgeBg: 'rgba(245, 158, 11, 0.15)',
-          badgeColor: '#f59e0b',
-          badgeText: '⚡ Desligável',
-        };
-      case 'variable':
-        return {
-          border: '1px solid rgba(168, 85, 247, 0.4)',
-          badgeBg: 'rgba(168, 85, 247, 0.15)',
-          badgeColor: '#c084fc',
-          badgeText: '🎓 Variável',
-        };
-      case 'fixed':
-      default:
-        return {
-          border: '1px solid rgba(59, 130, 246, 0.35)',
-          badgeBg: 'rgba(59, 130, 246, 0.15)',
-          badgeColor: '#60a5fa',
-          badgeText: '📌 Fixo',
-        };
-    }
-  };
-
   return (
     <div>
       {/* Total Card */}
@@ -236,17 +234,24 @@ export function CommitmentsBreakdown({
           const isCcFatura = c.name === 'Fatura do Cartão';
           const isActive = c.is_active !== false;
 
-          // A commitment is a Forecast if it is not paid, not manually set by user, and is in a future month or has amount 0
-          const isForecast = !c.is_paid && !c.is_manually_set && (isFutureMonth || c.amount === 0);
+          const inferred = inferSplitRuleAndCategory(c.name);
+          let catType = (c.category_type || inferred.categoryType) as CommitmentType;
+          if ((catType as string) === 'toggleable') catType = 'optional';
+          if ((catType as string) === 'variable') catType = 'occasional';
+
+          const rule = c.split_rule || inferred.splitRule;
+
+          // Placeholders ONLY exist for 'fixed' and 'optional' commitments
+          const supportsPlaceholder = catType === 'fixed' || catType === 'optional';
+          const isForecast = supportsPlaceholder && !c.is_paid && !c.is_manually_set && (isFutureMonth || c.amount === 0);
           const forecastedVal = isForecast && forecastMap ? findForecastAmount(c.name, forecastMap) : 0;
           const displayAmount = forecastedVal > 0 ? forecastedVal : c.amount;
-          const isUnpopulated = displayAmount === 0;
+          const isUnpopulated = supportsPlaceholder && displayAmount === 0;
 
-          const inferred = inferSplitRuleAndCategory(c.name);
-          const catType = c.category_type || inferred.categoryType;
-          const rule = c.split_rule || inferred.splitRule;
-          const typeStyle = getTypeStyle(catType);
           const split = calculateSplitShare(displayAmount, rule, activeRoommatesCount);
+
+          const ruleInfo = getRuleIcon(rule);
+          const typeInfo = getTypeIcon(catType);
 
           return (
             <div
@@ -262,9 +267,9 @@ export function CommitmentsBreakdown({
                   ? '1px solid rgba(168, 85, 247, 0.45)'
                   : isUnpopulated
                   ? '1px dashed rgba(245, 158, 11, 0.5)'
-                  : typeStyle.border,
+                  : '1px solid var(--fi-color-border, rgba(255,255,255,0.1))',
                 padding: '1.25rem',
-                opacity: !isActive ? 0.55 : 1,
+                opacity: !isActive ? 0.5 : 1,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '0.75rem',
@@ -272,135 +277,161 @@ export function CommitmentsBreakdown({
                 boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
               }}
             >
-              {/* Card Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontSize: '1.25rem' }}>
-                    {!isActive ? '⏸️' : c.is_paid ? '✅' : isForecast && forecastedVal > 0 ? '🔮' : isUnpopulated ? '⚠️' : '⏳'}
-                  </span>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, textDecoration: c.is_paid ? 'line-through' : 'none' }}>
-                      {c.name}
-                    </h4>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
-                      Dia {c.due_day}
-                    </span>
-                  </div>
-                </div>
-
-                <span
+              {/* Card Header matching reference layout */}
+              <div>
+                <h3
                   style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '12px',
-                    background: isForecast && forecastedVal > 0 ? 'rgba(168, 85, 247, 0.2)' : typeStyle.badgeBg,
-                    color: isForecast && forecastedVal > 0 ? '#c084fc' : typeStyle.badgeColor,
+                    margin: 0,
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    textDecoration: c.is_paid ? 'line-through' : 'none',
+                    lineHeight: 1.3,
                   }}
                 >
-                  {isForecast && forecastedVal > 0 ? '🔮 Previsão' : typeStyle.badgeText}
-                </span>
+                  {c.name}
+                </h3>
+
+                {/* Sub-line: venc + green rule icon + red type pin/icon */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem' }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
+                    venc {c.due_day}
+                  </span>
+
+                  {/* Green Circle -> Active Rule Icon */}
+                  <span
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      color: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                    }}
+                    title={`Regra: ${ruleInfo.label}`}
+                  >
+                    {ruleInfo.icon}
+                  </span>
+
+                  {/* Red Circle / Type Icon: Red Pin for Fixo, Icon for Opcional / Ocasional */}
+                  <span
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '50%',
+                      color: '#ffffff',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.75rem',
+                    }}
+                    title={`Tipo: ${typeInfo.label}`}
+                  >
+                    {typeInfo.icon}
+                  </span>
+
+                  {!isActive && (
+                    <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600, marginLeft: 'auto' }}>
+                      ⏸️ Suspenso
+                    </span>
+                  )}
+
+                  {c.is_paid && (
+                    <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600, marginLeft: 'auto' }}>
+                      ✅ Pago
+                    </span>
+                  )}
+
+                  {isForecast && forecastedVal > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: '#c084fc', background: 'rgba(168, 85, 247, 0.15)', padding: '0.15rem 0.4rem', borderRadius: '8px', marginLeft: 'auto' }}>
+                      🔮 Previsão
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Unpopulated Warning OR Forecast CTA */}
+              {/* Forecast CTA if placeholder value */}
               {isForecast && forecastedVal > 0 ? (
-                <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '0.75rem', borderRadius: '8px' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#c084fc', fontWeight: 600, marginBottom: '0.25rem' }}>
-                    🔮 Previsão Estatística Calculada
+                <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '0.6rem', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.35rem' }}>
+                    Média móvel prevista: {formatCurrency(forecastedVal)}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>
-                    Média móvel ponderada do histórico ({formatCurrency(forecastedVal)})
-                  </div>
-                  <div style={{ display: 'flex', gap: '0.375rem' }}>
-                    <button
-                      className="btn btn-primary btn-sm"
-                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.3rem 0.4rem', background: 'linear-gradient(135deg, #a855f7, #6366f1)' }}
-                      onClick={() => handleSaveCommitment({ ...c, amount: forecastedVal, is_manually_set: true })}
-                      title="Confirmar este valor sugerido como meta definida do mês"
-                    >
-                      ✨ Confirmar Meta ({formatCurrency(forecastedVal)})
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      style={{ fontSize: '0.75rem', padding: '0.3rem 0.4rem' }}
-                      onClick={() => openEditModal(c)}
-                      title="Ajustar manualmente"
-                    >
-                      ✏️
-                    </button>
-                  </div>
-                </div>
-              ) : isUnpopulated ? (
-                <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, marginBottom: '0.375rem' }}>
-                    Valor não preenchido neste mês
-                  </div>
-                  <button className="btn btn-secondary btn-sm" style={{ width: '100%', fontSize: '0.75rem' }} onClick={() => openEditModal(c)}>
-                    ✏️ Definir valor
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ width: '100%', fontSize: '0.75rem', padding: '0.3rem 0.4rem', background: 'linear-gradient(135deg, #a855f7, #6366f1)' }}
+                    onClick={() => handleSaveCommitment({ ...c, amount: forecastedVal, is_manually_set: true })}
+                    title="Confirmar este valor sugerido como meta definida do mês"
+                  >
+                    ✨ Confirmar Meta ({formatCurrency(forecastedVal)})
                   </button>
                 </div>
-              ) : (
-                /* Values & Rule */
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Total Conta:</span>
-                    <span style={{ fontWeight: 600 }}>{formatCurrency(c.amount)}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Regra:</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--fi-color-primary, #3b82f6)' }}>
-                      {split.splitLabel}
-                    </span>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.375rem', marginTop: '0.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sua Cota:</span>
-                    <span style={{ fontSize: '1.125rem', fontWeight: 700, color: c.is_paid ? 'var(--fi-color-success, #10b981)' : 'var(--fi-color-text)' }}>
-                      {formatCurrency(split.userCalculatedShare)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Preview values block for forecast if unpopulated / forecast */}
-              {isForecast && forecastedVal > 0 && (
-                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Total Previsto:</span>
-                    <span style={{ fontWeight: 600, color: '#c084fc' }}>{formatCurrency(forecastedVal)}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
-                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Regra:</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--fi-color-primary, #3b82f6)' }}>
-                      {split.splitLabel}
-                    </span>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.375rem', marginTop: '0.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sua Cota Prevista:</span>
-                    <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#c084fc' }}>
-                      {formatCurrency(split.userCalculatedShare)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Receivables breakdown */}
-              {displayAmount > 0 && (split.receivables.roommate_b || split.receivables.roommate_c || split.receivables.mother) ? (
-                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <span style={{ fontWeight: 600 }}>{isForecast ? 'A receber (previsto):' : 'A receber:'}</span>
-                  {split.receivables.roommate_b ? <div>• Morador B: {formatCurrency(split.receivables.roommate_b)}</div> : null}
-                  {split.receivables.roommate_c ? <div>• Morador C: {formatCurrency(split.receivables.roommate_c)}</div> : null}
-                  {split.receivables.mother ? <div>• Mãe: {formatCurrency(split.receivables.mother)}</div> : null}
-                </div>
               ) : null}
+
+              {/* Inner Box of Values (matching reference UI) */}
+              <div
+                style={{
+                  border: '1.5px solid var(--fi-color-border, rgba(255,255,255,0.12))',
+                  borderRadius: '10px',
+                  padding: '0.75rem 1rem',
+                  background: 'rgba(0, 0, 0, 0.25)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                  <span style={{ color: 'var(--fi-color-text-muted)' }}>Total:</span>
+                  <span style={{ fontWeight: 600 }}>{formatCurrency(displayAmount)}</span>
+                </div>
+
+                {/* Participant A */}
+                {split.receivables.roommate_b ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
+                    <span>particip A:</span>
+                    <span>{formatCurrency(split.receivables.roommate_b)}</span>
+                  </div>
+                ) : null}
+
+                {/* Participant B */}
+                {split.receivables.roommate_c ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
+                    <span>particip B:</span>
+                    <span>{formatCurrency(split.receivables.roommate_c)}</span>
+                  </div>
+                ) : null}
+
+                {/* Mother participant if TIM Celular */}
+                {split.receivables.mother ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
+                    <span>particip A (Mãe):</span>
+                    <span>{formatCurrency(split.receivables.mother)}</span>
+                  </div>
+                ) : null}
+
+                {/* Você Paga (Highlighted) */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    paddingTop: '0.4rem',
+                    marginTop: '0.2rem',
+                    borderTop: '1px solid rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <span style={{ fontSize: '1.05rem', fontWeight: 800 }}>você paga:</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: c.is_paid ? '#10b981' : 'var(--fi-color-primary, #3b82f6)' }}>
+                    {formatCurrency(split.userCalculatedShare)}
+                  </span>
+                </div>
+              </div>
 
               {/* Actions Footer */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                 <div>
-                  {catType === 'toggleable' && (
+                  {catType === 'optional' && (
                     <button
                       className="btn btn-ghost btn-sm"
                       onClick={() => handleToggleActive(c)}
@@ -421,7 +452,7 @@ export function CommitmentsBreakdown({
                     </>
                   )}
 
-                  {!isUnpopulated && !isForecast && !c.is_paid && payCommitment && isActive && (
+                  {displayAmount > 0 && !isForecast && !c.is_paid && payCommitment && isActive && (
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleQuitar(c)}
@@ -471,7 +502,7 @@ export function CommitmentsBreakdown({
         >
           <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>➕</div>
           <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--fi-color-text)' }}>Adicionar Meta</div>
-          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Criar compromisso fixo ou opcional</div>
+          <div style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>Criar compromisso fixo, opcional ou ocasional</div>
         </div>
       </div>
 

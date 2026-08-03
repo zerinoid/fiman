@@ -65,7 +65,7 @@ export interface Person {
 // FIORC — Personal Budget & Cash Flow
 // ----------------------------------------------------------
 
-export type CommitmentType = 'fixed' | 'toggleable' | 'variable';
+export type CommitmentType = 'fixed' | 'optional' | 'occasional';
 export type SplitRuleType = 'none' | 'equal_roommates' | 'weighted_rent' | 'mobile_shared';
 
 export interface ReceivablesBreakdown {

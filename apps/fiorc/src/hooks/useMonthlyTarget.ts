@@ -22,14 +22,24 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
 
   const enrichCommitment = useCallback((c: CommitmentItem): CommitmentItem => {
     const inferred = inferSplitRuleAndCategory(c.name);
-    const category_type = c.category_type || inferred.categoryType;
+    let category_type = c.category_type || inferred.categoryType;
+    if ((category_type as string) === 'toggleable') category_type = 'optional';
+    if ((category_type as string) === 'variable') category_type = 'occasional';
+
     const split_rule = c.split_rule || inferred.splitRule;
     const is_active = c.is_active !== undefined ? c.is_active : true;
 
-    const split = calculateSplitShare(c.amount, split_rule, activeRoommatesCount);
+    // Default amount for Shibari Study is R$ 15.00
+    let amount = c.amount;
+    if (c.name.toLowerCase().includes('shibari') && (amount === 0 || amount === undefined)) {
+      amount = 15.00;
+    }
+
+    const split = calculateSplitShare(amount, split_rule, activeRoommatesCount);
 
     return {
       ...c,
+      amount,
       category_type,
       split_rule,
       is_active,
@@ -76,7 +86,7 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
     if (data) {
       let rawCommitments: CommitmentItem[] = (data.commitments as unknown as CommitmentItem[]) || [];
 
-      // If target exists in DB but commitments is empty, seed from latest past target
+      // If target exists in DB but commitments is empty, seed from latest past target (only fixed and optional)
       if (rawCommitments.length === 0) {
         const { data: latestPast } = await supabase
           .from('fiorc_monthly_targets')
@@ -88,10 +98,15 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
           .maybeSingle();
 
         if (latestPast && latestPast.commitments) {
-          rawCommitments = (latestPast.commitments as unknown as CommitmentItem[]).map((c: CommitmentItem) => ({
-            ...c,
-            is_paid: false,
-          }));
+          rawCommitments = (latestPast.commitments as unknown as CommitmentItem[])
+            .filter((c: CommitmentItem) => {
+              const cat = c.category_type || inferSplitRuleAndCategory(c.name).categoryType;
+              return cat === 'fixed' || cat === 'optional';
+            })
+            .map((c: CommitmentItem) => ({
+              ...c,
+              is_paid: false,
+            }));
         }
       }
 
@@ -128,7 +143,7 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
       return;
     }
 
-    // Auto-rollover seed from previous month
+    // Auto-rollover seed from previous month: ONLY fixed and optional commitments recur
     const { data: prev } = await supabase
       .from('fiorc_monthly_targets')
       .select('*')
@@ -139,10 +154,15 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
 
     if (prev && prev.commitments) {
       const prevCommitments = prev.commitments as unknown as CommitmentItem[];
-      newCommitments = prevCommitments.map((c: CommitmentItem) => ({
-        ...c,
-        is_paid: false,
-      }));
+      newCommitments = prevCommitments
+        .filter((c: CommitmentItem) => {
+          const cat = c.category_type || inferSplitRuleAndCategory(c.name).categoryType;
+          return cat === 'fixed' || cat === 'optional';
+        })
+        .map((c: CommitmentItem) => ({
+          ...c,
+          is_paid: false,
+        }));
     }
 
     if (ccTotal > 0) {

@@ -90,13 +90,13 @@ export function inferSplitRuleAndCategory(name: string): { splitRule: SplitRuleT
     return { splitRule: 'mobile_shared', categoryType: 'fixed' };
   }
   if (lower.includes('reserva') || lower.includes('emergência') || lower.includes('emergencia') || lower.includes('investimento') || lower.includes('quarto vago')) {
-    return { splitRule: 'none', categoryType: 'toggleable' };
+    return { splitRule: 'none', categoryType: 'optional' };
   }
   if (lower.includes('curso') || lower.includes('workshop') || lower.includes('estudo')) {
-    return { splitRule: 'none', categoryType: 'variable' };
+    return { splitRule: 'none', categoryType: 'occasional' };
   }
 
-  return { splitRule: 'none', categoryType: 'fixed' };
+  return { splitRule: 'none', categoryType: 'occasional' };
 }
 
 /**

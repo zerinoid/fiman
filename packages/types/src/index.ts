@@ -200,15 +200,29 @@ export interface Lesson {
 // FITEO — Class Systems & Lesson Planning
 // ----------------------------------------------------------
 
+/** A FITEO course track (e.g. Teoria das Cordas, Sobre Nós). */
+export interface CourseTrack {
+  id: string;
+  title: string;        // 'Teoria das Cordas' | 'Sobre Nós'
+  schedule_day: string; // 'Monday' | 'Wednesday'
+  skill_level: string;  // 'Intermediate' | 'Beginner' | 'Advanced'
+  active: boolean;
+  created_at: string;
+}
+
 /** A scheduled or planned class session. */
 export interface ClassSchedule {
   id: string;
+  /** FK → fiteo_courses.id — which track this class belongs to. */
+  course_id: string | null;
   class_date: string; // ISO 8601 timestamp
   proposed_theme: string;
   /** Editable by collaborators — meeting minutes / class notes */
   minutes_and_notes: string | null;
   is_planned: boolean;
   created_at: string;
+  /** Joined course track (available when fetched with select('*, course:fiteo_courses(*)')). */
+  course?: CourseTrack | null;
 }
 
 /** Attendance record linking a person to a class session. */
@@ -216,10 +230,10 @@ export interface Attendance {
   id: string;
   class_id: string; // FK → fiteo_class_schedules.id
   person_id: string; // FK → people.id
+  /** FK → fialn_enrollments.id — presence is tied to an active enrollment, not a payment event. */
+  enrollment_id: string | null;
   present: boolean;
-  payment_type: 'quarterly_plan' | 'single_class' | 'private_lesson' | null;
-  transaction_id: string | null; // FK → fiorc_transactions.id
-  enrollment_id: string | null; // FK → fialn_enrollments.id
+  notes: string | null;
   created_at: string;
 }
 

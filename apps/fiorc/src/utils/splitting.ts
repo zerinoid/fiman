@@ -164,3 +164,20 @@ export function calculateWeightedMovingAverage(history: number[]): number {
 
   return Math.round((weightedTotal / weightSum) * 100) / 100;
 }
+
+export function findForecastAmount(name: string, forecastMap: Record<string, number>): number {
+  if (!forecastMap) return 0;
+  const lower = name.trim().toLowerCase();
+  if (forecastMap[lower] !== undefined && forecastMap[lower] > 0) return forecastMap[lower];
+
+  for (const [key, val] of Object.entries(forecastMap)) {
+    if (val <= 0) continue;
+    if (lower.includes('aluguel') && (key.includes('aluguel') || key.includes('condomínio') || key.includes('condominio'))) return val;
+    if (lower.includes('luz') && (key.includes('luz') || key.includes('energia'))) return val;
+    if (lower.includes('internet') && (key.includes('internet') || key.includes('claro'))) return val;
+    if (lower.includes('tim') && (key.includes('tim') || key.includes('celular'))) return val;
+    if (lower.includes('shibari') && key.includes('shibari')) return val;
+  }
+
+  return 0;
+}

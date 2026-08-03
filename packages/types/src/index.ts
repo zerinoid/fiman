@@ -86,6 +86,7 @@ export interface CommitmentItem {
   user_calculated_share?: number;
   receivables?: ReceivablesBreakdown;
   is_active?: boolean;
+  is_manually_set?: boolean;
   transaction_id?: string | null;
 }
 

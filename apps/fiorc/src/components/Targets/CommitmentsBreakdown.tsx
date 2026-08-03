@@ -4,11 +4,12 @@ import { formatCurrency } from '../../utils/categories';
 import { useTransactions } from '../../hooks/useTransactions';
 import { toMonthDate } from '../../utils/categories';
 import { CommitmentModal } from './CommitmentModal';
-import { inferSplitRuleAndCategory, calculateSplitShare } from '../../utils/splitting';
+import { inferSplitRuleAndCategory, calculateSplitShare, findForecastAmount } from '../../utils/splitting';
 
 interface Props {
   target: MonthlyTarget | null;
   activeRoommatesCount: 2 | 3;
+  forecastMap?: Record<string, number>;
   payCommitment?: (id: string, transactionId?: string) => Promise<void>;
   unpayCommitment?: (id: string, name: string) => Promise<void>;
   deleteCommitment?: (id: string, name: string) => Promise<void>;
@@ -58,6 +59,7 @@ function isDefaultItemPresent(defName: string, commitments: CommitmentItem[]): b
 export function CommitmentsBreakdown({
   target,
   activeRoommatesCount,
+  forecastMap,
   payCommitment,
   unpayCommitment,
   deleteCommitment,
@@ -86,6 +88,10 @@ export function CommitmentsBreakdown({
       });
     }
   }
+
+  const currentDateStr = toMonthDate(new Date().getFullYear(), new Date().getMonth() + 1);
+  const targetDateStr = target?.month_year || toMonthDate(year, month);
+  const isFutureMonth = targetDateStr > currentDateStr;
 
   const handleQuitar = async (c: CommitmentItem) => {
     if (!payCommitment) return;
@@ -209,10 +215,16 @@ export function CommitmentsBreakdown({
       {target && (
         <div className="card commitment-total" style={{ marginBottom: 'var(--fi-space-6)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div className="commitment-total-label">💳 Sua Cota Total de Metas</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>Custo pessoal líquido após aplicação das regras de rateio</div>
+            <div className="commitment-total-label">
+              💳 {isFutureMonth ? 'Sua Cota Total Estimada (Previsão)' : 'Sua Cota Total de Metas'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)' }}>
+              {isFutureMonth
+                ? 'Custo líquido estimado via média móvel ponderada para este mês futuro'
+                : 'Custo pessoal líquido após aplicação das regras de rateio'}
+            </div>
           </div>
-          <span className="commitment-total-amount" style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--fi-color-primary)' }}>
+          <span className="commitment-total-amount" style={{ fontSize: '1.75rem', fontWeight: 800, color: isFutureMonth ? '#c084fc' : 'var(--fi-color-primary)' }}>
             {formatCurrency(target.total_target)}
           </span>
         </div>
@@ -223,12 +235,18 @@ export function CommitmentsBreakdown({
         {mergedCommitments.map(c => {
           const isCcFatura = c.name === 'Fatura do Cartão';
           const isActive = c.is_active !== false;
-          const isUnpopulated = c.amount === 0;
+
+          // A commitment is a Forecast if it is not paid, not manually set by user, and is in a future month or has amount 0
+          const isForecast = !c.is_paid && !c.is_manually_set && (isFutureMonth || c.amount === 0);
+          const forecastedVal = isForecast && forecastMap ? findForecastAmount(c.name, forecastMap) : 0;
+          const displayAmount = forecastedVal > 0 ? forecastedVal : c.amount;
+          const isUnpopulated = displayAmount === 0;
+
           const inferred = inferSplitRuleAndCategory(c.name);
           const catType = c.category_type || inferred.categoryType;
           const rule = c.split_rule || inferred.splitRule;
           const typeStyle = getTypeStyle(catType);
-          const split = calculateSplitShare(c.amount, rule, activeRoommatesCount);
+          const split = calculateSplitShare(displayAmount, rule, activeRoommatesCount);
 
           return (
             <div
@@ -240,6 +258,8 @@ export function CommitmentsBreakdown({
                   ? '1px solid rgba(16, 185, 129, 0.4)'
                   : !isActive
                   ? '1px dashed var(--fi-color-border, rgba(255,255,255,0.15))'
+                  : isForecast && forecastedVal > 0
+                  ? '1px solid rgba(168, 85, 247, 0.45)'
                   : isUnpopulated
                   ? '1px dashed rgba(245, 158, 11, 0.5)'
                   : typeStyle.border,
@@ -256,7 +276,7 @@ export function CommitmentsBreakdown({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ fontSize: '1.25rem' }}>
-                    {!isActive ? '⏸️' : c.is_paid ? '✅' : isUnpopulated ? '⚠️' : '⏳'}
+                    {!isActive ? '⏸️' : c.is_paid ? '✅' : isForecast && forecastedVal > 0 ? '🔮' : isUnpopulated ? '⚠️' : '⏳'}
                   </span>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, textDecoration: c.is_paid ? 'line-through' : 'none' }}>
@@ -274,16 +294,43 @@ export function CommitmentsBreakdown({
                     fontWeight: 600,
                     padding: '0.2rem 0.5rem',
                     borderRadius: '12px',
-                    background: typeStyle.badgeBg,
-                    color: typeStyle.badgeColor,
+                    background: isForecast && forecastedVal > 0 ? 'rgba(168, 85, 247, 0.2)' : typeStyle.badgeBg,
+                    color: isForecast && forecastedVal > 0 ? '#c084fc' : typeStyle.badgeColor,
                   }}
                 >
-                  {typeStyle.badgeText}
+                  {isForecast && forecastedVal > 0 ? '🔮 Previsão' : typeStyle.badgeText}
                 </span>
               </div>
 
-              {/* Unpopulated CTA Warning if 0 amount */}
-              {isUnpopulated ? (
+              {/* Unpopulated Warning OR Forecast CTA */}
+              {isForecast && forecastedVal > 0 ? (
+                <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.25)', padding: '0.75rem', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '0.75rem', color: '#c084fc', fontWeight: 600, marginBottom: '0.25rem' }}>
+                    🔮 Previsão Estatística Calculada
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>
+                    Média móvel ponderada do histórico ({formatCurrency(forecastedVal)})
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.375rem' }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ flex: 1, fontSize: '0.75rem', padding: '0.3rem 0.4rem', background: 'linear-gradient(135deg, #a855f7, #6366f1)' }}
+                      onClick={() => handleSaveCommitment({ ...c, amount: forecastedVal, is_manually_set: true })}
+                      title="Confirmar este valor sugerido como meta definida do mês"
+                    >
+                      ✨ Confirmar Meta ({formatCurrency(forecastedVal)})
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.3rem 0.4rem' }}
+                      onClick={() => openEditModal(c)}
+                      title="Ajustar manualmente"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </div>
+              ) : isUnpopulated ? (
                 <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.75rem', borderRadius: '8px', textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600, marginBottom: '0.375rem' }}>
                     Valor não preenchido neste mês
@@ -316,10 +363,34 @@ export function CommitmentsBreakdown({
                 </div>
               )}
 
+              {/* Preview values block for forecast if unpopulated / forecast */}
+              {isForecast && forecastedVal > 0 && (
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Total Previsto:</span>
+                    <span style={{ fontWeight: 600, color: '#c084fc' }}>{formatCurrency(forecastedVal)}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem' }}>
+                    <span style={{ color: 'var(--fi-color-text-muted)' }}>Regra:</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--fi-color-primary, #3b82f6)' }}>
+                      {split.splitLabel}
+                    </span>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.375rem', marginTop: '0.125rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Sua Cota Prevista:</span>
+                    <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#c084fc' }}>
+                      {formatCurrency(split.userCalculatedShare)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Receivables breakdown */}
-              {!isUnpopulated && (split.receivables.roommate_b || split.receivables.roommate_c || split.receivables.mother) ? (
+              {displayAmount > 0 && (split.receivables.roommate_b || split.receivables.roommate_c || split.receivables.mother) ? (
                 <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                  <span style={{ fontWeight: 600 }}>A receber:</span>
+                  <span style={{ fontWeight: 600 }}>{isForecast ? 'A receber (previsto):' : 'A receber:'}</span>
                   {split.receivables.roommate_b ? <div>• Morador B: {formatCurrency(split.receivables.roommate_b)}</div> : null}
                   {split.receivables.roommate_c ? <div>• Morador C: {formatCurrency(split.receivables.roommate_c)}</div> : null}
                   {split.receivables.mother ? <div>• Mãe: {formatCurrency(split.receivables.mother)}</div> : null}
@@ -350,7 +421,7 @@ export function CommitmentsBreakdown({
                     </>
                   )}
 
-                  {!isUnpopulated && !c.is_paid && payCommitment && isActive && (
+                  {!isUnpopulated && !isForecast && !c.is_paid && payCommitment && isActive && (
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => handleQuitar(c)}

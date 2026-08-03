@@ -11,7 +11,7 @@ import { HistoricalIngestionModal } from '../components/Targets/HistoricalIngest
 export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
   const { activeRoommatesCount, setRoommatesCount } = useHouseSettings();
   const { target, loading: targetLoading, upsertTarget, payCommitment, unpayCommitment, deleteCommitment } = useMonthlyTarget(year, month, activeRoommatesCount);
-  const { momVariations, loading: analyticsLoading, bulkImportHistoricalData } = useForecastingAnalytics(year, month);
+  const { momVariations, forecastMap, loading: analyticsLoading, bulkImportHistoricalData } = useForecastingAnalytics(year, month);
 
   const [importModalOpen, setImportModalOpen] = useState(false);
 
@@ -115,6 +115,7 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
             <CommitmentsBreakdown
               target={target}
               activeRoommatesCount={activeRoommatesCount}
+              forecastMap={forecastMap}
               payCommitment={payCommitment}
               unpayCommitment={unpayCommitment}
               deleteCommitment={deleteCommitment}

@@ -76,6 +76,25 @@ export function useMonthlyTarget(year: number, month: number, activeRoommatesCou
     if (data) {
       let rawCommitments: CommitmentItem[] = (data.commitments as unknown as CommitmentItem[]) || [];
 
+      // If target exists in DB but commitments is empty, seed from latest past target
+      if (rawCommitments.length === 0) {
+        const { data: latestPast } = await supabase
+          .from('fiorc_monthly_targets')
+          .select('commitments')
+          .lt('month_year', monthDate)
+          .not('commitments', 'eq', '[]')
+          .order('month_year', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestPast && latestPast.commitments) {
+          rawCommitments = (latestPast.commitments as unknown as CommitmentItem[]).map((c: CommitmentItem) => ({
+            ...c,
+            is_paid: false,
+          }));
+        }
+      }
+
       if (ccTotal > 0) {
         const existingCcIdx = rawCommitments.findIndex((c: CommitmentItem) => c.name === 'Fatura do Cartão');
         if (existingCcIdx >= 0) {

@@ -15,6 +15,7 @@ export interface MoMItemResult {
 export interface UseForecastingAnalyticsReturn {
   momVariations: MoMItemResult[];
   projectedNextMonth: CommitmentItem[];
+  forecastMap: Record<string, number>;
   loading: boolean;
   bulkImportHistoricalData: (records: Array<{ month_year: string; commitments: CommitmentItem[] }>) => Promise<void>;
   refetch: () => void;
@@ -23,6 +24,7 @@ export interface UseForecastingAnalyticsReturn {
 export function useForecastingAnalytics(currentYear: number, currentMonth: number): UseForecastingAnalyticsReturn {
   const [momVariations, setMomVariations] = useState<MoMItemResult[]>([]);
   const [projectedNextMonth, setProjectedNextMonth] = useState<CommitmentItem[]>([]);
+  const [forecastMap, setForecastMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const fetchAnalytics = useCallback(async () => {
@@ -47,6 +49,7 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
       if (!targets || targets.length === 0) {
         setMomVariations([]);
         setProjectedNextMonth([]);
+        setForecastMap({});
         setLoading(false);
         return;
       }
@@ -74,22 +77,29 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
 
       setMomVariations(variations);
 
-      // 3. Statistical Forecasting for next month using historical weighted moving averages
-      // Collect history per commitment name across available past targets
+      // 3. Statistical Forecasting using historical weighted moving averages
       const historyByName: Record<string, number[]> = {};
       for (const t of targets) {
         const items = (t.commitments as unknown as CommitmentItem[]) || [];
         for (const item of items) {
-          const key = item.name.trim();
-          if (!historyByName[key]) historyByName[key] = [];
-          historyByName[key].push(item.amount);
+          if (item.amount > 0) {
+            const key = item.name.trim().toLowerCase();
+            if (!historyByName[key]) historyByName[key] = [];
+            historyByName[key].push(item.amount);
+          }
         }
       }
 
+      const map: Record<string, number> = {};
+      for (const [key, hist] of Object.entries(historyByName)) {
+        map[key] = calculateWeightedMovingAverage(hist);
+      }
+      setForecastMap(map);
+
       // Generate next month projections
       const projections: CommitmentItem[] = currentCommitments.map(c => {
-        const hist = historyByName[c.name.trim()] || [c.amount];
-        const forecastedAmount = calculateWeightedMovingAverage(hist);
+        const key = c.name.trim().toLowerCase();
+        const forecastedAmount = map[key] || c.amount;
         return {
           ...c,
           amount: forecastedAmount,
@@ -136,6 +146,7 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
   return {
     momVariations,
     projectedNextMonth,
+    forecastMap,
     loading,
     bulkImportHistoricalData,
     refetch: fetchAnalytics,

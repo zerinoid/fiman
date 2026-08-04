@@ -216,7 +216,9 @@ export interface ClassSchedule {
   /** FK → fiteo_courses.id — which track this class belongs to. */
   course_id: string | null;
   class_date: string; // ISO 8601 timestamp
-  proposed_theme: string;
+  proposed_theme: string; // Theme Title
+  /** Detailed description of the proposed theme, exercises, or outline. */
+  theme_description: string | null;
   /** Editable by collaborators — meeting minutes / class notes */
   minutes_and_notes: string | null;
   is_planned: boolean;

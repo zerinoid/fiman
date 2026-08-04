@@ -1,64 +1,119 @@
 import { useState } from 'react';
-import type { CourseTrack } from '@fi/types';
+import type { ClassSchedule, CourseTrack } from '@fi/types';
 import type { Navigate } from '../App';
 import { useCourses } from '../hooks/useCourses';
-import { useSchedules, type CreateSchedulePayload } from '../hooks/useSchedules';
+import {
+  useSchedules,
+  type CreateSchedulePayload,
+  type UpdateSchedulePayload,
+} from '../hooks/useSchedules';
 import { ClassRow } from '../components/ClassRow';
 
-interface NewClassModalProps {
+export interface ScheduleModalProps {
   courses: CourseTrack[];
   saving: boolean;
-  onSubmit: (payload: CreateSchedulePayload) => Promise<boolean>;
+  /** Existing schedule if editing; null if creating. */
+  initialSchedule?: ClassSchedule | null;
+  onSubmit: (payload: CreateSchedulePayload | UpdateSchedulePayload) => Promise<boolean>;
   onClose: () => void;
 }
 
-function NewClassModal({ courses, saving, onSubmit, onClose }: NewClassModalProps) {
-  const [courseId, setCourseId] = useState(courses[0]?.id ?? '');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('19:00');
-  const [theme, setTheme] = useState('');
-  const [isPlanned, setIsPlanned] = useState(false);
+export function ScheduleModal({
+  courses,
+  saving,
+  initialSchedule,
+  onSubmit,
+  onClose,
+}: ScheduleModalProps) {
+  const isEditing = !!initialSchedule;
+
+  const [courseId, setCourseId] = useState(
+    initialSchedule?.course_id ?? courses[0]?.id ?? '',
+  );
+
+  // Extract initial date and time strings if editing
+  const initialDateObj = initialSchedule ? new Date(initialSchedule.class_date) : null;
+  const initialDateStr = initialDateObj
+    ? initialDateObj.toISOString().split('T')[0]
+    : '';
+  const initialTimeStr = initialDateObj
+    ? initialDateObj.toTimeString().substring(0, 5)
+    : '19:00';
+
+  const [date, setDate] = useState(initialDateStr);
+  const [time, setTime] = useState(initialTimeStr);
+  const [themeTitle, setThemeTitle] = useState(initialSchedule?.proposed_theme ?? '');
+  const [themeDescription, setThemeDescription] = useState(
+    initialSchedule?.theme_description ?? '',
+  );
+  const [isPlanned, setIsPlanned] = useState(initialSchedule?.is_planned ?? false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!courseId || !date || !theme.trim()) {
-      setError('Preencha todos os campos obrigatórios.');
+
+    if (!courseId || !date || !themeTitle.trim()) {
+      setError('Preencha os campos obrigatórios (Trilha, Data e Título).');
       return;
     }
+
     const isoDate = new Date(`${date}T${time}:00`).toISOString();
-    const ok = await onSubmit({ course_id: courseId, class_date: isoDate, proposed_theme: theme.trim(), is_planned: isPlanned });
+
+    const ok = await onSubmit({
+      course_id: courseId,
+      class_date: isoDate,
+      proposed_theme: themeTitle.trim(),
+      theme_description: themeDescription.trim() || null,
+      is_planned: isPlanned,
+    });
+
     if (ok) onClose();
-    else setError('Erro ao criar aula. Tente novamente.');
+    else setError(isEditing ? 'Erro ao atualizar aula.' : 'Erro ao criar aula.');
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="new-class-title">
-        <h2 className="modal-title" id="new-class-title">Nova Aula</h2>
+    <div
+      className="modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="schedule-modal-title"
+      >
+        <h2 className="modal-title" id="schedule-modal-title">
+          {isEditing ? 'Editar Aula' : 'Nova Aula'}
+        </h2>
 
         <form onSubmit={handleSubmit} className="stack-4">
           <div className="form-group">
-            <label className="form-label" htmlFor="nc-course">Trilha *</label>
+            <label className="form-label" htmlFor="sm-course">
+              Trilha *
+            </label>
             <select
-              id="nc-course"
+              id="sm-course"
               className="form-select"
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
               required
             >
               {courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.title}</option>
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
               ))}
             </select>
           </div>
 
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label" htmlFor="nc-date">Data *</label>
+              <label className="form-label" htmlFor="sm-date">
+                Data *
+              </label>
               <input
-                id="nc-date"
+                id="sm-date"
                 type="date"
                 className="form-input"
                 value={date}
@@ -67,9 +122,11 @@ function NewClassModal({ courses, saving, onSubmit, onClose }: NewClassModalProp
               />
             </div>
             <div className="form-group">
-              <label className="form-label" htmlFor="nc-time">Horário</label>
+              <label className="form-label" htmlFor="sm-time">
+                Horário
+              </label>
               <input
-                id="nc-time"
+                id="sm-time"
                 type="time"
                 className="form-input"
                 value={time}
@@ -79,23 +136,45 @@ function NewClassModal({ courses, saving, onSubmit, onClose }: NewClassModalProp
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="nc-theme">Tema Proposto *</label>
+            <label className="form-label" htmlFor="sm-theme-title">
+              Título do Tema Proposto *
+            </label>
             <input
-              id="nc-theme"
+              id="sm-theme-title"
               type="text"
               className="form-input"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              placeholder="Ex: Introdução a nós base, Tensão e equilíbrio…"
+              value={themeTitle}
+              onChange={(e) => setThemeTitle(e.target.value)}
+              placeholder="Ex: Ancoragens Multi-ponto e Equilíbrio"
               required
             />
           </div>
 
+          <div className="form-group">
+            <label className="form-label" htmlFor="sm-theme-desc">
+              Descrição do Tema Proposto (opcional)
+            </label>
+            <textarea
+              id="sm-theme-desc"
+              className="form-textarea"
+              value={themeDescription}
+              onChange={(e) => setThemeDescription(e.target.value)}
+              rows={3}
+              placeholder="Detalhes dos exercícios, conceitos teóricos, distribuição de peso, equipamentos necessários…"
+            />
+          </div>
+
           <label
-            style={{ display: 'flex', alignItems: 'center', gap: 'var(--fi-space-3)', cursor: 'pointer', fontSize: '0.875rem' }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--fi-space-3)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
           >
             <input
-              id="nc-planned"
+              id="sm-planned"
               type="checkbox"
               checked={isPlanned}
               onChange={(e) => setIsPlanned(e.target.checked)}
@@ -106,9 +185,24 @@ function NewClassModal({ courses, saving, onSubmit, onClose }: NewClassModalProp
           {error && <p className="form-error">⚠ {error}</p>}
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
-            <button id="nc-submit-btn" type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? <><span className="spinner" /> Criando…</> : 'Criar Aula'}
+            <button type="button" className="btn btn-ghost" onClick={onClose}>
+              Cancelar
+            </button>
+            <button
+              id="sm-submit-btn"
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving}
+            >
+              {saving ? (
+                <>
+                  <span className="spinner" /> {isEditing ? 'Salving…' : 'Criando…'}
+                </>
+              ) : isEditing ? (
+                'Salvar Alterações'
+              ) : (
+                'Criar Aula'
+              )}
             </button>
           </div>
         </form>
@@ -125,14 +219,23 @@ interface CalendarPageProps {
   preselectedCourseId?: string | null;
 }
 
-export function CalendarPage({ navigate, isAdmin, preselectedCourseId }: CalendarPageProps) {
+export function CalendarPage({
+  navigate,
+  isAdmin,
+  preselectedCourseId,
+}: CalendarPageProps) {
   const { courses } = useCourses();
-  const [activeCourseId, setActiveCourseId] = useState<string | null>(preselectedCourseId ?? null);
+  const [activeCourseId, setActiveCourseId] = useState<string | null>(
+    preselectedCourseId ?? null,
+  );
   const [showNewClass, setShowNewClass] = useState(false);
-  const { schedules, loading, saving, error, createSchedule } = useSchedules(activeCourseId);
+  const { schedules, loading, saving, error, createSchedule } =
+    useSchedules(activeCourseId);
 
-  const handleCreateSchedule = async (payload: CreateSchedulePayload) => {
-    return createSchedule(payload);
+  const handleCreateSchedule = async (
+    payload: CreateSchedulePayload | UpdateSchedulePayload,
+  ) => {
+    return createSchedule(payload as CreateSchedulePayload);
   };
 
   return (
@@ -142,13 +245,18 @@ export function CalendarPage({ navigate, isAdmin, preselectedCourseId }: Calenda
           <h1 className="page-title">Agenda de Aulas</h1>
           <p className="page-subtitle">
             {activeCourseId
-              ? courses.find((c) => c.id === activeCourseId)?.title ?? 'Todas as trilhas'
+              ? courses.find((c) => c.id === activeCourseId)?.title ??
+                'Todas as trilhas'
               : 'Todas as trilhas'}
           </p>
         </div>
 
         {isAdmin && (
-          <button id="new-class-btn" className="btn btn-primary" onClick={() => setShowNewClass(true)}>
+          <button
+            id="new-class-btn"
+            className="btn btn-primary"
+            onClick={() => setShowNewClass(true)}
+          >
             + Nova Aula
           </button>
         )}
@@ -165,7 +273,9 @@ export function CalendarPage({ navigate, isAdmin, preselectedCourseId }: Calenda
         {courses.map((course) => (
           <button
             key={course.id}
-            className={`course-tab ${activeCourseId === course.id ? 'active' : ''}`}
+            className={`course-tab ${
+              activeCourseId === course.id ? 'active' : ''
+            }`}
             onClick={() => setActiveCourseId(course.id)}
           >
             {course.title}
@@ -181,9 +291,7 @@ export function CalendarPage({ navigate, isAdmin, preselectedCourseId }: Calenda
         </div>
       )}
 
-      {!loading && error && (
-        <div className="alert alert-danger">{error}</div>
-      )}
+      {!loading && error && <div className="alert alert-danger">{error}</div>}
 
       {!loading && !error && schedules.length === 0 && (
         <div className="empty-state">
@@ -210,7 +318,7 @@ export function CalendarPage({ navigate, isAdmin, preselectedCourseId }: Calenda
       )}
 
       {showNewClass && (
-        <NewClassModal
+        <ScheduleModal
           courses={courses}
           saving={saving}
           onSubmit={handleCreateSchedule}

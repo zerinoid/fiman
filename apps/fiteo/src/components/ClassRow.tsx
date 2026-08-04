@@ -31,6 +31,20 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
 
       <div className="class-row-body">
         <div className="class-row-theme">{schedule.proposed_theme}</div>
+        {schedule.theme_description && (
+          <div
+            style={{
+              fontSize: '0.78rem',
+              color: 'var(--fi-color-text-muted)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              marginTop: '2px',
+            }}
+          >
+            {schedule.theme_description}
+          </div>
+        )}
         {schedule.course && (
           <div className="class-row-course">
             {schedule.course.title} · {schedule.course.schedule_day === 'Monday' ? 'Segunda' : schedule.course.schedule_day === 'Wednesday' ? 'Quarta' : schedule.course.schedule_day}

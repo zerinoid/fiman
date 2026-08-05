@@ -8,6 +8,10 @@ export interface CreateSchedulePayload {
   proposed_theme: string;      // Title
   theme_description?: string | null; // Description
   is_planned?: boolean;
+  techniques?: string[];
+  has_photo_content?: boolean;
+  has_video_content?: boolean;
+  is_highlighted?: boolean;
 }
 
 export interface UpdateSchedulePayload {
@@ -16,6 +20,10 @@ export interface UpdateSchedulePayload {
   proposed_theme?: string;
   theme_description?: string | null;
   is_planned?: boolean;
+  techniques?: string[];
+  has_photo_content?: boolean;
+  has_video_content?: boolean;
+  is_highlighted?: boolean;
 }
 
 export interface UseSchedulesReturn {
@@ -27,6 +35,21 @@ export interface UseSchedulesReturn {
   updateSchedule: (id: string, payload: UpdateSchedulePayload) => Promise<boolean>;
   deleteSchedule: (id: string, classDate: string) => Promise<{ success: boolean; error?: string }>;
   refresh: () => void;
+}
+
+/**
+ * Helper to auto-mark past classes as planned
+ */
+function normalizeClassSchedule(item: any): ClassSchedule {
+  const isPast = new Date(item.class_date).getTime() < Date.now();
+  return {
+    ...item,
+    is_planned: isPast || Boolean(item.is_planned),
+    techniques: Array.isArray(item.techniques) ? item.techniques : [],
+    has_photo_content: Boolean(item.has_photo_content),
+    has_video_content: Boolean(item.has_video_content),
+    is_highlighted: Boolean(item.is_highlighted),
+  };
 }
 
 /**
@@ -57,7 +80,8 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
 
       const { data, error: fetchError } = await query;
       if (fetchError) throw fetchError;
-      setSchedules((data ?? []) as unknown as ClassSchedule[]);
+      const normalized = (data ?? []).map(normalizeClassSchedule);
+      setSchedules(normalized);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar agenda de aulas');
     } finally {
@@ -71,6 +95,9 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
     setSaving(true);
     setError(null);
 
+    const isPast = new Date(payload.class_date).getTime() < Date.now();
+    const finalIsPlanned = isPast || Boolean(payload.is_planned);
+
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: insertError } = await (supabase as any)
@@ -80,13 +107,17 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
           class_date: payload.class_date,
           proposed_theme: payload.proposed_theme,
           theme_description: payload.theme_description ?? null,
-          is_planned: payload.is_planned ?? false,
+          is_planned: finalIsPlanned,
+          techniques: payload.techniques ?? [],
+          has_photo_content: payload.has_photo_content ?? false,
+          has_video_content: payload.has_video_content ?? false,
+          is_highlighted: payload.is_highlighted ?? false,
         })
         .select('*, course:fiteo_courses(*)')
         .single();
 
       if (insertError) throw insertError;
-      setSchedules((prev) => [data as unknown as ClassSchedule, ...prev]);
+      setSchedules((prev) => [normalizeClassSchedule(data), ...prev]);
       return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar aula');
@@ -101,23 +132,38 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
     setError(null);
 
     try {
+      const updateData: Record<string, any> = {};
+      if (payload.course_id !== undefined) updateData.course_id = payload.course_id;
+      if (payload.class_date !== undefined) updateData.class_date = payload.class_date;
+      if (payload.proposed_theme !== undefined) updateData.proposed_theme = payload.proposed_theme;
+      if (payload.theme_description !== undefined) updateData.theme_description = payload.theme_description;
+      if (payload.techniques !== undefined) updateData.techniques = payload.techniques;
+      if (payload.has_photo_content !== undefined) updateData.has_photo_content = payload.has_photo_content;
+      if (payload.has_video_content !== undefined) updateData.has_video_content = payload.has_video_content;
+      if (payload.is_highlighted !== undefined) updateData.is_highlighted = payload.is_highlighted;
+
+      if (payload.class_date !== undefined) {
+        const isPast = new Date(payload.class_date).getTime() < Date.now();
+        if (isPast) {
+          updateData.is_planned = true;
+        } else if (payload.is_planned !== undefined) {
+          updateData.is_planned = payload.is_planned;
+        }
+      } else if (payload.is_planned !== undefined) {
+        updateData.is_planned = payload.is_planned;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error: updateError } = await (supabase as any)
         .from('fiteo_class_schedules')
-        .update({
-          ...(payload.course_id !== undefined && { course_id: payload.course_id }),
-          ...(payload.class_date !== undefined && { class_date: payload.class_date }),
-          ...(payload.proposed_theme !== undefined && { proposed_theme: payload.proposed_theme }),
-          ...(payload.theme_description !== undefined && { theme_description: payload.theme_description }),
-          ...(payload.is_planned !== undefined && { is_planned: payload.is_planned }),
-        })
+        .update(updateData)
         .eq('id', id)
         .select('*, course:fiteo_courses(*)')
         .single();
 
       if (updateError) throw updateError;
       setSchedules((prev) =>
-        prev.map((s) => (s.id === id ? (data as unknown as ClassSchedule) : s)),
+        prev.map((s) => (s.id === id ? normalizeClassSchedule(data) : s)),
       );
       return true;
     } catch (err) {

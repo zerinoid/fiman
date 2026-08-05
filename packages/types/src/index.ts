@@ -239,6 +239,14 @@ export interface ClassSchedule {
   /** Editable by collaborators — meeting minutes / class notes */
   minutes_and_notes: string | null;
   is_planned: boolean;
+  /** Array of technique tags addressed in the class (dynamically added/searchable). */
+  techniques?: string[] | null;
+  /** Flag for interesting photo content for social media/disclosure. */
+  has_photo_content?: boolean | null;
+  /** Flag for interesting video content for social media/disclosure. */
+  has_video_content?: boolean | null;
+  /** Flag for featured/exceptional classes ("Aula Destaque"). */
+  is_highlighted?: boolean | null;
   created_at: string;
   /** Joined course track (available when fetched with select('*, course:fiteo_courses(*)')). */
   course?: CourseTrack | null;

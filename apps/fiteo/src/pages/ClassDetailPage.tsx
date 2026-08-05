@@ -43,6 +43,13 @@ function formatDateTime(iso: string): string {
   });
 }
 
+function formatShortDate(iso: string): string {
+  const d = new Date(iso);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  return `${day}/${month}`;
+}
+
 type DetailTab = 'attendance' | 'minutes';
 
 interface ClassDetailPageProps {
@@ -63,6 +70,18 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
   const { courses } = useCourses();
   const { updateSchedule, deleteSchedule, saving: scheduleSaving } = useSchedules();
 
+  // Retrieve track schedules for internal pagination (ordered newest first)
+  const { schedules: trackSchedules } = useSchedules(schedule?.course_id ?? null);
+  const currentIndex = trackSchedules.findIndex((s) => s.id === classId);
+  const prevClass =
+    currentIndex !== -1 && currentIndex + 1 < trackSchedules.length
+      ? trackSchedules[currentIndex + 1]
+      : null; // Chronologically older class
+  const nextClass =
+    currentIndex > 0
+      ? trackSchedules[currentIndex - 1]
+      : null; // Chronologically newer class
+
   const groupWeekday = schedule?.course
     ? scheduleDayToWeekday(schedule.course.schedule_day)
     : null;
@@ -82,6 +101,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
   const fetchSchedule = () => {
     if (!classId) return;
     setLoadingSchedule(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     supabase
       .from('fiteo_class_schedules')
@@ -89,7 +109,11 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
       .eq('id', classId)
       .single()
       .then(({ data, error }) => {
-        if (!error && data) setSchedule(data as unknown as ClassSchedule);
+        if (!error && data) {
+          setSchedule(data as unknown as ClassSchedule);
+        } else {
+          setSchedule(null);
+        }
         setLoadingSchedule(false);
       });
   };
@@ -161,11 +185,54 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
     );
   }
 
-  return (
-    <>
-      <button className="back-btn" onClick={() => navigate('calendar')}>
+  const renderPaginationNav = () => (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 'var(--fi-space-4)',
+        gap: 'var(--fi-space-2)',
+        flexWrap: 'wrap',
+      }}
+    >
+      <button className="back-btn" onClick={() => navigate('calendar')} style={{ margin: 0 }}>
         ← Voltar à Agenda
       </button>
+
+      <div style={{ display: 'flex', gap: 'var(--fi-space-2)', alignItems: 'center' }}>
+        {prevClass && (
+          <button
+            id="prev-class-btn"
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate(`class-detail?class_id=${prevClass.id}`)}
+            title={`Aula Anterior: ${prevClass.proposed_theme}`}
+            style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+          >
+            ← {formatShortDate(prevClass.class_date)} {prevClass.proposed_theme}
+          </button>
+        )}
+
+        {nextClass && (
+          <button
+            id="next-class-btn"
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate(`class-detail?class_id=${nextClass.id}`)}
+            title={`Próxima Aula: ${nextClass.proposed_theme}`}
+            style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+          >
+            {nextClass.proposed_theme} ({formatShortDate(nextClass.class_date)}) →
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      {renderPaginationNav()}
 
       {/* ---- Class header ---- */}
       <div className="card" style={{ marginBottom: 'var(--fi-space-6)' }}>
@@ -198,6 +265,30 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
                   {LEVEL_LABELS[schedule.course.skill_level] ??
                     schedule.course.skill_level}
                 </span>
+                {schedule.is_highlighted && (
+                  <span
+                    className="badge"
+                    title="Aula Destaque Excepcional"
+                    style={{
+                      backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                      color: '#facc15',
+                      border: '1px solid rgba(234, 179, 8, 0.4)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    ⭐ Aula Destaque
+                  </span>
+                )}
+                {schedule.has_photo_content && (
+                  <span className="badge badge-accent" title="Conteúdo interessante para foto">
+                    📸 Divulgação Foto
+                  </span>
+                )}
+                {schedule.has_video_content && (
+                  <span className="badge badge-accent" title="Conteúdo interessante para vídeo">
+                    🎥 Divulgação Vídeo
+                  </span>
+                )}
               </div>
             )}
 
@@ -224,6 +315,34 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
               </p>
             )}
 
+            {/* Technique Tags */}
+            {schedule.techniques && schedule.techniques.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 'var(--fi-space-2)',
+                  flexWrap: 'wrap',
+                  marginBottom: 'var(--fi-space-3)',
+                }}
+              >
+                {schedule.techniques.map((tag) => (
+                  <span
+                    key={tag}
+                    style={{
+                      fontSize: '0.78rem',
+                      padding: '2px 10px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      color: 'var(--fi-color-text)',
+                      border: '1px solid var(--fi-color-border-subtle)',
+                    }}
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <p className="text-muted" style={{ fontSize: '0.8rem' }}>
               📅 {formatDateTime(schedule.class_date)}
             </p>
@@ -238,7 +357,26 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
               gap: 'var(--fi-space-2)',
             }}
           >
-            <PlanningBadge isPlanned={schedule.is_planned} />
+            <PlanningBadge isPlanned={schedule.is_planned || !isFutureClass} isPast={!isFutureClass} />
+
+            <button
+              id="toggle-highlight-btn"
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={async () => {
+                await updateSchedule(schedule.id, {
+                  is_highlighted: !schedule.is_highlighted,
+                });
+              }}
+              style={{
+                fontSize: '0.78rem',
+                color: schedule.is_highlighted ? '#facc15' : undefined,
+                border: schedule.is_highlighted ? '1px solid rgba(234, 179, 8, 0.4)' : undefined,
+              }}
+              title={schedule.is_highlighted ? 'Remover destaque' : 'Marcar como aula destaque'}
+            >
+              ⭐ {schedule.is_highlighted ? 'Destaque' : 'Marcar Destaque'}
+            </button>
 
             {isAdmin && (
               <div
@@ -424,6 +562,11 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
           />
         </div>
       )}
+
+      {/* Bottom pagination */}
+      <div style={{ marginTop: 'var(--fi-space-6)' }}>
+        {renderPaginationNav()}
+      </div>
 
       {/* Edit Modal */}
       {showEditModal && (

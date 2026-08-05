@@ -24,8 +24,8 @@ export type Navigate = (to: string) => void;
 // ---- Hash-based routing ----
 
 function parseHash(): { route: Route; params: URLSearchParams } {
-  const raw = window.location.hash.replace('#', '');
-  const [routePart, queryPart] = raw.split('?');
+  const decoded = decodeURIComponent(window.location.hash.replace(/^#\/?/, ''));
+  const [routePart, queryPart] = decoded.split('?');
   const route = VALID_ROUTES.includes(routePart as Route) ? (routePart as Route) : 'calendar';
   const params = new URLSearchParams(queryPart ?? '');
   return { route, params };

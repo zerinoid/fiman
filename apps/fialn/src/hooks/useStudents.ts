@@ -6,16 +6,27 @@ export interface StudentWithProfile extends Person {
   profile: StudentProfile | null;
 }
 
+export interface CreateStudentPayload {
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  financial_status?: string | null;
+}
+
 export interface UseStudentsReturn {
   students: StudentWithProfile[];
   loading: boolean;
+  saving: boolean;
   error: string | null;
   refresh: () => void;
+  createStudent: (payload: CreateStudentPayload) => Promise<boolean>;
 }
 
 export function useStudents(): UseStudentsReturn {
   const [students, setStudents] = useState<StudentWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetch = useCallback(async () => {
@@ -66,7 +77,49 @@ export function useStudents(): UseStudentsReturn {
     }
   }, []);
 
+  const createStudent = useCallback(
+    async (payload: CreateStudentPayload): Promise<boolean> => {
+      setSaving(true);
+      setError(null);
+
+      try {
+        const { data: person, error: personError } = await supabase
+          .from('people')
+          .insert({
+            full_name: payload.full_name.trim(),
+            phone: payload.phone?.trim() || null,
+            email: payload.email?.trim() || null,
+            notes: payload.notes?.trim() || null,
+            is_student: true,
+            is_client: false,
+          })
+          .select()
+          .single();
+
+        if (personError) throw personError;
+
+        const { error: profileError } = await supabase
+          .from('fialn_student_profiles')
+          .insert({
+            person_id: person.id,
+            financial_status: payload.financial_status || 'em_dia',
+          });
+
+        if (profileError) throw profileError;
+
+        await fetch();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao cadastrar aluno');
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [fetch],
+  );
+
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { students, loading, error, refresh: fetch };
+  return { students, loading, saving, error, refresh: fetch, createStudent };
 }

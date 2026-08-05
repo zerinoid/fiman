@@ -11,7 +11,7 @@ import './index.css';
 // ---- Types ----
 
 export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password';
-export type Navigate = (to: Route) => void;
+export type Navigate = (to: Route, params?: Record<string, string>) => void;
 
 const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password'];
 
@@ -42,9 +42,13 @@ export function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const navigate: Navigate = (to: Route) => {
-    // Preserve current hash params only if navigating to same route
-    window.location.hash = to;
+  const navigate: Navigate = (to: Route, params?: Record<string, string>) => {
+    if (params) {
+      const searchParams = new URLSearchParams(params);
+      window.location.hash = `${to}?${searchParams.toString()}`;
+    } else {
+      window.location.hash = to;
+    }
     setRouteState(parseHash());
   };
 

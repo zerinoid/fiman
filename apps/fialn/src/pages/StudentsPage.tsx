@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStudents } from '../hooks/useStudents';
 import { StudentCard } from '../components/StudentCard';
+import { AddStudentModal } from '../components/AddStudentModal';
 
 // We need last lesson dates for all students. We build this in a sub-component
 // to avoid a single massive hook doing N fetches.
@@ -89,8 +90,9 @@ interface StudentsPageProps {
 }
 
 export function StudentsPage({ navigate }: StudentsPageProps) {
-  const { students, loading, error, refresh } = useStudents();
+  const { students, loading, saving, error, refresh, createStudent } = useStudents();
   const [query, setQuery] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
@@ -101,19 +103,25 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
   );
 
   const openProfile = (personId: string) => {
-    window.location.hash = `profile?person_id=${personId}`;
-    navigate('profile');
+    navigate('profile', { person_id: personId });
   };
 
   return (
     <div className="page-wrapper">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h1 className="page-title">Alunos</h1>
           <p className="page-subtitle">
             {loading ? 'Carregando…' : `${students.length} aluno${students.length !== 1 ? 's' : ''} cadastrado${students.length !== 1 ? 's' : ''}`}
           </p>
         </div>
+        <button
+          id="btn-add-student"
+          className="btn btn-primary"
+          onClick={() => setIsAddModalOpen(true)}
+        >
+          + Novo Aluno
+        </button>
       </div>
 
       {/* Search */}
@@ -155,7 +163,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
           <p className="empty-state-desc">
             {query
               ? `Nenhum aluno corresponde a "${query}"`
-              : 'Adicione pessoas com is_student = true no banco de dados para vê-las aqui.'}
+              : 'Clique no botão "+ Novo Aluno" acima para cadastrar um novo aluno.'}
           </p>
         </div>
       )}
@@ -172,6 +180,14 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
             />
           ))}
         </div>
+      )}
+
+      {isAddModalOpen && (
+        <AddStudentModal
+          saving={saving}
+          onClose={() => setIsAddModalOpen(false)}
+          onSubmit={createStudent}
+        />
       )}
     </div>
   );

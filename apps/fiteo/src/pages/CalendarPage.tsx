@@ -38,7 +38,7 @@ export function ScheduleModal({
     : '';
   const initialTimeStr = initialDateObj
     ? initialDateObj.toTimeString().substring(0, 5)
-    : '19:00';
+    : '19:30';
 
   const [date, setDate] = useState(initialDateStr);
   const [time, setTime] = useState(initialTimeStr);

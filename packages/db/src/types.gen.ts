@@ -732,6 +732,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fiorc_confirm_shibari_projection: {
+        Args: {
+          p_transaction_id: string
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string | null
+          description: string | null
+          due_date: string
+          enrollment_id: string | null
+          id: string
+          installment_index: number | null
+          is_credit_card: boolean | null
+          is_projection: boolean | null
+          paid_at: string | null
+          parent_id: string | null
+          person_id: string | null
+          received_by: string | null
+          tags: string[] | null
+          total_installments: number | null
+          transaction_datetime: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+      }
       fialn_create_enrollment_financials: {
         Args: {
           p_amount_per_installment: number

@@ -5,6 +5,7 @@ import { useTransactions } from '../hooks/useTransactions';
 import { usePeople } from '../hooks/usePeople';
 import { TransactionTable } from '../components/Transactions/TransactionTable';
 import { AddTransactionModal } from '../components/Transactions/AddTransactionModal';
+import { ShibariHouseSplitSection } from '../components/Transactions/ShibariHouseSplitSection';
 import { CATEGORY_LABELS } from '../utils/categories';
 
 const PAGE_SIZE = 25;
@@ -13,11 +14,12 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
   const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, refetch } = useTransactions(year, month);
   const { people } = usePeople();
 
-  const [typeFilter, setTypeFilter]   = useState<'all' | 'income' | 'expense'>('all');
-  const [catFilter,  setCatFilter]    = useState<TransactionCategory | ''>('');
-  const [page,       setPage]         = useState(1);
-  const [modalOpen,  setModalOpen]    = useState(false);
-  const [txToEdit,   setTxToEdit]     = useState<Transaction | null>(null);
+  const [activeView, setActiveView] = useState<'all' | 'shibari'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [catFilter, setCatFilter] = useState<TransactionCategory | ''>('');
+  const [page, setPage] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [txToEdit, setTxToEdit] = useState<Transaction | null>(null);
 
   const filtered = useMemo(() => {
     return transactions.filter(tx => {
@@ -35,7 +37,7 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
       <div className="page-header">
         <div>
           <h1 className="page-title">Transações</h1>
-          <p className="page-subtitle">{filtered.length} registro(s)</p>
+          <p className="page-subtitle">{transactions.length} registro(s) no mês</p>
         </div>
 
         <div style={{ display: 'flex', gap: 'var(--fi-space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -48,46 +50,73 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="filter-bar">
-        <select
-          className="form-input"
-          style={{ width: 'auto' }}
-          value={typeFilter}
-          onChange={e => { setTypeFilter(e.target.value as typeof typeFilter); setPage(1); }}
+      {/* Main View Tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+        <button
+          className={`btn ${activeView === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveView('all')}
         >
-          <option value="all">Todos os tipos</option>
-          <option value="income">Receitas</option>
-          <option value="expense">Despesas</option>
-        </select>
-
-        <select
-          className="form-input"
-          style={{ width: 'auto' }}
-          value={catFilter}
-          onChange={e => { setCatFilter(e.target.value as TransactionCategory | ''); setPage(1); }}
+          📋 Todas as Transações
+        </button>
+        <button
+          className={`btn ${activeView === 'shibari' ? 'btn-primary' : 'btn-ghost'}`}
+          onClick={() => setActiveView('shibari')}
         >
-          <option value="">Todas as categorias</option>
-          {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
+          🏛️ Shibari House (75/25)
+        </button>
       </div>
 
-      <TransactionTable 
-        transactions={paged} 
-        loading={loading} 
-        onEdit={tx => { setTxToEdit(tx); setModalOpen(true); }}
-        onDelete={deleteTransaction}
-      />
+      {activeView === 'all' ? (
+        <>
+          {/* Filters */}
+          <div className="filter-bar">
+            <select
+              className="form-input"
+              style={{ width: 'auto' }}
+              value={typeFilter}
+              onChange={e => { setTypeFilter(e.target.value as typeof typeFilter); setPage(1); }}
+            >
+              <option value="all">Todos os tipos</option>
+              <option value="income">Receitas</option>
+              <option value="expense">Despesas</option>
+            </select>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="pagination">
-          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
-          <span>Página {page} de {totalPages}</span>
-          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
-        </div>
+            <select
+              className="form-input"
+              style={{ width: 'auto' }}
+              value={catFilter}
+              onChange={e => { setCatFilter(e.target.value as TransactionCategory | ''); setPage(1); }}
+            >
+              <option value="">Todas as categorias</option>
+              {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                <option key={k} value={k}>{v}</option>
+              ))}
+            </select>
+          </div>
+
+          <TransactionTable 
+            transactions={paged} 
+            loading={loading} 
+            onEdit={tx => { setTxToEdit(tx); setModalOpen(true); }}
+            onDelete={deleteTransaction}
+          />
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
+              <span>Página {page} de {totalPages}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
+            </div>
+          )}
+        </>
+      ) : (
+        <ShibariHouseSplitSection
+          transactions={transactions}
+          loading={loading}
+          onRefetch={refetch}
+          onOpenAddModal={() => setModalOpen(true)}
+        />
       )}
 
       <AddTransactionModal

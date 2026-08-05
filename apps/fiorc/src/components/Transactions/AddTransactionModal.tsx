@@ -55,6 +55,7 @@ export function AddTransactionModal({
   const [tags, setTags]         = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [personId, setPersonId] = useState('');
+  const [receivedBy, setReceivedBy] = useState<'foraisso' | 'shibarihouse' | ''>('');
   const [isCreditCard, setIsCreditCard] = useState(false);
   const [installments, setInstallments] = useState(false);
   const [nInstall, setNInstall] = useState(2);
@@ -91,6 +92,7 @@ export function AddTransactionModal({
         setTags(transactionToEdit.tags || []);
         setDesc(transactionToEdit.description || '');
         setPersonId(transactionToEdit.person_id || '');
+        setReceivedBy(transactionToEdit.received_by || '');
         setIsCreditCard(transactionToEdit.is_credit_card || false);
         
         if (totalInst > 1 && !transactionToEdit.parent_id) {
@@ -108,7 +110,7 @@ export function AddTransactionModal({
 
   const reset = () => {
     setTxType('expense'); setCategory('food_grocery'); setAmount('');
-    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setPersonId(''); setTags([]); setTagInput('');
+    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setPersonId(''); setReceivedBy(''); setTags([]); setTagInput('');
     setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
   };
 
@@ -162,6 +164,7 @@ export function AddTransactionModal({
 
         await updateTransaction(transactionToEdit.id, {
           person_id: personId || null,
+          received_by: receivedBy || null,
           type: txType,
           category,
           amount: dividedAmount,
@@ -204,6 +207,7 @@ export function AddTransactionModal({
               id:                i === 0 ? parentId : crypto.randomUUID(),
               parent_id:         i === 0 ? null : parentId,
               person_id:         personId || null,
+              received_by:       receivedBy || null,
               type:              txType,
               category,
               amount:            dividedAmount,
@@ -222,6 +226,7 @@ export function AddTransactionModal({
         } else {
           await addTransaction({
             person_id:          personId || null,
+            received_by:        receivedBy || null,
             type:               txType,
             category,
             amount:             baseAmount,
@@ -391,6 +396,21 @@ export function AddTransactionModal({
               </select>
             </div>
           )}
+
+          {/* Shibari House Partnership Recipient */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="modal-received-by">Parceria Shibari House (opcional)</label>
+            <select
+              id="modal-received-by"
+              className="form-input"
+              value={receivedBy}
+              onChange={e => setReceivedBy(e.target.value as 'foraisso' | 'shibarihouse' | '')}
+            >
+              <option value="">— Nenhuma parceria especial —</option>
+              <option value="foraisso">👤 Recebido por Foraisso (Gera repasse 25% due 05/mês+1)</option>
+              <option value="shibarihouse">🏛️ Recebido por Shibari House (Gera projeção 75%)</option>
+            </select>
+          </div>
 
           {/* Installments & Credit Card */}
           <div className="form-group">

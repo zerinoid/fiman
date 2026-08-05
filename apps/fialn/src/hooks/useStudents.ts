@@ -14,6 +14,14 @@ export interface CreateStudentPayload {
   financial_status?: string | null;
 }
 
+export interface UpdateStudentPayload {
+  full_name: string;
+  phone?: string | null;
+  email?: string | null;
+  notes?: string | null;
+  financial_status?: string | null;
+}
+
 export interface UseStudentsReturn {
   students: StudentWithProfile[];
   loading: boolean;
@@ -21,6 +29,7 @@ export interface UseStudentsReturn {
   error: string | null;
   refresh: () => void;
   createStudent: (payload: CreateStudentPayload) => Promise<boolean>;
+  updateStudent: (personId: string, payload: UpdateStudentPayload) => Promise<boolean>;
 }
 
 export function useStudents(): UseStudentsReturn {
@@ -119,7 +128,54 @@ export function useStudents(): UseStudentsReturn {
     [fetch],
   );
 
+  const updateStudent = useCallback(
+    async (personId: string, payload: UpdateStudentPayload): Promise<boolean> => {
+      setSaving(true);
+      setError(null);
+
+      try {
+        // 1. Update people record
+        const { error: personError } = await supabase
+          .from('people')
+          .update({
+            full_name: payload.full_name.trim(),
+            phone: payload.phone?.trim() || null,
+            email: payload.email?.trim() || null,
+            notes: payload.notes?.trim() || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', personId);
+
+        if (personError) throw personError;
+
+        // 2. Upsert financial status in fialn_student_profiles
+        if (payload.financial_status) {
+          const { error: profileError } = await supabase
+            .from('fialn_student_profiles')
+            .upsert(
+              {
+                person_id: personId,
+                financial_status: payload.financial_status,
+              },
+              { onConflict: 'person_id' }
+            );
+
+          if (profileError) throw profileError;
+        }
+
+        await fetch();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Erro ao atualizar dados do aluno');
+        return false;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [fetch],
+  );
+
   useEffect(() => { fetch(); }, [fetch]);
 
-  return { students, loading, saving, error, refresh: fetch, createStudent };
+  return { students, loading, saving, error, refresh: fetch, createStudent, updateStudent };
 }

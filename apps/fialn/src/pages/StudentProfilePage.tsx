@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Person } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useStudentProfile } from '../hooks/useStudentProfile';
+import { useStudents } from '../hooks/useStudents';
 import { useLessons } from '../hooks/useLessons';
 import { useStudentFinancials } from '../hooks/useStudentFinancials';
 import { useGroupsAndEnrollments } from '../hooks/useGroupsAndEnrollments';
@@ -10,6 +11,7 @@ import { LessonEntry } from '../components/LessonEntry';
 import { TechnicalRadar } from '../components/TechnicalRadar';
 import { EnrollModal } from '../components/EnrollModal';
 import { AddBundleModal } from '../components/AddBundleModal';
+import { EditStudentModal } from '../components/EditStudentModal';
 import type { Navigate } from '../App';
 
 type ProfileTab = 'timeline' | 'radar' | 'financeiro';
@@ -50,12 +52,25 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   // Modals
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBundleModal, setShowBundleModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const { profile, loading: profileLoading, saving, error: saveError, saveProfile } = useStudentProfile(personId);
   const { lessons, loading: lessonsLoading } = useLessons(personId);
   const { incomeTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
   const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollmentStatus } = useGroupsAndEnrollments(personId);
   const { bundles, unconsumedLessonsCount, saving: bundleSaving, createBundle, refresh: refreshBundles } = useLessonBundles(personId);
+  const { updateStudent, saving: studentSaving } = useStudents();
+
+  const refetchPerson = () => {
+    supabase
+      .from('people')
+      .select('*')
+      .eq('id', personId)
+      .single()
+      .then(({ data }) => {
+        setPerson(data as Person | null);
+      });
+  };
 
   useEffect(() => {
     setPersonLoading(true);
@@ -125,6 +140,13 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         </div>
 
         <div className="flex-gap-2">
+          <button
+            id="profile-edit-btn"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowEditModal(true)}
+          >
+            ✏️ Editar Perfil
+          </button>
           <button
             id="profile-bundle-btn"
             className="btn btn-ghost btn-sm"
@@ -278,6 +300,29 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             if (ok) {
               refreshBundles();
               refreshFinancials();
+            }
+            return ok;
+          }}
+        />
+      )}
+
+      {/* Edit Student Modal */}
+      {showEditModal && (
+        <EditStudentModal
+          student={{
+            id: person.id,
+            full_name: person.full_name,
+            phone: person.phone,
+            email: person.email,
+            notes: person.notes,
+            financial_status: profile?.financial_status,
+          }}
+          saving={studentSaving}
+          onClose={() => setShowEditModal(false)}
+          onSubmit={async (payload) => {
+            const ok = await updateStudent(person.id, payload);
+            if (ok) {
+              refetchPerson();
             }
             return ok;
           }}

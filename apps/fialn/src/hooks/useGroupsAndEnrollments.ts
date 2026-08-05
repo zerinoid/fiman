@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { GroupClassroom, StudentEnrollment, ModalityType, TransactionCategory } from '@fi/types';
+import type { GroupClassroom, StudentEnrollment, ModalityType, TransactionCategory, PaymentRecipient, PaymentMethod } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
 export interface CreateEnrollmentPayload {
@@ -8,6 +8,10 @@ export interface CreateEnrollmentPayload {
   modality: ModalityType;
   start_date: string;
   notes: string | null;
+  is_partner?: boolean;
+  partner_details?: string | null;
+  received_by?: PaymentRecipient | null;
+  payment_method?: PaymentMethod | null;
   // Optional financial projection parameters:
   generateProjections?: boolean;
   total_installments?: number;
@@ -73,8 +77,8 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   /**
-   * Creates a student enrollment. If financial projections are requested,
-   * calls the `fialn_create_plan_installments` RPC function to insert projected rows
+   * Creates a student enrollment. If financial projections are requested and not partner,
+   * calls the `fialn_create_enrollment_financials` RPC function to insert rows
    * into `fiorc_transactions` in a single atomic SQL call.
    */
   const createEnrollment = async (payload: CreateEnrollmentPayload): Promise<boolean> => {
@@ -92,17 +96,20 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
           status: 'active',
           start_date: payload.start_date,
           notes: payload.notes,
+          is_partner: payload.is_partner ?? false,
+          partner_details: payload.is_partner ? payload.partner_details : null,
+          received_by: payload.is_partner ? null : (payload.received_by ?? 'foraisso'),
+          payment_method: payload.is_partner ? null : (payload.payment_method ?? 'credit'),
         })
         .select(`*, group:fialn_groups(*)`)
         .single();
 
       if (enrollError) throw enrollError;
 
-      // 2. If projections requested, call RPC function
+      // 2. If not a partner and financial projections requested, call RPC function
       if (
+        !payload.is_partner &&
         payload.generateProjections &&
-        payload.total_installments &&
-        payload.total_installments > 0 &&
         payload.amount_per_installment &&
         payload.amount_per_installment > 0 &&
         payload.first_due_date
@@ -128,13 +135,17 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
           ? `${modalityLabel} (${groupName})`
           : modalityLabel;
 
-        const { error: rpcError } = await supabase.rpc('fialn_create_plan_installments', {
+        const { error: rpcError } = await supabase.rpc('fialn_create_enrollment_financials', {
           p_person_id: payload.person_id,
+          p_enrollment_id: newEnrollment.id,
           p_category: category,
-          p_total_installments: payload.total_installments,
+          p_payment_method: payload.payment_method || 'credit',
+          p_received_by: payload.received_by || 'foraisso',
+          p_total_installments: payload.payment_method === 'pix' ? 1 : (payload.total_installments || 1),
           p_amount_per_installment: payload.amount_per_installment,
           p_first_due_date: payload.first_due_date,
           p_description: desc,
+          p_is_partner: false,
         });
 
         if (rpcError) throw rpcError;

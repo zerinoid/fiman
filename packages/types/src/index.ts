@@ -108,6 +108,9 @@ export interface MonthlyTarget {
   created_at: string;
 }
 
+export type PaymentRecipient = 'foraisso' | 'shibarihouse';
+export type PaymentMethod = 'pix' | 'credit';
+
 /** A single financial income or expense event. */
 export interface Transaction {
   id: string;
@@ -123,6 +126,8 @@ export interface Transaction {
   total_installments: number;
   description: string | null;
   parent_id?: string | null; // FK -> fiorc_transactions.id
+  received_by?: PaymentRecipient | null;
+  enrollment_id?: string | null;
   created_at: string;
   transaction_datetime?: string | null;
   tags?: string[];
@@ -168,6 +173,10 @@ export interface StudentEnrollment {
   start_date: string;
   end_date: string | null;
   notes: string | null;
+  is_partner?: boolean;
+  partner_details?: string | null;
+  received_by?: PaymentRecipient | null;
+  payment_method?: PaymentMethod | null;
   created_at: string;
   updated_at: string;
   group?: GroupClassroom | null;

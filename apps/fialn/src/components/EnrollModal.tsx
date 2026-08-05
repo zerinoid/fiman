@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { GroupClassroom, ModalityType } from '@fi/types';
+import type { GroupClassroom, ModalityType, PaymentRecipient, PaymentMethod } from '@fi/types';
 import type { CreateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
 
 interface EnrollModalProps {
@@ -31,6 +31,14 @@ export function EnrollModal({
   const [startDate, setStartDate] = useState<string>(toLocalDateString(new Date()));
   const [notes, setNotes] = useState<string>('');
 
+  // Partner / Scholarship toggle
+  const [isPartner, setIsPartner] = useState<boolean>(false);
+  const [partnerDetails, setPartnerDetails] = useState<string>('');
+
+  // Split payment recipient & payment method
+  const [receivedBy, setReceivedBy] = useState<PaymentRecipient>('foraisso');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
+
   // Projections
   const [generateProjections, setGenerateProjections] = useState<boolean>(true);
   const [installments, setInstallments] = useState<string>('1');
@@ -49,7 +57,6 @@ export function EnrollModal({
         setInstallments('1');
         setAmount('450');
       } else {
-        // quarterly_group - default 1x (à vista) R$ 900
         setInstallments('1');
         setAmount('900');
       }
@@ -58,7 +65,6 @@ export function EnrollModal({
         setInstallments('1');
         setAmount('300');
       } else {
-        // quarterly_group - default 1x (à vista) R$ 750
         setInstallments('1');
         setAmount('750');
       }
@@ -89,6 +95,12 @@ export function EnrollModal({
     }
   };
 
+  const parsedAmount = parseFloat(amount || '0');
+  const parsedInstallments = paymentMethod === 'pix' ? 1 : parseInt(installments || '1', 10);
+  const totalAmount = parsedAmount * parsedInstallments;
+  const split75Amount = (parsedAmount * 0.75).toFixed(2);
+  const split25Amount = (parsedAmount * 0.25).toFixed(2);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -98,13 +110,18 @@ export function EnrollModal({
       return;
     }
 
-    let instNum = 0;
+    if (isPartner && !partnerDetails.trim()) {
+      setErrorMsg('Descreva a condição da parceria ou vigência.');
+      return;
+    }
+
+    let instNum = 1;
     let amtNum = 0;
 
-    if (generateProjections) {
-      instNum = parseInt(installments, 10);
+    if (!isPartner && generateProjections) {
+      instNum = paymentMethod === 'pix' ? 1 : parseInt(installments, 10);
       amtNum = parseFloat(amount);
-      if (isNaN(instNum) || instNum <= 0) {
+      if (paymentMethod === 'credit' && (isNaN(instNum) || instNum <= 0)) {
         setErrorMsg('Informe um número válido de parcelas.');
         return;
       }
@@ -120,10 +137,14 @@ export function EnrollModal({
       modality,
       start_date: startDate,
       notes: notes.trim() || null,
-      generateProjections,
-      total_installments: generateProjections ? instNum : undefined,
-      amount_per_installment: generateProjections ? amtNum : undefined,
-      first_due_date: generateProjections ? firstDueDate : undefined,
+      is_partner: isPartner,
+      partner_details: isPartner ? partnerDetails.trim() : null,
+      received_by: isPartner ? null : receivedBy,
+      payment_method: isPartner ? null : paymentMethod,
+      generateProjections: !isPartner && generateProjections,
+      total_installments: !isPartner && generateProjections ? instNum : undefined,
+      amount_per_installment: !isPartner && generateProjections ? amtNum : undefined,
+      first_due_date: !isPartner && generateProjections ? firstDueDate : undefined,
     });
 
     if (ok) {
@@ -151,7 +172,7 @@ export function EnrollModal({
       <div
         className="card"
         style={{
-          maxWidth: '520px',
+          maxWidth: '540px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
@@ -166,7 +187,7 @@ export function EnrollModal({
         </div>
 
         <form onSubmit={handleSubmit} className="stack-4">
-          {/* 1. Group Classroom selector (Moved to TOP per prompt) */}
+          {/* 1. Group Classroom selector */}
           <div className="form-group">
             <label className="form-label" htmlFor="enroll-group">Turma / Sala de Aula *</label>
             <select
@@ -185,7 +206,7 @@ export function EnrollModal({
             </select>
           </div>
 
-          {/* 2. Modality Selector (Only recurring group modalities) */}
+          {/* 2. Modality Selector */}
           <div className="form-group">
             <label className="form-label" htmlFor="enroll-modality">Modalidade do Plano *</label>
             <select
@@ -212,6 +233,44 @@ export function EnrollModal({
             />
           </div>
 
+          {/* Partner / Scholarship Toggle */}
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              background: isPartner ? 'var(--fi-color-surface-3, rgba(234, 179, 8, 0.1))' : 'var(--fi-color-surface-2)',
+              borderRadius: 'var(--fi-radius-md)',
+              border: `1px solid ${isPartner ? '#eab308' : 'var(--fi-color-border)'}`,
+            }}
+            className="stack-3"
+          >
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+              <input
+                type="checkbox"
+                checked={isPartner}
+                onChange={(e) => setIsPartner(e.target.checked)}
+              />
+              <span>🤝 Parceiro / Bolsista (Troca de Serviços)</span>
+            </label>
+
+            {isPartner && (
+              <div className="form-group mt-2">
+                <label className="form-label" htmlFor="partner-details">Condição da Parceria / Vigência *</label>
+                <input
+                  id="partner-details"
+                  type="text"
+                  className="form-input"
+                  placeholder="Circunstancia da parceria, vigência, etc"
+                  value={partnerDetails}
+                  onChange={(e) => setPartnerDetails(e.target.value)}
+                  required={isPartner}
+                />
+                <p className="text-xs text-muted mt-1" style={{ color: '#eab308' }}>
+                  ℹ️ Alunos parceiros não geram dívidas, projeções nem registros financeiros no FIORC.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Notes */}
           <div className="form-group">
             <label className="form-label" htmlFor="enroll-notes">Observações (opcional)</label>
@@ -219,101 +278,196 @@ export function EnrollModal({
               id="enroll-notes"
               type="text"
               className="form-input"
-              placeholder="Ex: Pagamento via PIX..."
+              placeholder="Ex: Aluno vindo do evento X..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
 
-          {/* Financial Projection Checkbox */}
-          <div
-            style={{
-              padding: '1rem',
-              background: 'var(--fi-color-surface-2)',
-              borderRadius: 'var(--fi-radius-md)',
-              border: '1px solid var(--fi-color-border)',
-            }}
-            className="stack-4"
-          >
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={generateProjections}
-                onChange={(e) => setGenerateProjections(e.target.checked)}
-              />
-              <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                💳 Gerar projeções financeiras no FIORC (RPC)
-              </span>
-            </label>
+          {/* Financial Section (Only if NOT partner) */}
+          {!isPartner && (
+            <div
+              style={{
+                padding: '1rem',
+                background: 'var(--fi-color-surface-2)',
+                borderRadius: 'var(--fi-radius-md)',
+                border: '1px solid var(--fi-color-border)',
+              }}
+              className="stack-4"
+            >
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={generateProjections}
+                  onChange={(e) => setGenerateProjections(e.target.checked)}
+                />
+                <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                  💳 Registrar Integração Financeira FIORC
+                </span>
+              </label>
 
-            {generateProjections && (
-              <div className="stack-4 mt-2">
-                {modality === 'quarterly_group' && (
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${installments === '1' ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={setSinglePaymentPreset}
-                    >
-                      À Vista (1x)
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-sm ${installments === '3' ? 'btn-primary' : 'btn-ghost'}`}
-                      onClick={setQuarterlyInstallmentsPreset}
-                    >
-                      Parcelado (3x)
-                    </button>
-                  </div>
-                )}
-
-                <div className="grid-2">
+              {generateProjections && (
+                <div className="stack-4 mt-2">
+                  {/* Parte que recebeu */}
                   <div className="form-group">
-                    <label className="form-label" htmlFor="proj-installments">Parcelas</label>
+                    <label className="form-label">Parte que Recebeu o Pagamento *</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${receivedBy === 'foraisso' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setReceivedBy('foraisso')}
+                        style={{ flex: 1 }}
+                      >
+                        Foraisso (Eu recebi)
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${receivedBy === 'shibarihouse' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setReceivedBy('shibarihouse')}
+                        style={{ flex: 1 }}
+                      >
+                        Shibari House (Eles receberam)
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Método de Pagamento */}
+                  <div className="form-group">
+                    <label className="form-label">Método de Pagamento *</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${paymentMethod === 'pix' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => {
+                          setPaymentMethod('pix');
+                          setInstallments('1');
+                        }}
+                        style={{ flex: 1 }}
+                      >
+                        ⚡ PIX
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${paymentMethod === 'credit' ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => setPaymentMethod('credit')}
+                        style={{ flex: 1 }}
+                      >
+                        💳 CRÉDITO
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Parcelas (Se crédito) */}
+                  {paymentMethod === 'credit' && (
+                    <>
+                      {modality === 'quarterly_group' && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${installments === '1' ? 'btn-secondary' : 'btn-ghost'}`}
+                            onClick={setSinglePaymentPreset}
+                          >
+                            À Vista (1x)
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn btn-sm ${installments === '3' ? 'btn-secondary' : 'btn-ghost'}`}
+                            onClick={setQuarterlyInstallmentsPreset}
+                          >
+                            Parcelado (3x)
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="grid-2">
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="proj-installments">Qtde Parcelas</label>
+                          <input
+                            id="proj-installments"
+                            type="number"
+                            className="form-input"
+                            value={installments}
+                            onChange={(e) => setInstallments(e.target.value)}
+                            min="1"
+                            max="36"
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label" htmlFor="proj-amount">Valor por Parcela (R$)</label>
+                          <input
+                            id="proj-amount"
+                            type="number"
+                            className="form-input"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            step="0.01"
+                            min="1"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {paymentMethod === 'pix' && (
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="proj-amount-pix">Valor Total do PIX (R$)</label>
+                      <input
+                        id="proj-amount-pix"
+                        type="number"
+                        className="form-input"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        step="0.01"
+                        min="1"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="proj-due">
+                      {paymentMethod === 'pix' ? 'Data de Recebimento' : 'Vencimento da 1ª Parcela'}
+                    </label>
                     <input
-                      id="proj-installments"
-                      type="number"
+                      id="proj-due"
+                      type="date"
                       className="form-input"
-                      value={installments}
-                      onChange={(e) => setInstallments(e.target.value)}
-                      min="1"
-                      max="36"
+                      value={firstDueDate}
+                      onChange={(e) => setFirstDueDate(e.target.value)}
                       required
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="proj-amount">Valor Parcela (R$)</label>
-                    <input
-                      id="proj-amount"
-                      type="number"
-                      className="form-input"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      step="0.01"
-                      min="1"
-                      required
-                    />
+
+                  {/* Calculation summary info box */}
+                  <div
+                    style={{
+                      padding: '0.75rem',
+                      background: 'var(--fi-color-surface-1)',
+                      borderRadius: 'var(--fi-radius-sm)',
+                      fontSize: '0.85rem',
+                      borderLeft: '3px solid var(--fi-color-primary)',
+                    }}
+                    className="stack-2"
+                  >
+                    <p style={{ fontWeight: 600 }}>
+                      Total Bruto: {totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                    {receivedBy === 'shibarihouse' ? (
+                      <p style={{ color: 'var(--fi-color-success)' }}>
+                        📈 <strong>Projeção (75% Shibari House):</strong> Você tem a receber R$ {split75Amount} {paymentMethod === 'credit' ? '/parcela' : ''} na data do vencimento.
+                      </p>
+                    ) : (
+                      <p style={{ color: 'var(--fi-color-danger)' }}>
+                        💸 <strong>Repasse Devido (25% Shibari House):</strong> Você deve repassar R$ {split25Amount} {paymentMethod === 'credit' ? '/parcela' : ''} com vencimento no dia 5 do mês seguinte.
+                      </p>
+                    )}
                   </div>
                 </div>
-
-                <p className="text-xs text-muted" style={{ fontStyle: 'italic' }}>
-                  Total previsto: { (parseFloat(amount || '0') * parseInt(installments || '1', 10)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </p>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="proj-due">Vencimento da 1ª Parcela</label>
-                  <input
-                    id="proj-due"
-                    type="date"
-                    className="form-input"
-                    value={firstDueDate}
-                    onChange={(e) => setFirstDueDate(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {errorMsg && <p className="form-error">{errorMsg}</p>}
 

@@ -206,6 +206,19 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                   <span className="badge badge-primary">
                     {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
                   </span>
+                  {en.is_partner ? (
+                    <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
+                      🤝 Bolsista / Troca
+                    </span>
+                  ) : en.received_by === 'shibarihouse' ? (
+                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                      🏛️ Shibari House (75%)
+                    </span>
+                  ) : en.received_by === 'foraisso' ? (
+                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                      👤 Foraisso (Repasse 25%)
+                    </span>
+                  ) : null}
                   {en.group && (
                     <span className="text-muted text-xs">
                       ({en.group.weekday === 1 ? 'Segundas' : 'Quartas'})

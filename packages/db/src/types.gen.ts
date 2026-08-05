@@ -20,6 +20,10 @@ export type Database = {
           end_date: string | null
           group_id: string | null
           id: string
+          is_partner: boolean | null
+          partner_details: string | null
+          received_by: string | null
+          payment_method: string | null
           modality: Database["public"]["Enums"]["fialn_modality_type"]
           notes: string | null
           person_id: string
@@ -32,6 +36,10 @@ export type Database = {
           end_date?: string | null
           group_id?: string | null
           id?: string
+          is_partner?: boolean | null
+          partner_details?: string | null
+          received_by?: string | null
+          payment_method?: string | null
           modality: Database["public"]["Enums"]["fialn_modality_type"]
           notes?: string | null
           person_id: string
@@ -44,6 +52,10 @@ export type Database = {
           end_date?: string | null
           group_id?: string | null
           id?: string
+          is_partner?: boolean | null
+          partner_details?: string | null
+          received_by?: string | null
+          payment_method?: string | null
           modality?: Database["public"]["Enums"]["fialn_modality_type"]
           notes?: string | null
           person_id?: string
@@ -498,6 +510,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string
+          enrollment_id: string | null
           id: string
           installment_index: number | null
           is_credit_card: boolean | null
@@ -505,6 +518,7 @@ export type Database = {
           paid_at: string | null
           parent_id: string | null
           person_id: string | null
+          received_by: string | null
           tags: string[] | null
           total_installments: number | null
           transaction_datetime: string | null
@@ -516,6 +530,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date: string
+          enrollment_id?: string | null
           id?: string
           installment_index?: number | null
           is_credit_card?: boolean | null
@@ -523,6 +538,7 @@ export type Database = {
           paid_at?: string | null
           parent_id?: string | null
           person_id?: string | null
+          received_by?: string | null
           tags?: string[] | null
           total_installments?: number | null
           transaction_datetime?: string | null
@@ -534,6 +550,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string
+          enrollment_id?: string | null
           id?: string
           installment_index?: number | null
           is_credit_card?: boolean | null
@@ -541,6 +558,7 @@ export type Database = {
           paid_at?: string | null
           parent_id?: string | null
           person_id?: string | null
+          received_by?: string | null
           tags?: string[] | null
           total_installments?: number | null
           transaction_datetime?: string | null
@@ -714,6 +732,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fialn_create_enrollment_financials: {
+        Args: {
+          p_amount_per_installment: number
+          p_category: Database["public"]["Enums"]["transaction_category"]
+          p_description: string
+          p_enrollment_id: string
+          p_first_due_date: string
+          p_is_partner?: boolean
+          p_payment_method: string
+          p_person_id: string
+          p_received_by: string
+          p_total_installments: number
+        }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string | null
+          description: string | null
+          due_date: string
+          enrollment_id: string | null
+          id: string
+          installment_index: number | null
+          is_credit_card: boolean | null
+          is_projection: boolean | null
+          paid_at: string | null
+          parent_id: string | null
+          person_id: string | null
+          received_by: string | null
+          tags: string[] | null
+          total_installments: number | null
+          transaction_datetime: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }[]
+      }
       fialn_create_plan_installments: {
         Args: {
           p_amount_per_installment: number

@@ -19,6 +19,18 @@ export interface CreateEnrollmentPayload {
   first_due_date?: string;
 }
 
+export interface UpdateEnrollmentPayload {
+  group_id?: string | null;
+  modality?: ModalityType;
+  status?: StudentEnrollment['status'];
+  start_date?: string;
+  notes?: string | null;
+  is_partner?: boolean;
+  partner_details?: string | null;
+  received_by?: PaymentRecipient | null;
+  payment_method?: PaymentMethod | null;
+}
+
 export interface UseGroupsAndEnrollmentsReturn {
   groups: GroupClassroom[];
   enrollments: StudentEnrollment[];
@@ -26,7 +38,9 @@ export interface UseGroupsAndEnrollmentsReturn {
   saving: boolean;
   error: string | null;
   createEnrollment: (payload: CreateEnrollmentPayload) => Promise<boolean>;
+  updateEnrollment: (enrollmentId: string, payload: UpdateEnrollmentPayload) => Promise<boolean>;
   updateEnrollmentStatus: (enrollmentId: string, status: StudentEnrollment['status']) => Promise<boolean>;
+  deleteEnrollment: (enrollmentId: string) => Promise<boolean>;
   refresh: () => void;
 }
 
@@ -161,29 +175,65 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     }
   };
 
-  const updateEnrollmentStatus = async (
+  const updateEnrollment = async (
     enrollmentId: string,
-    status: StudentEnrollment['status'],
+    payload: UpdateEnrollmentPayload,
   ): Promise<boolean> => {
     setSaving(true);
     setError(null);
 
-    const { error: updateError } = await supabase
-      .from('fialn_enrollments')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', enrollmentId);
+    try {
+      const { data: updatedData, error: updateError } = await supabase
+        .from('fialn_enrollments')
+        .update({
+          ...payload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', enrollmentId)
+        .select(`*, group:fialn_groups(*)`)
+        .single();
 
-    setSaving(false);
+      if (updateError) throw updateError;
 
-    if (updateError) {
-      setError(updateError.message);
+      setEnrollments((prev) =>
+        prev.map((e) => (e.id === enrollmentId ? (updatedData as unknown as StudentEnrollment) : e))
+      );
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao atualizar matrícula');
       return false;
+    } finally {
+      setSaving(false);
     }
+  };
 
-    setEnrollments((prev) =>
-      prev.map((e) => (e.id === enrollmentId ? { ...e, status } : e)),
-    );
-    return true;
+  const updateEnrollmentStatus = async (
+    enrollmentId: string,
+    status: StudentEnrollment['status'],
+  ): Promise<boolean> => {
+    return updateEnrollment(enrollmentId, { status });
+  };
+
+  const deleteEnrollment = async (enrollmentId: string): Promise<boolean> => {
+    setSaving(true);
+    setError(null);
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('fialn_enrollments')
+        .delete()
+        .eq('id', enrollmentId);
+
+      if (deleteError) throw deleteError;
+
+      setEnrollments((prev) => prev.filter((e) => e.id !== enrollmentId));
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao excluir matrícula');
+      return false;
+    } finally {
+      setSaving(false);
+    }
   };
 
   return {
@@ -193,7 +243,9 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     saving,
     error,
     createEnrollment,
+    updateEnrollment,
     updateEnrollmentStatus,
+    deleteEnrollment,
     refresh: fetchAll,
   };
 }

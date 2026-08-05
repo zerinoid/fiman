@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import type { GroupClassroom, ModalityType, PaymentRecipient, PaymentMethod } from '@fi/types';
-import type { CreateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
+import type { GroupClassroom, ModalityType, PaymentRecipient, PaymentMethod, StudentEnrollment } from '@fi/types';
+import type { CreateEnrollmentPayload, UpdateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
 
 interface EnrollModalProps {
   personId: string;
   studentName: string;
   groups: GroupClassroom[];
   saving: boolean;
+  enrollmentToEdit?: StudentEnrollment | null;
   onClose: () => void;
   onSubmit: (payload: CreateEnrollmentPayload) => Promise<boolean>;
+  onUpdate?: (enrollmentId: string, payload: UpdateEnrollmentPayload) => Promise<boolean>;
 }
 
 function toLocalDateString(date: Date): string {
@@ -23,32 +25,38 @@ export function EnrollModal({
   studentName,
   groups,
   saving,
+  enrollmentToEdit,
   onClose,
   onSubmit,
+  onUpdate,
 }: EnrollModalProps) {
-  const [groupId, setGroupId] = useState<string>(groups[0]?.id ?? '');
-  const [modality, setModality] = useState<ModalityType>('quarterly_group');
-  const [startDate, setStartDate] = useState<string>(toLocalDateString(new Date()));
-  const [notes, setNotes] = useState<string>('');
+  const isEditing = Boolean(enrollmentToEdit);
+
+  const [groupId, setGroupId] = useState<string>(enrollmentToEdit?.group_id ?? (groups[0]?.id ?? ''));
+  const [modality, setModality] = useState<ModalityType>(enrollmentToEdit?.modality ?? 'quarterly_group');
+  const [status, setStatus] = useState<StudentEnrollment['status']>(enrollmentToEdit?.status ?? 'active');
+  const [startDate, setStartDate] = useState<string>(enrollmentToEdit?.start_date ?? toLocalDateString(new Date()));
+  const [notes, setNotes] = useState<string>(enrollmentToEdit?.notes ?? '');
 
   // Partner / Scholarship toggle
-  const [isPartner, setIsPartner] = useState<boolean>(false);
-  const [partnerDetails, setPartnerDetails] = useState<string>('');
+  const [isPartner, setIsPartner] = useState<boolean>(enrollmentToEdit?.is_partner ?? false);
+  const [partnerDetails, setPartnerDetails] = useState<string>(enrollmentToEdit?.partner_details ?? '');
 
   // Split payment recipient & payment method
-  const [receivedBy, setReceivedBy] = useState<PaymentRecipient>('foraisso');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('credit');
+  const [receivedBy, setReceivedBy] = useState<PaymentRecipient>(enrollmentToEdit?.received_by ?? 'foraisso');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(enrollmentToEdit?.payment_method ?? 'credit');
 
   // Projections
-  const [generateProjections, setGenerateProjections] = useState<boolean>(true);
+  const [generateProjections, setGenerateProjections] = useState<boolean>(!isEditing);
   const [installments, setInstallments] = useState<string>('1');
   const [amount, setAmount] = useState<string>('900');
   const [firstDueDate, setFirstDueDate] = useState<string>(toLocalDateString(new Date()));
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Auto-pricing based on group and modality
+  // Auto-pricing based on group and modality (only when creating)
   useEffect(() => {
+    if (isEditing) return;
     const selectedGroup = groups.find((g) => g.id === groupId);
     const groupName = selectedGroup?.name.toLowerCase() ?? '';
 
@@ -69,7 +77,7 @@ export function EnrollModal({
         setAmount('750');
       }
     }
-  }, [groupId, modality, groups]);
+  }, [groupId, modality, groups, isEditing]);
 
   const setQuarterlyInstallmentsPreset = () => {
     const selectedGroup = groups.find((g) => g.id === groupId);
@@ -112,6 +120,25 @@ export function EnrollModal({
 
     if (isPartner && !partnerDetails.trim()) {
       setErrorMsg('Descreva a condição da parceria ou vigência.');
+      return;
+    }
+
+    if (isEditing && enrollmentToEdit && onUpdate) {
+      const ok = await onUpdate(enrollmentToEdit.id, {
+        group_id: groupId,
+        modality,
+        status,
+        start_date: startDate,
+        notes: notes.trim() || null,
+        is_partner: isPartner,
+        partner_details: isPartner ? partnerDetails.trim() : null,
+        received_by: isPartner ? null : receivedBy,
+        payment_method: isPartner ? null : paymentMethod,
+      });
+
+      if (ok) {
+        onClose();
+      }
       return;
     }
 
@@ -180,13 +207,33 @@ export function EnrollModal({
       >
         <div className="flex-between mb-6">
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Nova Matrícula / Plano</h2>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+              {isEditing ? 'Editar Matrícula' : 'Nova Matrícula / Plano'}
+            </h2>
             <p className="text-xs text-muted mt-2">Aluno: {studentName}</p>
           </div>
           <button className="btn btn-ghost btn-icon" onClick={onClose} type="button">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="stack-4">
+          {/* Status selector in edit mode */}
+          {isEditing && (
+            <div className="form-group">
+              <label className="form-label" htmlFor="enroll-status">Status da Matrícula *</label>
+              <select
+                id="enroll-status"
+                className="form-input"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as StudentEnrollment['status'])}
+              >
+                <option value="active">✓ Ativa</option>
+                <option value="paused">⏸ Pausada</option>
+                <option value="completed">✔ Concluída</option>
+                <option value="cancelled">✖ Cancelada</option>
+              </select>
+            </div>
+          )}
+
           {/* 1. Group Classroom selector */}
           <div className="form-group">
             <label className="form-label" htmlFor="enroll-group">Turma / Sala de Aula *</label>
@@ -302,7 +349,7 @@ export function EnrollModal({
                   onChange={(e) => setGenerateProjections(e.target.checked)}
                 />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                  💳 Registrar Integração Financeira FIORC
+                  💳 {isEditing ? 'Re-gerar projeções financeiras no FIORC' : 'Registrar Integração Financeira FIORC'}
                 </span>
               </label>
 
@@ -476,7 +523,7 @@ export function EnrollModal({
               Cancelar
             </button>
             <button id="enroll-submit-btn" type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? <><span className="spinner" /> Salvando…</> : '✓ Confirmar Matrícula'}
+              {saving ? <><span className="spinner" /> Salvando…</> : isEditing ? '✓ Atualizar Matrícula' : '✓ Confirmar Matrícula'}
             </button>
           </div>
         </form>

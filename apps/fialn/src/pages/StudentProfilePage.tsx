@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Person } from '@fi/types';
+import type { Person, StudentEnrollment } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useStudents } from '../hooks/useStudents';
@@ -54,10 +54,12 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  const [enrollmentToEdit, setEnrollmentToEdit] = useState<StudentEnrollment | null>(null);
+
   const { profile, loading: profileLoading, saving, error: saveError, saveProfile } = useStudentProfile(personId);
   const { lessons, loading: lessonsLoading } = useLessons(personId);
   const { incomeTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
-  const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollmentStatus } = useGroupsAndEnrollments(personId);
+  const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollment, updateEnrollmentStatus, deleteEnrollment } = useGroupsAndEnrollments(personId);
   const { bundles, unconsumedLessonsCount, saving: bundleSaving, createBundle, refresh: refreshBundles } = useLessonBundles(personId);
   const { updateStudent, saving: studentSaving } = useStudents();
 
@@ -227,14 +229,39 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                   <span className="text-xs text-mono" style={{ color: 'var(--fi-color-accent)' }}>
                     {MODALITY_LABELS[en.modality]}
                   </span>
-                  <button
-                    type="button"
-                    title="Concluir matrícula"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', marginLeft: '0.25rem' }}
-                    onClick={() => updateEnrollmentStatus(en.id, 'completed')}
-                  >
-                    ✓
-                  </button>
+                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', marginLeft: '0.25rem' }}>
+                    <button
+                      type="button"
+                      title="Editar matrícula"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        setEnrollmentToEdit(en);
+                        setShowEnrollModal(true);
+                      }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      type="button"
+                      title="Concluir matrícula"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
+                      onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      title="Excluir matrícula"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                      onClick={() => {
+                        if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
+                          deleteEnrollment(en.id);
+                        }
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -290,9 +317,20 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           studentName={person.full_name}
           groups={groups}
           saving={enrollmentSaving}
-          onClose={() => setShowEnrollModal(false)}
+          enrollmentToEdit={enrollmentToEdit}
+          onClose={() => {
+            setShowEnrollModal(false);
+            setEnrollmentToEdit(null);
+          }}
           onSubmit={async (payload) => {
             const ok = await createEnrollment(payload);
+            if (ok) {
+              refreshFinancials();
+            }
+            return ok;
+          }}
+          onUpdate={async (enrollmentId, payload) => {
+            const ok = await updateEnrollment(enrollmentId, payload);
             if (ok) {
               refreshFinancials();
             }

@@ -114,7 +114,9 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
 
         const groupName = (newEnrollment as unknown as StudentEnrollment).group?.name;
         const modalityLabel =
-          payload.modality === 'quarterly_group'
+          payload.modality === 'monthly_group'
+            ? 'Plano Mensal'
+            : payload.modality === 'quarterly_group'
             ? 'Plano Trimestral'
             : payload.modality === 'private_bundle'
             ? 'Pacote Particular'

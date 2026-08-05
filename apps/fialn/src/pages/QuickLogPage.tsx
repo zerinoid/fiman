@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Person } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useLessons } from '../hooks/useLessons';
+import { useLessonBundles } from '../hooks/useLessonBundles';
 import type { Navigate } from '../App';
 
 function toLocalDatetimeString(date: Date): string {
@@ -23,6 +24,7 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
   const [studentsLoading, setStudentsLoading] = useState(true);
 
   const [personId, setPersonId] = useState<string>(prefilledPersonId ?? '');
+  const [bundleId, setBundleId] = useState<string>('');
   const [lessonDatetime, setLessonDatetime] = useState(toLocalDatetimeString(new Date()));
   const [duration, setDuration] = useState('1');
   const [location, setLocation] = useState('');
@@ -34,6 +36,7 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
   const [formError, setFormError] = useState<string | null>(null);
 
   const { addLesson, saving, error: saveError } = useLessons(personId || null);
+  const { activeBundles } = useLessonBundles(personId || null);
 
   const topicsRef = useRef<HTMLTextAreaElement>(null);
 
@@ -49,6 +52,11 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
         setStudentsLoading(false);
       });
   }, []);
+
+  // Reset bundle selection when student changes
+  useEffect(() => {
+    setBundleId('');
+  }, [personId]);
 
   // Auto-focus topics on load (most common first field to fill after picking student)
   useEffect(() => {
@@ -73,6 +81,7 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
 
     const ok = await addLesson({
       person_id: personId,
+      bundle_id: bundleId || null,
       lesson_date: lessonIso,
       duration_hours: durationNum,
       location: location.trim(),
@@ -150,6 +159,31 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
             ))}
           </select>
         </div>
+
+        {/* Optional Bundle selector */}
+        {personId && activeBundles.length > 0 && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="log-bundle">
+              Consumir crédito de Pacote (Bundle)
+              <span className="text-muted text-xs" style={{ fontWeight: 400, marginLeft: '0.5rem' }}>
+                (opcional)
+              </span>
+            </label>
+            <select
+              id="log-bundle"
+              className="form-input"
+              value={bundleId}
+              onChange={(e) => setBundleId(e.target.value)}
+            >
+              <option value="">Nenhum (Aula Avulsa sem pacote)</option>
+              {activeBundles.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name} ({b.used_lessons}/{b.total_lessons} consumidas — {b.total_lessons - b.used_lessons} pendentes)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Date/time + Duration row */}
         <div className="grid-2">
@@ -262,3 +296,5 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
     </div>
   );
 }
+
+export default QuickLogPage;

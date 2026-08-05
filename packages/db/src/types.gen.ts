@@ -95,9 +95,57 @@ export type Database = {
         }
         Relationships: []
       }
+      fialn_lesson_bundles: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          person_id: string
+          price: number
+          status: string
+          total_lessons: number
+          updated_at: string | null
+          used_lessons: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          person_id: string
+          price?: number
+          status?: string
+          total_lessons: number
+          updated_at?: string | null
+          used_lessons?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          person_id?: string
+          price?: number
+          status?: string
+          total_lessons?: number
+          updated_at?: string | null
+          used_lessons?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fialn_lesson_bundles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fialn_lessons: {
         Row: {
           action_items: string | null
+          bundle_id: string | null
           created_at: string | null
           duration_hours: number
           id: string
@@ -109,6 +157,7 @@ export type Database = {
         }
         Insert: {
           action_items?: string | null
+          bundle_id?: string | null
           created_at?: string | null
           duration_hours: number
           id?: string
@@ -120,6 +169,7 @@ export type Database = {
         }
         Update: {
           action_items?: string | null
+          bundle_id?: string | null
           created_at?: string | null
           duration_hours?: number
           id?: string
@@ -130,6 +180,13 @@ export type Database = {
           topics_covered?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fialn_lessons_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_lesson_bundles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fialn_lessons_person_id_fkey"
             columns: ["person_id"]
@@ -696,6 +753,7 @@ export type Database = {
       commitment_type: "fixed" | "optional" | "occasional"
       fi_role_type: "admin" | "collaborator"
       fialn_modality_type:
+        | "monthly_group"
         | "quarterly_group"
         | "private_bundle"
         | "single_group"
@@ -856,6 +914,7 @@ export const Constants = {
       commitment_type: ["fixed", "optional", "occasional"],
       fi_role_type: ["admin", "collaborator"],
       fialn_modality_type: [
+        "monthly_group",
         "quarterly_group",
         "private_bundle",
         "single_group",

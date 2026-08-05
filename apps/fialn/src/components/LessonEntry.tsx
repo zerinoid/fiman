@@ -39,6 +39,11 @@ export function LessonEntry({ lesson }: LessonEntryProps) {
         <div className="lesson-dot" />
         <span className="lesson-date">{formatDateTime(lesson.lesson_date)}</span>
         <span className="lesson-topics">{lesson.topics_covered}</span>
+        {lesson.bundle && (
+          <span className="badge badge-accent" style={{ fontSize: '0.7rem', padding: '2px 6px' }}>
+            📦 {lesson.bundle.name}
+          </span>
+        )}
         <span className="lesson-duration">{formatDuration(lesson.duration_hours)}</span>
         <span className={`lesson-chevron ${open ? 'open' : ''}`}>▾</span>
       </div>

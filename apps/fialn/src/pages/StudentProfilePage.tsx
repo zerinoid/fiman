@@ -5,9 +5,11 @@ import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useLessons } from '../hooks/useLessons';
 import { useStudentFinancials } from '../hooks/useStudentFinancials';
 import { useGroupsAndEnrollments } from '../hooks/useGroupsAndEnrollments';
+import { useLessonBundles } from '../hooks/useLessonBundles';
 import { LessonEntry } from '../components/LessonEntry';
 import { TechnicalRadar } from '../components/TechnicalRadar';
 import { EnrollModal } from '../components/EnrollModal';
+import { AddBundleModal } from '../components/AddBundleModal';
 import type { Navigate } from '../App';
 
 type ProfileTab = 'timeline' | 'radar' | 'financeiro';
@@ -33,6 +35,7 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const MODALITY_LABELS: Record<string, string> = {
+  monthly_group: 'Plano Mensal Grupo',
   quarterly_group: 'Plano Trimestral Grupo',
   private_bundle: 'Pacote Particular',
   single_group: 'Aula Avulsa Grupo',
@@ -43,12 +46,16 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const [activeTab, setActiveTab] = useState<ProfileTab>('timeline');
   const [person, setPerson] = useState<Person | null>(null);
   const [personLoading, setPersonLoading] = useState(true);
+
+  // Modals
   const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showBundleModal, setShowBundleModal] = useState(false);
 
   const { profile, loading: profileLoading, saving, error: saveError, saveProfile } = useStudentProfile(personId);
   const { lessons, loading: lessonsLoading } = useLessons(personId);
   const { incomeTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
   const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollmentStatus } = useGroupsAndEnrollments(personId);
+  const { bundles, unconsumedLessonsCount, saving: bundleSaving, createBundle, refresh: refreshBundles } = useLessonBundles(personId);
 
   useEffect(() => {
     setPersonLoading(true);
@@ -93,6 +100,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const confirmedIncome = incomeTransactions.filter((tx) => !tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
 
   const activeEnrollments = enrollments.filter((e) => e.status === 'active');
+  const activeBundlesList = bundles.filter((b) => b.status === 'active');
 
   return (
     <div className="page-wrapper">
@@ -118,6 +126,13 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
         <div className="flex-gap-2">
           <button
+            id="profile-bundle-btn"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowBundleModal(true)}
+          >
+            📦 Novo Pacote
+          </button>
+          <button
             id="profile-enroll-btn"
             className="btn btn-ghost btn-sm"
             onClick={() => setShowEnrollModal(true)}
@@ -137,59 +152,103 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         </div>
       </div>
 
-      {/* Active Enrollments Banner */}
-      <div className="card card-sm mb-6">
-        <div className="flex-between">
-          <div className="section-title">Matrículas & Turmas Ativas</div>
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}>
-            + Adicionar
-          </button>
+      {/* Pending Unconsumed Lessons Banner */}
+      <div className="grid-2 mb-6" style={{ gridTemplateColumns: activeBundlesList.length > 0 ? '1fr 1fr' : '1fr' }}>
+        {/* Active Enrollments Banner */}
+        <div className="card card-sm">
+          <div className="flex-between">
+            <div className="section-title">Matrículas & Turmas Ativas</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}>
+              + Adicionar
+            </button>
+          </div>
+
+          {activeEnrollments.length === 0 ? (
+            <p className="text-xs text-muted mt-2">Nenhuma matrícula ativa de grupo no momento.</p>
+          ) : (
+            <div className="stack-2 mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              {activeEnrollments.map((en) => (
+                <div
+                  key={en.id}
+                  style={{
+                    background: 'var(--fi-color-surface-2)',
+                    border: '1px solid var(--fi-color-border)',
+                    borderRadius: 'var(--fi-radius-md)',
+                    padding: '0.5rem 0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    fontSize: '0.85rem',
+                  }}
+                >
+                  <span className="badge badge-primary">
+                    {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                  </span>
+                  {en.group && (
+                    <span className="text-muted text-xs">
+                      ({en.group.weekday === 1 ? 'Segundas' : 'Quartas'})
+                    </span>
+                  )}
+                  <span className="text-xs text-mono" style={{ color: 'var(--fi-color-accent)' }}>
+                    {MODALITY_LABELS[en.modality]}
+                  </span>
+                  <button
+                    type="button"
+                    title="Concluir matrícula"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', marginLeft: '0.25rem' }}
+                    onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                  >
+                    ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {activeEnrollments.length === 0 ? (
-          <p className="text-xs text-muted mt-2">Nenhuma matrícula ativa no momento.</p>
-        ) : (
-          <div className="stack-2 mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            {activeEnrollments.map((en) => (
-              <div
-                key={en.id}
-                style={{
-                  background: 'var(--fi-color-surface-2)',
-                  border: '1px solid var(--fi-color-border)',
-                  borderRadius: 'var(--fi-radius-md)',
-                  padding: '0.5rem 0.75rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  fontSize: '0.85rem',
-                }}
-              >
-                <span className="badge badge-primary">
-                  {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
-                </span>
-                {en.group && (
-                  <span className="text-muted text-xs">
-                    ({en.group.weekday === 1 ? 'Segundas' : 'Quartas'})
-                  </span>
-                )}
-                <span className="text-xs text-mono" style={{ color: 'var(--fi-color-accent)' }}>
-                  {MODALITY_LABELS[en.modality]}
-                </span>
-                <button
-                  type="button"
-                  title="Concluir matrícula"
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', marginLeft: '0.25rem' }}
-                  onClick={() => updateEnrollmentStatus(en.id, 'completed')}
-                >
-                  ✓
-                </button>
-              </div>
-            ))}
+        {/* Lesson Bundles & Pending Lessons Banner */}
+        <div className="card card-sm">
+          <div className="flex-between">
+            <div className="section-title">Aulas Pendentes (Pacotes / Bundles)</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowBundleModal(true)}>
+              + Novo Pacote
+            </button>
           </div>
-        )}
+
+          <div className="mt-2 flex-between" style={{ alignItems: 'baseline' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className={unconsumedLessonsCount > 0 ? 'text-primary' : 'text-muted'}>
+              {unconsumedLessonsCount} {unconsumedLessonsCount === 1 ? 'aula pendente' : 'aulas pendentes'}
+            </div>
+            <div className="text-xs text-muted">
+              {activeBundlesList.length} pacote{activeBundlesList.length !== 1 ? 's' : ''} ativo{activeBundlesList.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {activeBundlesList.length > 0 && (
+            <div className="stack-2 mt-3">
+              {activeBundlesList.map((b) => {
+                const remaining = Math.max(0, b.total_lessons - b.used_lessons);
+                const percent = Math.min(100, Math.round((b.used_lessons / b.total_lessons) * 100));
+                return (
+                  <div key={b.id} style={{ background: 'var(--fi-color-surface-2)', padding: '0.5rem 0.75rem', borderRadius: 'var(--fi-radius-md)', border: '1px solid var(--fi-color-border)' }}>
+                    <div className="flex-between text-xs mb-1">
+                      <span style={{ fontWeight: 600 }}>{b.name}</span>
+                      <span className="text-mono" style={{ color: 'var(--fi-color-accent)' }}>
+                        {b.used_lessons}/{b.total_lessons} consumidas ({remaining} pendentes)
+                      </span>
+                    </div>
+                    <div style={{ height: '6px', background: 'var(--fi-color-surface-3)', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${percent}%`, height: '100%', background: 'var(--fi-color-primary)', transition: 'width 300ms ease' }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Modal */}
+      {/* Enroll Modal */}
       {showEnrollModal && (
         <EnrollModal
           personId={personId}
@@ -200,7 +259,25 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           onSubmit={async (payload) => {
             const ok = await createEnrollment(payload);
             if (ok) {
-              refreshFinancials(); // Refresh financials tab so newly generated RPC projections display!
+              refreshFinancials();
+            }
+            return ok;
+          }}
+        />
+      )}
+
+      {/* Bundle Modal */}
+      {showBundleModal && (
+        <AddBundleModal
+          personId={personId}
+          studentName={person.full_name}
+          saving={bundleSaving}
+          onClose={() => setShowBundleModal(false)}
+          onSubmit={async (payload) => {
+            const ok = await createBundle(payload);
+            if (ok) {
+              refreshBundles();
+              refreshFinancials();
             }
             return ok;
           }}
@@ -234,7 +311,73 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
       {/* ---- TAB: Linha do Tempo ---- */}
       {activeTab === 'timeline' && (
-        <div>
+        <div className="stack-6">
+          {/* Active / All Bundles Cards in Timeline */}
+          {bundles.length > 0 && (
+            <div className="card card-sm">
+              <div className="flex-between mb-4">
+                <div className="section-title">📦 Pacotes de Aulas Adquiridos (Bundles)</div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowBundleModal(true)}>
+                  + Comprar Pacote
+                </button>
+              </div>
+
+              <div className="stack-3">
+                {bundles.map((b) => {
+                  const remaining = Math.max(0, b.total_lessons - b.used_lessons);
+                  const percent = Math.min(100, Math.round((b.used_lessons / b.total_lessons) * 100));
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        background: 'var(--fi-color-surface-2)',
+                        border: '1px solid var(--fi-color-border)',
+                        borderRadius: 'var(--fi-radius-md)',
+                        padding: '0.75rem 1rem',
+                      }}
+                    >
+                      <div className="flex-between">
+                        <div>
+                          <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{b.name}</span>
+                          <span className="text-xs text-muted ml-2">
+                            (Comprado em {formatDate(b.created_at)})
+                          </span>
+                        </div>
+                        <div>
+                          <span className={`badge ${b.status === 'active' ? 'badge-primary' : 'badge-neutral'}`}>
+                            {b.status === 'active' ? `Ativo (${remaining} pendentes)` : 'Concluído'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex-between text-xs text-muted mt-2 mb-1">
+                        <span>Progresso de consumo:</span>
+                        <span className="text-mono">{b.used_lessons} de {b.total_lessons} aulas utilizadas</span>
+                      </div>
+
+                      <div style={{ height: '8px', background: 'var(--fi-color-surface-3)', borderRadius: '4px', overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            width: `${percent}%`,
+                            height: '100%',
+                            background: b.status === 'active' ? 'var(--fi-color-primary)' : 'var(--fi-color-text-muted)',
+                            transition: 'width 300ms ease',
+                          }}
+                        />
+                      </div>
+
+                      {b.notes && (
+                        <p className="text-xs text-muted mt-2" style={{ fontStyle: 'italic' }}>
+                          Obs: {b.notes}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {lessonsLoading && (
             <div className="loading-center">
               <div className="spinner spinner-lg" />
@@ -253,6 +396,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
           {!lessonsLoading && lessons.length > 0 && (
             <div className="stack-4">
+              <div className="section-title">Aulas Registradas</div>
               {lessons.map((lesson) => (
                 <LessonEntry key={lesson.id} lesson={lesson} />
               ))}
@@ -409,3 +553,5 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
     </div>
   );
 }
+
+export default StudentProfilePage;

@@ -146,8 +146,9 @@ export interface RentBoleto {
 // FIALN — Student Tracking
 // ----------------------------------------------------------
 
-export type ModalityType = 'quarterly_group' | 'private_bundle' | 'single_group' | 'single_private';
+export type ModalityType = 'monthly_group' | 'quarterly_group' | 'private_bundle' | 'single_group' | 'single_private';
 export type EnrollmentStatus = 'active' | 'paused' | 'cancelled' | 'completed';
+export type BundleStatus = 'active' | 'completed' | 'cancelled';
 
 export interface GroupClassroom {
   id: string;
@@ -172,6 +173,20 @@ export interface StudentEnrollment {
   group?: GroupClassroom | null;
 }
 
+/** Lesson bundle for private classes */
+export interface LessonBundle {
+  id: string;
+  person_id: string;
+  name: string;
+  total_lessons: number;
+  used_lessons: number;
+  price: number;
+  status: BundleStatus;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Extended profile for a person who is a student (Shibari). */
 export interface StudentProfile {
   id: string;
@@ -187,6 +202,7 @@ export interface StudentProfile {
 export interface Lesson {
   id: string;
   person_id: string; // FK → people.id
+  bundle_id?: string | null; // FK -> fialn_lesson_bundles.id
   lesson_date: string; // ISO 8601 timestamp
   duration_hours: number;
   location: string;
@@ -194,6 +210,7 @@ export interface Lesson {
   performance_notes: string | null;
   action_items: string | null;
   created_at: string;
+  bundle?: LessonBundle | null;
 }
 
 // ----------------------------------------------------------

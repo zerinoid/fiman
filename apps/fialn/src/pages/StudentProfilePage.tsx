@@ -419,7 +419,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
       {/* ---- TAB: Matrículas ---- */}
       {activeTab === 'matriculas' && (
-        <div className="card">
+        <div>
           <div className="flex-between mb-4">
             <div>
               <h2 className="section-title" style={{ fontSize: '1.15rem' }}>MATRÍCULAS DO ALUNO</h2>
@@ -488,6 +488,27 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         ) : null}
                       </div>
 
+                      <div style={{fontSize: '0.85rem', color: 'var(--fi-color-text-muted)'}}>
+                        <strong>{MODALITY_LABELS[en.modality] ?? en.modality}</strong>
+                        {en.group && ` (${en.group.weekday === 1 ? 'Segundas-feiras' : en.group.weekday === 3 ? 'Quartas-feiras' : `Dia ${en.group.weekday}`})`}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
+                      <div className="text-mono" style={{ fontSize: '0.82rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span>📅 <strong>Início:</strong> {formatDate(en.start_date)}</span>
+                        <span style={{ color: 'var(--fi-color-border-subtle)' }}>|</span>
+                        <span>📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
+                    <div>{en.notes && (
+                      <p className="text-xs text-muted" style={{ fontStyle: 'italic', margin: 0 }}>
+                        Obs: {en.notes}
+                      </p>
+                    )}</div>
+
                       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
                           type="button"
@@ -530,25 +551,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                           </span>
                         )}
                       </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
-                      <div>
-                        <strong>{MODALITY_LABELS[en.modality] ?? en.modality}</strong>
-                        {en.group && ` (${en.group.weekday === 1 ? 'Segundas-feiras' : en.group.weekday === 3 ? 'Quartas-feiras' : `Dia ${en.group.weekday}`})`}
-                      </div>
-                      <div className="text-mono" style={{ fontSize: '0.82rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <span>📅 <strong>Início:</strong> {formatDate(en.start_date)}</span>
-                        <span style={{ color: 'var(--fi-color-border-subtle)' }}>|</span>
-                        <span>📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}</span>
-                      </div>
-                    </div>
-
-                    {en.notes && (
-                      <p className="text-xs text-muted" style={{ fontStyle: 'italic', margin: 0 }}>
-                        Obs: {en.notes}
-                      </p>
-                    )}
+                  </div>
                   </div>
                 );
               })}

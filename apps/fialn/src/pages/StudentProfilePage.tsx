@@ -116,9 +116,11 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const pendingIncome = incomeTransactions.filter((tx) => tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
   const confirmedIncome = incomeTransactions.filter((tx) => !tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
 
-  const groupEnrollments = enrollments.filter(
-    (e) => e.modality === 'monthly_group' || e.modality === 'quarterly_group' || e.modality === 'single_group'
-  );
+  const groupEnrollments = enrollments
+    .filter(
+      (e) => e.modality === 'monthly_group' || e.modality === 'quarterly_group' || e.modality === 'single_group'
+    )
+    .sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''));
   const activeEnrollments = groupEnrollments.filter((e) => e.status === 'active');
   const activeBundlesList = bundles.filter((b) => b.status === 'active');
 

@@ -103,11 +103,13 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
             group:fialn_groups(*)
           `)
           .eq('person_id', personId)
+          .order('start_date', { ascending: false })
           .order('created_at', { ascending: false });
 
         if (enrollError) throw enrollError;
 
         const rawEnrollments = (enrollmentsData ?? []) as unknown as StudentEnrollment[];
+        rawEnrollments.sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''));
         const todayStr = toLocalDateString(new Date());
 
         // Process enrollments: auto-complete if active but end_date has passed

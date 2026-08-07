@@ -7,7 +7,7 @@
 // ENUMS
 // ----------------------------------------------------------
 
-export type UserRoleType = 'admin' | 'collaborator';
+export type UserRoleType = 'admin' | 'associate' | 'clerk';
 
 export type TransactionType = 'income' | 'expense';
 

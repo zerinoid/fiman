@@ -55,7 +55,7 @@ export function App() {
       .select('role')
       .eq('id', session.user.id)
       .single();
-    setIsAdmin(data?.role === 'admin');
+    setIsAdmin(data?.role === 'admin' || data?.role === 'associate');
     setRoleLoading(false);
   }, [session?.user?.id]);
 

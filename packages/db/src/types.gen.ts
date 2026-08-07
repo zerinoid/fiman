@@ -828,7 +828,7 @@ export type Database = {
     }
     Enums: {
       commitment_type: "fixed" | "optional" | "occasional"
-      fi_role_type: "admin" | "collaborator"
+      fi_role_type: "admin" | "associate" | "clerk"
       fialn_modality_type:
         | "monthly_group"
         | "quarterly_group"
@@ -860,7 +860,6 @@ export type Database = {
         | "performance"
         | "freelance_dev"
       transaction_type: "income" | "expense"
-      user_role_type: "admin" | "collaborator"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -989,7 +988,7 @@ export const Constants = {
   public: {
     Enums: {
       commitment_type: ["fixed", "optional", "occasional"],
-      fi_role_type: ["admin", "collaborator"],
+      fi_role_type: ["admin", "associate", "clerk"],
       fialn_modality_type: [
         "monthly_group",
         "quarterly_group",
@@ -1024,7 +1023,6 @@ export const Constants = {
         "freelance_dev",
       ],
       transaction_type: ["income", "expense"],
-      user_role_type: ["admin", "collaborator"],
     },
   },
 } as const

@@ -14,7 +14,7 @@ import { AddBundleModal } from '../components/AddBundleModal';
 import { EditStudentModal } from '../components/EditStudentModal';
 import type { Navigate } from '../App';
 
-type ProfileTab = 'timeline' | 'radar' | 'financeiro';
+type ProfileTab = 'matriculas' | 'timeline' | 'radar' | 'financeiro';
 
 interface StudentProfilePageProps {
   personId: string;
@@ -45,7 +45,7 @@ const MODALITY_LABELS: Record<string, string> = {
 };
 
 export function StudentProfilePage({ personId, navigate }: StudentProfilePageProps) {
-  const [activeTab, setActiveTab] = useState<ProfileTab>('timeline');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('matriculas');
   const [person, setPerson] = useState<Person | null>(null);
   const [personLoading, setPersonLoading] = useState(true);
 
@@ -178,92 +178,127 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
       {/* Pending Unconsumed Lessons Banner */}
       <div className="grid-2 mb-6" style={{ gridTemplateColumns: activeBundlesList.length > 0 ? '1fr 1fr' : '1fr' }}>
-        {/* Active Enrollments Banner */}
+        {/* Enrollments (MATRICULAS) Banner - Lists Active & Expired */}
         <div className="card card-sm">
-          <div className="flex-between">
-            <div className="section-title">Matrículas & Turmas Ativas</div>
+          <div className="flex-between mb-2">
+            <div>
+              <div className="section-title">Matrículas & Turmas</div>
+              <span className="text-xs text-muted">
+                {activeEnrollments.length} ativa{activeEnrollments.length !== 1 ? 's' : ''} · {enrollments.length} total
+              </span>
+            </div>
             <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}>
               + Adicionar
             </button>
           </div>
 
-          {activeEnrollments.length === 0 ? (
-            <p className="text-xs text-muted mt-2">Nenhuma matrícula ativa de grupo no momento.</p>
+          {enrollments.length === 0 ? (
+            <p className="text-xs text-muted mt-2">Nenhuma matrícula cadastrada no momento.</p>
           ) : (
-            <div className="stack-2 mt-4" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {activeEnrollments.map((en) => (
-                <div
-                  key={en.id}
-                  style={{
-                    background: 'var(--fi-color-surface-2)',
-                    border: '1px solid var(--fi-color-border)',
-                    borderRadius: 'var(--fi-radius-md)',
-                    padding: '0.5rem 0.75rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  <span className="badge badge-primary">
-                    {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
-                  </span>
-                  {en.is_partner ? (
-                    <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
-                      🤝 Bolsista / Troca
-                    </span>
-                  ) : en.received_by === 'shibarihouse' ? (
-                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                      🏛️ Shibari House (75%)
-                    </span>
-                  ) : en.received_by === 'foraisso' ? (
-                    <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                      👤 Foraisso (Repasse 25%)
-                    </span>
-                  ) : null}
-                  {en.group && (
-                    <span className="text-muted text-xs">
-                      ({en.group.weekday === 1 ? 'Segundas' : 'Quartas'})
-                    </span>
-                  )}
-                  <span className="text-xs text-mono" style={{ color: 'var(--fi-color-accent)' }}>
-                    {MODALITY_LABELS[en.modality]}
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center', marginLeft: '0.25rem' }}>
-                    <button
-                      type="button"
-                      title="Editar matrícula"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                      onClick={() => {
-                        setEnrollmentToEdit(en);
-                        setShowEnrollModal(true);
-                      }}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      type="button"
-                      title="Concluir matrícula"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
-                      onClick={() => updateEnrollmentStatus(en.id, 'completed')}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      type="button"
-                      title="Excluir matrícula"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                      onClick={() => {
-                        if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
-                          deleteEnrollment(en.id);
-                        }
-                      }}
-                    >
-                      🗑️
-                    </button>
+            <div className="stack-2 mt-3" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {enrollments.map((en) => {
+                const isInactive = en.status === 'completed' || en.status === 'cancelled';
+                return (
+                  <div
+                    key={en.id}
+                    style={{
+                      background: isInactive ? 'var(--fi-color-surface-1)' : 'var(--fi-color-surface-2)',
+                      border: `1px solid ${isInactive ? 'var(--fi-color-border-subtle)' : 'var(--fi-color-border)'}`,
+                      borderRadius: 'var(--fi-radius-md)',
+                      padding: '0.6rem 0.85rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.35rem',
+                      fontSize: '0.85rem',
+                      opacity: isInactive ? 0.65 : 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                        <span className={`badge ${isInactive ? 'badge-neutral' : 'badge-primary'}`}>
+                          {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                        </span>
+
+                        {en.status === 'active' ? (
+                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>✓ Ativa</span>
+                        ) : en.status === 'completed' ? (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>✔ Concluída / Vencida</span>
+                        ) : en.status === 'paused' ? (
+                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>⏸ Pausada</span>
+                        ) : (
+                          <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>✖ Cancelada</span>
+                        )}
+
+                        {en.is_partner ? (
+                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
+                            🤝 Bolsista / Troca
+                          </span>
+                        ) : en.received_by === 'shibarihouse' ? (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                            🏛️ Shibari House (75%)
+                          </span>
+                        ) : en.received_by === 'foraisso' ? (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                            👤 Foraisso (Repasse 25%)
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          title="Editar matrícula"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setEnrollmentToEdit(en);
+                            setShowEnrollModal(true);
+                          }}
+                        >
+                          ✏️
+                        </button>
+                        {en.status === 'active' && (
+                          <button
+                            type="button"
+                            title="Concluir matrícula"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
+                            onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                          >
+                            ✓
+                          </button>
+                        )}
+                        {!isInactive ? (
+                          <button
+                            type="button"
+                            title="Excluir matrícula"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                            onClick={() => {
+                              if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
+                                deleteEnrollment(en.id);
+                              }
+                            }}
+                          >
+                            🗑️
+                          </button>
+                        ) : (
+                          <span title="Matrículas vencidas/concluídas não podem ser excluídas" style={{ fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }}>
+                            🔒
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--fi-color-text-muted)' }}>
+                      <span>
+                        {MODALITY_LABELS[en.modality]}
+                        {en.group && ` (${en.group.weekday === 1 ? 'Segundas' : 'Quartas'})`}
+                      </span>
+                      <span className="text-mono" style={{ fontSize: '0.75rem' }}>
+                        📅 Início: {formatDate(en.start_date)} · Fim: {formatDate(en.end_date)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -383,6 +418,13 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
       {/* Tabs */}
       <div className="tabs">
         <button
+          id="tab-matriculas"
+          className={`tab-btn ${activeTab === 'matriculas' ? 'active' : ''}`}
+          onClick={() => setActiveTab('matriculas')}
+        >
+          📋 Matrículas ({enrollments.length})
+        </button>
+        <button
           id="tab-timeline"
           className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`}
           onClick={() => setActiveTab('timeline')}
@@ -404,6 +446,144 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           💰 Financeiro
         </button>
       </div>
+
+      {/* ---- TAB: Matrículas ---- */}
+      {activeTab === 'matriculas' && (
+        <div className="card">
+          <div className="flex-between mb-4">
+            <div>
+              <h2 className="section-title" style={{ fontSize: '1.15rem' }}>MATRÍCULAS DO ALUNO</h2>
+              <p className="text-xs text-muted mt-1">
+                Listagem de matrículas ativas e vencidas/concluídas ({activeEnrollments.length} ativas, {enrollments.length - activeEnrollments.length} concluídas/vencidas)
+              </p>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowEnrollModal(true)}>
+              + Nova Matrícula
+            </button>
+          </div>
+
+          {enrollments.length === 0 ? (
+            <div className="empty-state" style={{ padding: '2rem 0' }}>
+              <div className="empty-state-icon">📋</div>
+              <p className="empty-state-title">Nenhuma matrícula cadastrada</p>
+              <p className="empty-state-desc">Use o botão "+ Nova Matrícula" para realizar a matrícula do aluno.</p>
+            </div>
+          ) : (
+            <div className="stack-3">
+              {enrollments.map((en) => {
+                const isInactive = en.status === 'completed' || en.status === 'cancelled';
+                return (
+                  <div
+                    key={en.id}
+                    style={{
+                      background: isInactive ? 'var(--fi-color-surface-1)' : 'var(--fi-color-surface-2)',
+                      border: `1px solid ${isInactive ? 'var(--fi-color-border-subtle)' : 'var(--fi-color-border)'}`,
+                      borderRadius: 'var(--fi-radius-md)',
+                      padding: '0.85rem 1.1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.5rem',
+                      opacity: isInactive ? 0.65 : 1,
+                      transition: 'opacity 200ms ease',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: isInactive ? 'var(--fi-color-text-muted)' : 'var(--fi-color-text)' }}>
+                          {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                        </span>
+
+                        {en.status === 'active' ? (
+                          <span className="badge badge-success">✓ Ativa</span>
+                        ) : en.status === 'completed' ? (
+                          <span className="badge badge-neutral">✔ Concluída / Vencida</span>
+                        ) : en.status === 'paused' ? (
+                          <span className="badge badge-warning">⏸ Pausada</span>
+                        ) : (
+                          <span className="badge badge-danger">✖ Cancelada</span>
+                        )}
+
+                        {en.is_partner ? (
+                          <span className="badge badge-warning" title={en.partner_details || 'Parceria / Troca de Serviços'}>
+                            🤝 Bolsista / Troca
+                          </span>
+                        ) : en.received_by === 'shibarihouse' ? (
+                          <span className="badge badge-neutral">
+                            🏛️ Shibari House (75%)
+                          </span>
+                        ) : en.received_by === 'foraisso' ? (
+                          <span className="badge badge-neutral">
+                            👤 Foraisso (Repasse 25%)
+                          </span>
+                        ) : null}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          title="Editar matrícula"
+                          onClick={() => {
+                            setEnrollmentToEdit(en);
+                            setShowEnrollModal(true);
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                        {en.status === 'active' && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            title="Concluir / Encerrar matrícula"
+                            onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                          >
+                            ✓ Concluir
+                          </button>
+                        )}
+                        {!isInactive ? (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            style={{ color: 'var(--fi-color-danger)' }}
+                            title="Excluir matrícula"
+                            onClick={() => {
+                              if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
+                                deleteEnrollment(en.id);
+                              }
+                            }}
+                          >
+                            🗑️ Excluir
+                          </button>
+                        ) : (
+                          <span title="Matrículas vencidas/concluídas não podem ser excluídas" style={{ fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }}>
+                            🔒 Não pode ser deletada
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
+                      <div>
+                        Modalidade: <strong>{MODALITY_LABELS[en.modality] ?? en.modality}</strong>
+                        {en.group && ` (${en.group.weekday === 1 ? 'Segundas-feiras' : en.group.weekday === 3 ? 'Quartas-feiras' : `Dia ${en.group.weekday}`})`}
+                      </div>
+                      <div className="text-mono" style={{ fontSize: '0.82rem' }}>
+                        📅 <strong>Início:</strong> {formatDate(en.start_date)} &nbsp;|&nbsp; 📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}
+                      </div>
+                    </div>
+
+                    {en.notes && (
+                      <p className="text-xs text-muted" style={{ fontStyle: 'italic', margin: 0 }}>
+                        Obs: {en.notes}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ---- TAB: Linha do Tempo ---- */}
       {activeTab === 'timeline' && (

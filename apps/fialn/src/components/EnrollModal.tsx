@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { GroupClassroom, ModalityType, PaymentRecipient, PaymentMethod, StudentEnrollment } from '@fi/types';
-import type { CreateEnrollmentPayload, UpdateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
+import { calculateEndDate, toLocalDateString, type CreateEnrollmentPayload, type UpdateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
 
 interface EnrollModalProps {
   personId: string;
@@ -13,7 +13,7 @@ interface EnrollModalProps {
   onUpdate?: (enrollmentId: string, payload: UpdateEnrollmentPayload) => Promise<boolean>;
 }
 
-function toLocalDateString(date: Date): string {
+function toLocalDateStringFallback(date: Date): string {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
   const dd = String(date.getDate()).padStart(2, '0');
@@ -35,7 +35,7 @@ export function EnrollModal({
   const [groupId, setGroupId] = useState<string>(enrollmentToEdit?.group_id ?? (groups[0]?.id ?? ''));
   const [modality, setModality] = useState<ModalityType>(enrollmentToEdit?.modality ?? 'quarterly_group');
   const [status, setStatus] = useState<StudentEnrollment['status']>(enrollmentToEdit?.status ?? 'active');
-  const [startDate, setStartDate] = useState<string>(enrollmentToEdit?.start_date ?? toLocalDateString(new Date()));
+  const [startDate, setStartDate] = useState<string>(enrollmentToEdit?.start_date ?? toLocalDateStringFallback(new Date()));
   const [notes, setNotes] = useState<string>(enrollmentToEdit?.notes ?? '');
 
   // Partner / Scholarship toggle
@@ -50,9 +50,13 @@ export function EnrollModal({
   const [generateProjections, setGenerateProjections] = useState<boolean>(!isEditing);
   const [installments, setInstallments] = useState<string>('1');
   const [amount, setAmount] = useState<string>('900');
-  const [firstDueDate, setFirstDueDate] = useState<string>(toLocalDateString(new Date()));
+  const [firstDueDate, setFirstDueDate] = useState<string>(toLocalDateStringFallback(new Date()));
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const calculatedEndDate = calculateEndDate(startDate, modality);
+  const todayStr = toLocalDateString();
+  const isRetroactive = calculatedEndDate < todayStr;
 
   // Auto-pricing based on group and modality (only when creating)
   useEffect(() => {
@@ -129,6 +133,7 @@ export function EnrollModal({
         modality,
         status,
         start_date: startDate,
+        end_date: calculatedEndDate,
         notes: notes.trim() || null,
         is_partner: isPartner,
         partner_details: isPartner ? partnerDetails.trim() : null,
@@ -163,6 +168,7 @@ export function EnrollModal({
       group_id: groupId,
       modality,
       start_date: startDate,
+      end_date: calculatedEndDate,
       notes: notes.trim() || null,
       is_partner: isPartner,
       partner_details: isPartner ? partnerDetails.trim() : null,
@@ -228,7 +234,7 @@ export function EnrollModal({
               >
                 <option value="active">✓ Ativa</option>
                 <option value="paused">⏸ Pausada</option>
-                <option value="completed">✔ Concluída</option>
+                <option value="completed">✔ Concluída / Vencida</option>
                 <option value="cancelled">✖ Cancelada</option>
               </select>
             </div>
@@ -267,18 +273,38 @@ export function EnrollModal({
             </select>
           </div>
 
-          {/* Start Date */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="enroll-start">Data de Início</label>
-            <input
-              id="enroll-start"
-              type="date"
-              className="form-input"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
+          {/* Start Date and End Date preview */}
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="enroll-start">Data de Início *</label>
+              <input
+                id="enroll-start"
+                type="date"
+                className="form-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="enroll-end">Fim Previsto</label>
+              <input
+                id="enroll-end"
+                type="date"
+                className="form-input"
+                value={calculatedEndDate}
+                readOnly
+                title="Calculado automaticamente com base na modalidade"
+                style={{ opacity: 0.85, cursor: 'not-allowed', background: 'var(--fi-color-surface-2)' }}
+              />
+            </div>
           </div>
+
+          {isRetroactive && !isEditing && (
+            <div className="alert alert-warning" style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem' }}>
+              ⚠️ <strong>Matrícula Retroativa / Vencida:</strong> Como o término ({calculatedEndDate}) já passou, o registro será salvo como <strong>concluído (completed)</strong>.
+            </div>
+          )}
 
           {/* Partner / Scholarship Toggle */}
           <div

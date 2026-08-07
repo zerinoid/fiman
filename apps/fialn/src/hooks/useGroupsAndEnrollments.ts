@@ -2,11 +2,39 @@ import { useState, useEffect, useCallback } from 'react';
 import type { GroupClassroom, StudentEnrollment, ModalityType, TransactionCategory, PaymentRecipient, PaymentMethod } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
+export function toLocalDateString(date: Date = new Date()): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function calculateEndDate(startDateStr: string, modality: ModalityType): string {
+  if (!startDateStr) return startDateStr;
+  const d = new Date(`${startDateStr}T00:00:00`);
+  if (isNaN(d.getTime())) return startDateStr;
+
+  if (modality === 'monthly_group') {
+    d.setMonth(d.getMonth() + 1);
+  } else if (modality === 'quarterly_group') {
+    d.setMonth(d.getMonth() + 3);
+  } else if (modality === 'single_group' || modality === 'single_private') {
+    // same day
+  } else if (modality === 'private_bundle') {
+    d.setMonth(d.getMonth() + 3);
+  } else {
+    d.setMonth(d.getMonth() + 1);
+  }
+
+  return toLocalDateString(d);
+}
+
 export interface CreateEnrollmentPayload {
   person_id: string;
   group_id: string | null;
   modality: ModalityType;
   start_date: string;
+  end_date?: string | null;
   notes: string | null;
   is_partner?: boolean;
   partner_details?: string | null;
@@ -24,6 +52,7 @@ export interface UpdateEnrollmentPayload {
   modality?: ModalityType;
   status?: StudentEnrollment['status'];
   start_date?: string;
+  end_date?: string | null;
   notes?: string | null;
   is_partner?: boolean;
   partner_details?: string | null;
@@ -77,7 +106,28 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
           .order('created_at', { ascending: false });
 
         if (enrollError) throw enrollError;
-        setEnrollments((enrollmentsData ?? []) as unknown as StudentEnrollment[]);
+
+        const rawEnrollments = (enrollmentsData ?? []) as unknown as StudentEnrollment[];
+        const todayStr = toLocalDateString(new Date());
+
+        // Process enrollments: auto-complete if active but end_date has passed
+        const processed = rawEnrollments.map((e) => {
+          const endDate = e.end_date ?? calculateEndDate(e.start_date, e.modality);
+          const isExpired = endDate < todayStr;
+          if (e.status === 'active' && isExpired) {
+            // Asynchronously sync status update to DB
+            supabase
+              .from('fialn_enrollments')
+              .update({ status: 'completed', end_date: endDate, updated_at: new Date().toISOString() })
+              .eq('id', e.id)
+              .then(() => {});
+
+            return { ...e, end_date: endDate, status: 'completed' as const };
+          }
+          return { ...e, end_date: endDate };
+        });
+
+        setEnrollments(processed);
       } else {
         setEnrollments([]);
       }
@@ -100,6 +150,11 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     setError(null);
 
     try {
+      const calculatedEnd = payload.end_date ?? calculateEndDate(payload.start_date, payload.modality);
+      const todayStr = toLocalDateString(new Date());
+      const isExpiredOrRetroactive = calculatedEnd < todayStr;
+      const initialStatus: StudentEnrollment['status'] = isExpiredOrRetroactive ? 'completed' : 'active';
+
       // 1. Insert enrollment row
       const { data: newEnrollment, error: enrollError } = await supabase
         .from('fialn_enrollments')
@@ -107,8 +162,9 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
           person_id: payload.person_id,
           group_id: payload.group_id,
           modality: payload.modality,
-          status: 'active',
+          status: initialStatus,
           start_date: payload.start_date,
+          end_date: calculatedEnd,
           notes: payload.notes,
           is_partner: payload.is_partner ?? false,
           partner_details: payload.is_partner ? payload.partner_details : null,
@@ -180,13 +236,25 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     payload: UpdateEnrollmentPayload,
   ): Promise<boolean> => {
     setSaving(true);
-    setError(null);
-
     try {
+      const existing = enrollments.find((e) => e.id === enrollmentId);
+      const startDate = payload.start_date ?? existing?.start_date;
+      const modality = payload.modality ?? existing?.modality;
+      const calculatedEnd = payload.end_date ?? (startDate && modality ? calculateEndDate(startDate, modality) : undefined);
+
       const { data: updatedData, error: updateError } = await supabase
         .from('fialn_enrollments')
         .update({
-          ...payload,
+          group_id: payload.group_id,
+          modality: payload.modality,
+          status: payload.status,
+          start_date: payload.start_date,
+          end_date: calculatedEnd,
+          notes: payload.notes,
+          is_partner: payload.is_partner,
+          partner_details: payload.partner_details,
+          received_by: payload.received_by,
+          payment_method: payload.payment_method,
           updated_at: new Date().toISOString(),
         })
         .eq('id', enrollmentId)
@@ -249,3 +317,4 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     refresh: fetchAll,
   };
 }
+

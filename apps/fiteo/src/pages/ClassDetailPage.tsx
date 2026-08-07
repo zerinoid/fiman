@@ -95,7 +95,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
     saveMinutes,
   } = useAttendance(classId);
 
-  const { students, loading: studentsLoading } = useEnrolledStudents(groupWeekday);
+  const { students, loading: studentsLoading } = useEnrolledStudents(groupWeekday, schedule?.class_date ?? null);
 
   // Fetch the class schedule + joined course
   const fetchSchedule = () => {

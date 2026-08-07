@@ -18,7 +18,7 @@ export interface UseEnrolledStudentsReturn {
 }
 
 /**
- * Fetches active fialn_enrollments for students enrolled in a specific course.
+ * Fetches active fialn_enrollments for students enrolled in a specific course during the class date.
  * Cross-module read: FITEO reads from fialn_enrollments (owned by FIALN) to
  * populate per-class attendance sheets without duplicating enrollment data.
  *
@@ -26,9 +26,12 @@ export interface UseEnrolledStudentsReturn {
  * maps to `fialn_groups.weekday` (1 = Mon, 3 = Wed). We join via group_id.
  *
  * @param groupWeekday - The weekday number from fialn_groups (1=Mon, 3=Wed).
- *                       Pass null to skip fetching.
+ * @param classDate    - The ISO string or YYYY-MM-DD date of the class schedule.
  */
-export function useEnrolledStudents(groupWeekday: number | null): UseEnrolledStudentsReturn {
+export function useEnrolledStudents(
+  groupWeekday: number | null,
+  classDate: string | null = null,
+): UseEnrolledStudentsReturn {
   const [students, setStudents] = useState<EnrolledStudent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +43,7 @@ export function useEnrolledStudents(groupWeekday: number | null): UseEnrolledStu
     setError(null);
 
     try {
-      // Fetch active enrollments for groups matching this weekday
+      // Fetch enrollments for groups matching this weekday (ordered newest first)
       const { data, error: fetchError } = await supabase
         .from('fialn_enrollments')
         .select(`
@@ -48,23 +51,49 @@ export function useEnrolledStudents(groupWeekday: number | null): UseEnrolledStu
           group:fialn_groups(*),
           person:people(id, full_name)
         `)
-        .eq('status', 'active')
-        .not('group_id', 'is', null);
+        .not('group_id', 'is', null)
+        .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      // Filter client-side to enrollments whose group.weekday matches
-      const filtered = (data ?? []).filter(
-        (enrollment: any) => enrollment.group?.weekday === groupWeekday,
-      ) as unknown as EnrolledStudent[];
+      const targetDate = classDate ? classDate.split('T')[0] : new Date().toISOString().split('T')[0];
 
-      setStudents(filtered);
+      // Filter client-side to enrollments matching weekday, status and date validity window
+      const filtered = (data ?? []).filter((enrollment: any) => {
+        if (enrollment.group?.weekday !== groupWeekday) return false;
+
+        const startDate = enrollment.start_date;
+        const endDate = enrollment.end_date;
+        const status = enrollment.status;
+
+        // Enrollment must start on or before targetDate
+        if (startDate && startDate > targetDate) return false;
+
+        // If end_date exists, it must not be before targetDate
+        if (endDate && endDate < targetDate) return false;
+
+        // Status must be active (or completed if it covered targetDate)
+        if (status !== 'active' && status !== 'completed') return false;
+
+        return true;
+      });
+
+      // Deduplicate by person_id (keep only 1 enrollment per student)
+      const personMap = new Map<string, EnrolledStudent>();
+      for (const row of filtered) {
+        const pid = row.person?.id ?? row.person_id;
+        if (pid && !personMap.has(pid)) {
+          personMap.set(pid, row as unknown as EnrolledStudent);
+        }
+      }
+
+      setStudents(Array.from(personMap.values()));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar alunos matriculados');
     } finally {
       setLoading(false);
     }
-  }, [groupWeekday]);
+  }, [groupWeekday, classDate]);
 
   useEffect(() => { fetchStudents(); }, [fetchStudents]);
 

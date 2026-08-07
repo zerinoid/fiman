@@ -247,6 +247,7 @@ a:hover { text-decoration: underline; }
   justify-content: space-between;
   margin-bottom: var(--fi-space-6);
   gap: var(--fi-space-4);
+  flex-flow: wrap;
 }
 
 .page-title {
@@ -981,6 +982,7 @@ textarea.form-input {
 
 .flex-gap-2 { display: flex; gap: var(--fi-space-2); align-items: center; }
 .flex-gap-3 { display: flex; gap: var(--fi-space-3); align-items: center; }
+.flex-wrap { flex-wrap: wrap; }
 
 .text-muted { color: var(--fi-color-text-muted); }
 .text-success { color: var(--fi-color-success); }

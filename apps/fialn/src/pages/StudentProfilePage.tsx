@@ -27,7 +27,7 @@ function formatCurrency(value: number): string {
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('pt-BR');
 }
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
@@ -141,7 +141,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           </div>
         </div>
 
-        <div className="flex-gap-2">
+        <div className="flex-gap-2 flex-wrap">
           <button
             id="profile-edit-btn"
             className="btn btn-ghost btn-sm"
@@ -176,174 +176,144 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         </div>
       </div>
 
-      {/* Pending Unconsumed Lessons Banner */}
-      <div className="grid-2 mb-6" style={{ gridTemplateColumns: activeBundlesList.length > 0 ? '1fr 1fr' : '1fr' }}>
-        {/* Enrollments (MATRICULAS) Banner - Lists Active & Expired */}
-        <div className="card card-sm">
-          <div className="flex-between mb-2">
-            <div>
-              <div className="section-title">Matrículas & Turmas</div>
-              <span className="text-xs text-muted">
-                {activeEnrollments.length} ativa{activeEnrollments.length !== 1 ? 's' : ''} · {enrollments.length} total
-              </span>
-            </div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}>
-              + Adicionar
-            </button>
-          </div>
+      {/* Top Banners: Active Enrollments & Bundles */}
+      {(activeEnrollments.length > 0 || activeBundlesList.length > 0) && (
+        <div className="grid-2 mb-6" style={{ gridTemplateColumns: activeEnrollments.length > 0 && activeBundlesList.length > 0 ? '1fr 1fr' : '1fr' }}>
+          {/* Active Enrollments Banner - Only shown if student has active enrollments */}
+          {activeEnrollments.length > 0 && (
+            <div className="card card-sm">
+              <div className="flex-between">
+                <div className="section-title">Matrículas & Turmas Ativas</div>
+                {/* <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}> */}
+                {/*   + Adicionar */}
+                {/* </button> */}
+              </div>
 
-          {enrollments.length === 0 ? (
-            <p className="text-xs text-muted mt-2">Nenhuma matrícula cadastrada no momento.</p>
-          ) : (
-            <div className="stack-2 mt-3" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {enrollments.map((en) => {
-                const isInactive = en.status === 'completed' || en.status === 'cancelled';
-                return (
+              <div className="stack-2 mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {activeEnrollments.map((en) => (
                   <div
                     key={en.id}
                     style={{
-                      background: isInactive ? 'var(--fi-color-surface-1)' : 'var(--fi-color-surface-2)',
-                      border: `1px solid ${isInactive ? 'var(--fi-color-border-subtle)' : 'var(--fi-color-border)'}`,
+                      background: 'var(--fi-color-surface-2)',
+                      border: '1px solid var(--fi-color-border)',
                       borderRadius: 'var(--fi-radius-md)',
-                      padding: '0.6rem 0.85rem',
+                      padding: '0.5rem 0.75rem',
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.35rem',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem',
                       fontSize: '0.85rem',
-                      opacity: isInactive ? 0.65 : 1,
+                      width: '100%',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
-                        <span className={`badge ${isInactive ? 'badge-neutral' : 'badge-primary'}`}>
-                          {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 600 }}>
+                        {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
+                      </span>
+                      {en.is_partner ? (
+                        <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
+                          🤝 Bolsista
                         </span>
-
-                        {en.status === 'active' ? (
-                          <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>✓ Ativa</span>
-                        ) : en.status === 'completed' ? (
-                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>✔ Concluída / Vencida</span>
-                        ) : en.status === 'paused' ? (
-                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>⏸ Pausada</span>
-                        ) : (
-                          <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>✖ Cancelada</span>
-                        )}
-
-                        {en.is_partner ? (
-                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
-                            🤝 Bolsista / Troca
-                          </span>
-                        ) : en.received_by === 'shibarihouse' ? (
-                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                            🏛️ Shibari House (75%)
-                          </span>
-                        ) : en.received_by === 'foraisso' ? (
-                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                            👤 Foraisso (Repasse 25%)
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
-                        <button
-                          type="button"
-                          title="Editar matrícula"
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                          onClick={() => {
-                            setEnrollmentToEdit(en);
-                            setShowEnrollModal(true);
-                          }}
-                        >
-                          ✏️
-                        </button>
-                        {en.status === 'active' && (
-                          <button
-                            type="button"
-                            title="Concluir matrícula"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
-                            onClick={() => updateEnrollmentStatus(en.id, 'completed')}
-                          >
-                            ✓
-                          </button>
-                        )}
-                        {!isInactive ? (
-                          <button
-                            type="button"
-                            title="Excluir matrícula"
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                            onClick={() => {
-                              if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
-                                deleteEnrollment(en.id);
-                              }
-                            }}
-                          >
-                            🗑️
-                          </button>
-                        ) : (
-                          <span title="Matrículas vencidas/concluídas não podem ser excluídas" style={{ fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }}>
-                            🔒
-                          </span>
-                        )}
-                      </div>
+                      ) : en.received_by === 'shibarihouse' ? (
+                        <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                          🏛️ Shibari House
+                        </span>
+                      ) : en.received_by === 'foraisso' ? (
+                        <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                          👤 Foraisso
+                        </span>
+                      ) : null}
+                      <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                        {en.modality === 'monthly_group' ? 'Mensal' : en.modality === 'quarterly_group' ? 'Trimestral' : en.modality.includes('single') ? 'Avulsa' : 'Pacote'}
+                      </span>
+                      {en.end_date && (
+                        <span className="text-xs text-mono text-muted" title="Data do fim previsto de expiração">
+                          até {formatDate(en.end_date)}
+                        </span>
+                      )}
                     </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.78rem', color: 'var(--fi-color-text-muted)' }}>
-                      <span>
-                        {MODALITY_LABELS[en.modality]}
-                        {en.group && ` (${en.group.weekday === 1 ? 'Segundas' : 'Quartas'})`}
-                      </span>
-                      <span className="text-mono" style={{ fontSize: '0.75rem' }}>
-                        📅 Início: {formatDate(en.start_date)} · Fim: {formatDate(en.end_date)}
-                      </span>
+                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                      <button
+                        type="button"
+                        title="Editar matrícula"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          setEnrollmentToEdit(en);
+                          setShowEnrollModal(true);
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        type="button"
+                        title="Concluir matrícula"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
+                        onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        title="Excluir matrícula"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                        onClick={() => {
+                          if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
+                            deleteEnrollment(en.id);
+                          }
+                        }}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Lesson Bundles & Pending Lessons Banner */}
-        <div className="card card-sm">
-          <div className="flex-between">
-            <div className="section-title">Aulas Pendentes (Pacotes / Bundles)</div>
-            <button className="btn btn-ghost btn-sm" onClick={() => setShowBundleModal(true)}>
-              + Novo Pacote
-            </button>
-          </div>
-
-          <div className="mt-2 flex-between" style={{ alignItems: 'baseline' }}>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className={unconsumedLessonsCount > 0 ? 'text-primary' : 'text-muted'}>
-              {unconsumedLessonsCount} {unconsumedLessonsCount === 1 ? 'aula pendente' : 'aulas pendentes'}
-            </div>
-            <div className="text-xs text-muted">
-              {activeBundlesList.length} pacote{activeBundlesList.length !== 1 ? 's' : ''} ativo{activeBundlesList.length !== 1 ? 's' : ''}
-            </div>
-          </div>
-
+          {/* Lesson Bundles & Pending Lessons Banner */}
           {activeBundlesList.length > 0 && (
-            <div className="stack-2 mt-3">
-              {activeBundlesList.map((b) => {
-                const remaining = Math.max(0, b.total_lessons - b.used_lessons);
-                const percent = Math.min(100, Math.round((b.used_lessons / b.total_lessons) * 100));
-                return (
-                  <div key={b.id} style={{ background: 'var(--fi-color-surface-2)', padding: '0.5rem 0.75rem', borderRadius: 'var(--fi-radius-md)', border: '1px solid var(--fi-color-border)' }}>
-                    <div className="flex-between text-xs mb-1">
-                      <span style={{ fontWeight: 600 }}>{b.name}</span>
-                      <span className="text-mono" style={{ color: 'var(--fi-color-accent)' }}>
-                        {b.used_lessons}/{b.total_lessons} consumidas ({remaining} pendentes)
-                      </span>
+            <div className="card card-sm">
+              <div className="flex-between">
+                <div className="section-title">Aulas Pendentes (Pacotes / Bundles)</div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowBundleModal(true)}>
+                  + Novo Pacote
+                </button>
+              </div>
+
+              <div className="mt-2 flex-between" style={{ alignItems: 'baseline' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className={unconsumedLessonsCount > 0 ? 'text-primary' : 'text-muted'}>
+                  {unconsumedLessonsCount} {unconsumedLessonsCount === 1 ? 'aula pendente' : 'aulas pendentes'}
+                </div>
+                <div className="text-xs text-muted">
+                  {activeBundlesList.length} pacote{activeBundlesList.length !== 1 ? 's' : ''} ativo{activeBundlesList.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+
+              <div className="stack-2 mt-3">
+                {activeBundlesList.map((b) => {
+                  const remaining = Math.max(0, b.total_lessons - b.used_lessons);
+                  const percent = Math.min(100, Math.round((b.used_lessons / b.total_lessons) * 100));
+                  return (
+                    <div key={b.id} style={{ background: 'var(--fi-color-surface-2)', padding: '0.5rem 0.75rem', borderRadius: 'var(--fi-radius-md)', border: '1px solid var(--fi-color-border)' }}>
+                      <div className="flex-between text-xs mb-1">
+                        <span style={{ fontWeight: 600 }}>{b.name}</span>
+                        <span className="text-mono" style={{ color: 'var(--fi-color-accent)' }}>
+                          {b.used_lessons}/{b.total_lessons} consumidas ({remaining} pendentes)
+                        </span>
+                      </div>
+                      <div style={{ height: '6px', background: 'var(--fi-color-surface-3)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${percent}%`, height: '100%', background: 'var(--fi-color-primary)', transition: 'width 300ms ease' }} />
+                      </div>
                     </div>
-                    <div style={{ height: '6px', background: 'var(--fi-color-surface-3)', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${percent}%`, height: '100%', background: 'var(--fi-color-primary)', transition: 'width 300ms ease' }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Enroll Modal */}
       {showEnrollModal && (
@@ -454,12 +424,12 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             <div>
               <h2 className="section-title" style={{ fontSize: '1.15rem' }}>MATRÍCULAS DO ALUNO</h2>
               <p className="text-xs text-muted mt-1">
-                Listagem de matrículas ativas e vencidas/concluídas ({activeEnrollments.length} ativas, {enrollments.length - activeEnrollments.length} concluídas/vencidas)
+                ({activeEnrollments.length} ativa, {enrollments.length - activeEnrollments.length} concluídas/vencidas)
               </p>
             </div>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowEnrollModal(true)}>
-              + Nova Matrícula
-            </button>
+            {/* <button className="btn btn-primary btn-sm" onClick={() => setShowEnrollModal(true)}> */}
+            {/*   + Nova Matrícula */}
+            {/* </button> */}
           </div>
 
           {enrollments.length === 0 ? (
@@ -487,7 +457,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                       transition: 'opacity 200ms ease',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 700, fontSize: '1rem', color: isInactive ? 'var(--fi-color-text-muted)' : 'var(--fi-color-text)' }}>
                           {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
@@ -505,20 +475,20 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
                         {en.is_partner ? (
                           <span className="badge badge-warning" title={en.partner_details || 'Parceria / Troca de Serviços'}>
-                            🤝 Bolsista / Troca
+                            🤝 Bolsista
                           </span>
                         ) : en.received_by === 'shibarihouse' ? (
                           <span className="badge badge-neutral">
-                            🏛️ Shibari House (75%)
+                            🏛️ Shibari House
                           </span>
                         ) : en.received_by === 'foraisso' ? (
                           <span className="badge badge-neutral">
-                            👤 Foraisso (Repasse 25%)
+                            👤 Foraisso
                           </span>
                         ) : null}
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <button
                           type="button"
                           className="btn btn-ghost btn-sm"
@@ -556,7 +526,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                           </button>
                         ) : (
                           <span title="Matrículas vencidas/concluídas não podem ser excluídas" style={{ fontSize: '0.75rem', opacity: 0.5, cursor: 'not-allowed' }}>
-                            🔒 Não pode ser deletada
+                            🔒 Histórico
                           </span>
                         )}
                       </div>
@@ -564,11 +534,13 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
                       <div>
-                        Modalidade: <strong>{MODALITY_LABELS[en.modality] ?? en.modality}</strong>
+                        <strong>{MODALITY_LABELS[en.modality] ?? en.modality}</strong>
                         {en.group && ` (${en.group.weekday === 1 ? 'Segundas-feiras' : en.group.weekday === 3 ? 'Quartas-feiras' : `Dia ${en.group.weekday}`})`}
                       </div>
-                      <div className="text-mono" style={{ fontSize: '0.82rem' }}>
-                        📅 <strong>Início:</strong> {formatDate(en.start_date)} &nbsp;|&nbsp; 📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}
+                      <div className="text-mono" style={{ fontSize: '0.82rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span>📅 <strong>Início:</strong> {formatDate(en.start_date)}</span>
+                        <span style={{ color: 'var(--fi-color-border-subtle)' }}>|</span>
+                        <span>📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}</span>
                       </div>
                     </div>
 

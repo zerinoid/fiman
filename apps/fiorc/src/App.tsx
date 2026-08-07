@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './hooks/useAuth';
+import { supabase } from './lib/supabase';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TransactionsPage } from './pages/TransactionsPage';
@@ -46,10 +47,40 @@ export interface MonthProps {
   onNextMonth: () => void;
 }
 
+function UnauthorizedScreen({ onSignOut }: { onSignOut: () => void }) {
+  return (
+    <div className="loading-center" style={{ minHeight: '100vh', padding: 'var(--fi-space-6)' }}>
+      <div
+        className="card"
+        style={{
+          maxWidth: '420px',
+          width: '100%',
+          textAlign: 'center',
+          padding: 'var(--fi-space-8)',
+          boxShadow: '0 8px 32px hsl(0 0% 0% / 0.5)',
+        }}
+      >
+        <div style={{ fontSize: '3rem', marginBottom: 'var(--fi-space-4)' }}>🚫</div>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 'var(--fi-space-2)' }}>
+          Não autorizado
+        </h1>
+        <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.9rem', marginBottom: 'var(--fi-space-6)' }}>
+          Esta aplicação (FIORC) é restrita a administradores. Seu perfil não possui acesso autorizado.
+        </p>
+        <button className="btn btn-primary w-full" onClick={onSignOut}>
+          Sair / Alternar Conta
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---- App ----
 
 export function App() {
   const { session, loading, isPasswordRecovery, signOut } = useAuth();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
 
   const [route, setRoute] = useState<Route>(getRouteFromHash);
 
@@ -58,6 +89,26 @@ export function App() {
   const [month, setMonth] = useState(now.getMonth() + 1);
 
   const monthLabel = formatMonthYear(year, month);
+
+  const fetchRole = useCallback(async () => {
+    if (!session?.user?.id) {
+      setUserRole(null);
+      setRoleLoading(false);
+      return;
+    }
+    setRoleLoading(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+    setUserRole(data?.role ?? null);
+    setRoleLoading(false);
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    fetchRole();
+  }, [fetchRole]);
 
   const onPrevMonth = () => {
     if (month === 1) { setYear(y => y - 1); setMonth(12); }
@@ -78,12 +129,10 @@ export function App() {
 
   const navigate = (to: Route) => {
     window.location.hash = to;
-    // hashchange fires synchronously in the same task, so setRoute will be
-    // called by the listener. Setting it here prevents a frame of stale UI.
     setRoute(to);
   };
 
-  if (loading) {
+  if (loading || (session && roleLoading)) {
     return (
       <div className="loading-center" style={{ minHeight: '100vh' }}>
         <div className="spinner spinner-lg" />
@@ -105,6 +154,11 @@ export function App() {
     return <LoginPage />;
   }
 
+  // Unauthorized check for non-admin roles
+  if (userRole !== 'admin') {
+    return <UnauthorizedScreen onSignOut={signOut} />;
+  }
+
   const monthProps: MonthProps = { year, month, monthLabel, onPrevMonth, onNextMonth };
   const email = session.user?.email ?? '';
 
@@ -118,3 +172,4 @@ export function App() {
     </AppShell>
   );
 }
+

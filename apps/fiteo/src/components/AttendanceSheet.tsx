@@ -3,8 +3,9 @@ import type { EnrolledStudent } from '../hooks/useEnrolledStudents';
 
 const MODALITY_LABELS: Record<string, string> = {
   quarterly_group: 'Plano Trimestral',
-  private_bundle: 'Pacote Particular',
+  monthly_group: 'Plano Mensal',
   single_group: 'Aula Avulsa',
+  private_bundle: 'Pacote Particular',
   single_private: 'Aula Avulsa Particular',
 };
 

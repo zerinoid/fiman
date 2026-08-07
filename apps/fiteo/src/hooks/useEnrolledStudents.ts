@@ -62,18 +62,25 @@ export function useEnrolledStudents(
       const filtered = (data ?? []).filter((enrollment: any) => {
         if (enrollment.group?.weekday !== groupWeekday) return false;
 
+        const modality = enrollment.modality;
+        // Ignore non-group modalities
+        if (modality === 'private_bundle' || modality === 'single_private') return false;
+
         const startDate = enrollment.start_date;
         const endDate = enrollment.end_date;
         const status = enrollment.status;
 
-        // Enrollment must start on or before targetDate
-        if (startDate && startDate > targetDate) return false;
-
-        // If end_date exists, it must not be before targetDate
-        if (endDate && endDate < targetDate) return false;
-
         // Status must be active (or completed if it covered targetDate)
         if (status !== 'active' && status !== 'completed') return false;
+
+        // For single_group (aula avulsa), student only appears on the exact day of the class
+        if (modality === 'single_group') {
+          return startDate === targetDate;
+        }
+
+        // For monthly_group and quarterly_group (periodic enrollments)
+        if (startDate && startDate > targetDate) return false;
+        if (endDate && endDate < targetDate) return false;
 
         return true;
       });

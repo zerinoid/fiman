@@ -65,7 +65,10 @@ export function EnrollModal({
     const groupName = selectedGroup?.name.toLowerCase() ?? '';
 
     if (groupName.includes('teoria das cordas')) {
-      if (modality === 'monthly_group') {
+      if (modality === 'single_group') {
+        setInstallments('1');
+        setAmount('150');
+      } else if (modality === 'monthly_group') {
         setInstallments('1');
         setAmount('450');
       } else {
@@ -73,7 +76,10 @@ export function EnrollModal({
         setAmount('900');
       }
     } else if (groupName.includes('sobre nós') || groupName.includes('sobre nos')) {
-      if (modality === 'monthly_group') {
+      if (modality === 'single_group') {
+        setInstallments('1');
+        setAmount('100');
+      } else if (modality === 'monthly_group') {
         setInstallments('1');
         setAmount('300');
       } else {
@@ -270,6 +276,7 @@ export function EnrollModal({
             >
               <option value="quarterly_group">Plano Trimestral Grupo</option>
               <option value="monthly_group">Plano Mensal Grupo</option>
+              <option value="single_group">Aula Avulsa Grupo</option>
             </select>
           </div>
 

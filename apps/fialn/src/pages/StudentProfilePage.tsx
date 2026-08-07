@@ -116,7 +116,10 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const pendingIncome = incomeTransactions.filter((tx) => tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
   const confirmedIncome = incomeTransactions.filter((tx) => !tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
 
-  const activeEnrollments = enrollments.filter((e) => e.status === 'active');
+  const groupEnrollments = enrollments.filter(
+    (e) => e.modality === 'monthly_group' || e.modality === 'quarterly_group' || e.modality === 'single_group'
+  );
+  const activeEnrollments = groupEnrollments.filter((e) => e.status === 'active');
   const activeBundlesList = bundles.filter((b) => b.status === 'active');
 
   return (
@@ -225,11 +228,11 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         </span>
                       ) : null}
                       <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                        {en.modality === 'monthly_group' ? 'Mensal' : en.modality === 'quarterly_group' ? 'Trimestral' : en.modality.includes('single') ? 'Avulsa' : 'Pacote'}
+                        {en.modality === 'monthly_group' ? 'Mensal' : en.modality === 'quarterly_group' ? 'Trimestral' : en.modality === 'single_group' ? 'Avulsa' : 'Pacote'}
                       </span>
                       {en.end_date && (
-                        <span className="text-xs text-mono text-muted" title="Data do fim previsto de expiração">
-                          até {formatDate(en.end_date)}
+                        <span className="text-xs text-mono text-muted" title={en.modality === 'single_group' ? 'Data da aula' : 'Data do fim previsto de expiração'}>
+                          {en.modality === 'single_group' ? `(Aula: ${formatDate(en.start_date)})` : `até ${formatDate(en.end_date)}`}
                         </span>
                       )}
                     </div>
@@ -432,7 +435,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             {/* </button> */}
           </div>
 
-          {enrollments.length === 0 ? (
+          {groupEnrollments.length === 0 ? (
             <div className="empty-state" style={{ padding: '2rem 0' }}>
               <div className="empty-state-icon">📋</div>
               <p className="empty-state-title">Nenhuma matrícula cadastrada</p>
@@ -440,7 +443,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             </div>
           ) : (
             <div className="stack-3">
-              {enrollments.map((en) => {
+              {groupEnrollments.map((en) => {
                 const isInactive = en.status === 'completed' || en.status === 'cancelled';
                 return (
                   <div
@@ -496,9 +499,15 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', paddingTop: '0.25rem', borderTop: '1px solid var(--fi-color-border-subtle)' }}>
                       <div className="text-mono" style={{ fontSize: '0.82rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                        <span>📅 <strong>Início:</strong> {formatDate(en.start_date)}</span>
-                        <span style={{ color: 'var(--fi-color-border-subtle)' }}>|</span>
-                        <span>📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}</span>
+                        {en.modality === 'single_group' ? (
+                          <span>📅 <strong>Data da Aula:</strong> {formatDate(en.start_date)}</span>
+                        ) : (
+                          <>
+                            <span>📅 <strong>Início:</strong> {formatDate(en.start_date)}</span>
+                            <span style={{ color: 'var(--fi-color-border-subtle)' }}>|</span>
+                            <span>📅 <strong>Fim previsto:</strong> {formatDate(en.end_date)}</span>
+                          </>
+                        )}
                       </div>
                     </div>
 

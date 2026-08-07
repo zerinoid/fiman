@@ -543,6 +543,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
               enrolledStudents={students}
               attendance={attendance}
               saving={attendanceSaving}
+              readOnly={!isAdmin}
               onToggle={togglePresence}
             />
           )}

@@ -15,6 +15,8 @@ interface AttendanceSheetProps {
   attendance: AttendanceWithPerson[];
   /** Whether the toggle controls are disabled (saving in progress). */
   saving: boolean;
+  /** Whether the attendance sheet is read-only for this user role. */
+  readOnly?: boolean;
   /** Called when the user toggles a student's presence. */
   onToggle: (personId: string, enrollmentId: string | null, currentValue: boolean) => void;
 }
@@ -23,6 +25,7 @@ export function AttendanceSheet({
   enrolledStudents,
   attendance,
   saving,
+  readOnly = false,
   onToggle,
 }: AttendanceSheetProps) {
   if (enrolledStudents.length === 0) {
@@ -62,14 +65,14 @@ export function AttendanceSheet({
 
             <label
               className="toggle-switch"
-              title={isPresent ? 'Marcar como ausente' : 'Marcar como presente'}
+              title={readOnly ? 'Modo de visualização (apenas leitura)' : (isPresent ? 'Marcar como ausente' : 'Marcar como presente')}
               aria-label={`Presença de ${name}`}
             >
               <input
                 type="checkbox"
                 checked={isPresent}
-                disabled={saving}
-                onChange={() => onToggle(personId, enrollment.id, isPresent)}
+                disabled={saving || readOnly}
+                onChange={() => !readOnly && onToggle(personId, enrollment.id, isPresent)}
               />
               <span className="toggle-track" />
               <span className="toggle-thumb" />

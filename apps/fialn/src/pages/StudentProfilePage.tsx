@@ -178,10 +178,10 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
       {/* Top Banners: Active Enrollments & Bundles */}
       {(activeEnrollments.length > 0 || activeBundlesList.length > 0) && (
-        <div className="grid-2 mb-6" style={{ gridTemplateColumns: activeEnrollments.length > 0 && activeBundlesList.length > 0 ? '1fr 1fr' : '1fr' }}>
+        <div className="mb-6">
           {/* Active Enrollments Banner - Only shown if student has active enrollments */}
           {activeEnrollments.length > 0 && (
-            <div className="card card-sm">
+            <div className="card card-sm mb-4">
               <div className="flex-between">
                 <div className="section-title">Matrículas & Turmas Ativas</div>
                 {/* <button className="btn btn-ghost btn-sm" onClick={() => setShowEnrollModal(true)}> */}
@@ -233,7 +233,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
                       <button
                         type="button"
                         title="Editar matrícula"

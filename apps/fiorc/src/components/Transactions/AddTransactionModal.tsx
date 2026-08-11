@@ -5,6 +5,7 @@ import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES,
   CATEGORY_LABELS, calculateCreditCardDueDate,
 } from '../../utils/categories';
+import { CurrencyInput } from '../Common/CurrencyInput';
 
 interface AddTransactionModalProps {
   open: boolean;
@@ -292,15 +293,12 @@ export function AddTransactionModal({
           {/* Amount */}
           <div className="form-group">
             <label className="form-label" htmlFor="modal-amount">Valor (R$)</label>
-            <input
+            <CurrencyInput
               id="modal-amount"
-              type="number"
               className="form-input"
               placeholder="0,00"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
-              step="0.01"
-              min="0.01"
+              onChange={val => setAmount(val)}
               required
             />
           </div>

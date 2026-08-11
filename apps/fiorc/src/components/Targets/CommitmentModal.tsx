@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { CommitmentItem, CommitmentType, SplitRuleType } from '@fi/types';
 import { inferSplitRuleAndCategory } from '../../utils/splitting';
+import { CurrencyInput } from '../Common/CurrencyInput';
 
 interface CommitmentModalProps {
   open: boolean;
@@ -139,15 +140,12 @@ export function CommitmentModal({
           {/* Amount */}
           <div className="form-group">
             <label className="form-label" htmlFor="commit-amount">Valor Total da Conta (R$)</label>
-            <input
+            <CurrencyInput
               id="commit-amount"
-              type="number"
               className="form-input"
               placeholder="0,00"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
-              step="0.01"
-              min="0.01"
+              onChange={val => setAmount(val)}
               required
             />
           </div>

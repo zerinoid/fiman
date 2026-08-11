@@ -4,6 +4,7 @@ import type { NewTransaction } from '../hooks/useTransactions';
 import { useTransactions } from '../hooks/useTransactions';
 import { EXPENSE_CATEGORIES, CATEGORY_LABELS, calculateCreditCardDueDate } from '../utils/categories';
 import { MonthProps } from '../App';
+import { CurrencyInput } from '../components/Common/CurrencyInput';
 
 export function QuickAddPage({ year, month }: MonthProps) {
   const { addTransaction } = useTransactions(year, month);
@@ -131,18 +132,15 @@ export function QuickAddPage({ year, month }: MonthProps) {
         {/* Amount - Huge input */}
         <div className="form-group">
           <label className="form-label" htmlFor="quick-amount">Valor (R$)</label>
-          <input
+          <CurrencyInput
             ref={amountRef}
             id="quick-amount"
-            type="number"
             className="form-input"
             style={{ fontSize: '2rem', height: '4rem', textAlign: 'center' }}
             placeholder="0,00"
             value={amount}
-            onChange={e => setAmount(e.target.value)}
+            onChange={val => setAmount(val)}
             onKeyDown={handleAmountKeyDown}
-            step="0.01"
-            min="0.01"
             required
           />
         </div>

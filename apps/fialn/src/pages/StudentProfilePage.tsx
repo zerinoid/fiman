@@ -27,6 +27,13 @@ function formatCurrency(value: number): string {
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    if (!iso.includes('T') || iso.includes('T00:00:00')) {
+      const [, yyyy, mm, dd] = match;
+      return `${dd}/${mm}/${yyyy}`;
+    }
+  }
   return new Date(iso).toLocaleDateString('pt-BR');
 }
 

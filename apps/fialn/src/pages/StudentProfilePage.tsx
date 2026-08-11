@@ -58,7 +58,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
   const { profile, loading: profileLoading, saving, error: saveError, saveProfile } = useStudentProfile(personId);
   const { lessons, loading: lessonsLoading } = useLessons(personId);
-  const { incomeTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
+  const { studentTransactions, attendance, loading: financialsLoading, error: finError, refresh: refreshFinancials } = useStudentFinancials(personId);
   const { groups, enrollments, saving: enrollmentSaving, createEnrollment, updateEnrollment, updateEnrollmentStatus, deleteEnrollment } = useGroupsAndEnrollments(personId);
   const { bundles, unconsumedLessonsCount, saving: bundleSaving, createBundle, refresh: refreshBundles } = useLessonBundles(personId);
   const { updateStudent, saving: studentSaving } = useStudents();
@@ -112,9 +112,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
     );
   }
 
-  const totalIncome = incomeTransactions.reduce((acc, tx) => acc + tx.amount, 0);
-  const pendingIncome = incomeTransactions.filter((tx) => tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
-  const confirmedIncome = incomeTransactions.filter((tx) => !tx.is_projection).reduce((acc, tx) => acc + tx.amount, 0);
+  // (financial totals are shown in ValoresPage, not per-student)
 
   const groupEnrollments = enrollments
     .filter(
@@ -664,6 +662,46 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               ))}
             </div>
           )}
+
+          {/* Histórico de Grupos (presença em aulas coletivas) — migrado da aba Financeiro */}
+          {attendance.length > 0 && (
+            <div className="card card-sm">
+              <div className="section-header">
+                <span className="section-title">Histórico de Grupos</span>
+                <span className="badge badge-neutral">{attendance.filter((a) => a.present).length} presenças</span>
+              </div>
+              <table className="fi-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tema</th>
+                    <th>Tipo Pagamento</th>
+                    <th>Presença</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendance.map((att) => (
+                    <tr key={att.id}>
+                      <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
+                      <td>{att.proposed_theme ?? '—'}</td>
+                      <td>
+                        {att.payment_type
+                          ? <span className="badge badge-primary">{PAYMENT_TYPE_LABELS[att.payment_type] ?? att.payment_type}</span>
+                          : <span className="text-muted">—</span>
+                        }
+                      </td>
+                      <td>
+                        {att.present
+                          ? <span className="badge badge-success">✓ Presente</span>
+                          : <span className="badge badge-danger">✗ Ausente</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -700,111 +738,66 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
           {!financialsLoading && !finError && (
             <>
-              {/* Summary cards */}
-              <div className="grid-2" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                <div className="card card-sm" style={{ textAlign: 'center' }}>
-                  <div className="text-xs text-muted mb-4">Total Recebido</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className="text-success">
-                    {formatCurrency(confirmedIncome)}
-                  </div>
-                </div>
-                <div className="card card-sm" style={{ textAlign: 'center' }}>
-                  <div className="text-xs text-muted mb-4">Projeções Pendentes</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className="text-warning">
-                    {formatCurrency(pendingIncome)}
-                  </div>
-                </div>
-                <div className="card card-sm" style={{ textAlign: 'center' }}>
-                  <div className="text-xs text-muted mb-4">Total (Projeções)</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 700 }} className="text-primary">
-                    {formatCurrency(totalIncome)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Income transactions */}
-              {incomeTransactions.length > 0 && (
+              {/* Transactions table */}
+              {studentTransactions.length > 0 ? (
                 <div className="card card-sm">
                   <div className="section-header">
                     <span className="section-title">Transações</span>
+                    <span className="badge badge-neutral">{studentTransactions.length} registro{studentTransactions.length !== 1 ? 's' : ''}</span>
                   </div>
                   <table className="fi-table">
                     <thead>
                       <tr>
                         <th>Data</th>
                         <th>Descrição</th>
+                        <th>Recebedor</th>
                         <th>Valor</th>
-                        <th>Status</th>
+                        <th>Pagamento</th>
+                        <th>Vencimento</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {incomeTransactions.map((tx) => (
+                      {studentTransactions.map((tx) => (
                         <tr key={tx.id}>
-                          <td className="text-mono text-xs">{formatDate(tx.due_date)}</td>
-                          <td>{tx.description ?? '—'}</td>
-                          <td className={tx.is_projection ? 'text-warning' : 'text-success'}>
+                          <td className="text-mono text-xs">{formatDate(tx.transaction_date)}</td>
+                          <td style={{ fontSize: '0.85rem' }}>
+                            {tx.description}
+                            {tx.total_installments > 1 && (
+                              <span className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '0.25rem' }}>
+                                ({tx.installment_index}/{tx.total_installments})
+                              </span>
+                            )}
+                          </td>
+                          <td>
+                            {tx.received_by === 'shibarihouse' ? (
+                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>🏛️ Shibari House</span>
+                            ) : (
+                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>👤 Foraisso</span>
+                            )}
+                          </td>
+                          <td className="text-mono" style={{ fontWeight: 600 }}>
                             {formatCurrency(tx.amount)}
                           </td>
                           <td>
-                            {tx.is_projection ? (
-                              <span className="badge badge-warning">Projeção</span>
-                            ) : (
-                              <span className="badge badge-success">Pago {tx.paid_at ? formatDate(tx.paid_at) : ''}</span>
-                            )}
+                            <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`}
+                                  style={{ fontSize: '0.75rem' }}>
+                              {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                            </span>
+                          </td>
+                          <td className="text-mono text-xs">
+                            {tx.due_date ? formatDate(tx.due_date) : '—'}
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              )}
-
-              {/* Attendance history */}
-              {attendance.length > 0 && (
-                <div className="card card-sm">
-                  <div className="section-header">
-                    <span className="section-title">Histórico de Grupos</span>
-                    <span className="badge badge-neutral">{attendance.filter((a) => a.present).length} presenças</span>
-                  </div>
-                  <table className="fi-table">
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Tema</th>
-                        <th>Tipo Pagamento</th>
-                        <th>Presença</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {attendance.map((att) => (
-                        <tr key={att.id}>
-                          <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
-                          <td>{att.proposed_theme ?? '—'}</td>
-                          <td>
-                            {att.payment_type
-                              ? <span className="badge badge-primary">{PAYMENT_TYPE_LABELS[att.payment_type] ?? att.payment_type}</span>
-                              : <span className="text-muted">—</span>
-                            }
-                          </td>
-                          <td>
-                            {att.present
-                              ? <span className="badge badge-success">✓ Presente</span>
-                              : <span className="badge badge-danger">✗ Ausente</span>
-                            }
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {incomeTransactions.length === 0 && attendance.length === 0 && (
+              ) : (
                 <div className="empty-state">
                   <div className="empty-state-icon">💰</div>
-                  <p className="empty-state-title">Nenhum dado financeiro</p>
+                  <p className="empty-state-title">Nenhuma transação registrada</p>
                   <p className="empty-state-desc">
-                    Transações e presenças aparecerão aqui quando forem registradas.
+                    Transações aparecem aqui quando um pagamento é registrado na matrícula.
                   </p>
                 </div>
               )}

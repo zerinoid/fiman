@@ -246,6 +246,93 @@ export type Database = {
           },
         ]
       }
+      fialn_student_transactions: {
+        Row: {
+          amount: number
+          bundle_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          due_date: string | null
+          enrollment_id: string | null
+          fiorc_projection_due_date: string
+          fiorc_status: string
+          id: string
+          installment_index: number
+          notes: string | null
+          payment_method: string
+          person_id: string
+          received_by: string
+          split_amount: number
+          split_percent: number
+          split_type: string
+          total_installments: number
+          transaction_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          bundle_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          enrollment_id?: string | null
+          fiorc_projection_due_date: string
+          fiorc_status?: string
+          id?: string
+          installment_index?: number
+          notes?: string | null
+          payment_method: string
+          person_id: string
+          received_by: string
+          split_amount: number
+          split_percent: number
+          split_type: string
+          total_installments?: number
+          transaction_date: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          bundle_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          enrollment_id?: string | null
+          fiorc_projection_due_date?: string
+          fiorc_status?: string
+          id?: string
+          installment_index?: number
+          notes?: string | null
+          payment_method?: string
+          person_id?: string
+          received_by?: string
+          split_amount?: number
+          split_percent?: number
+          split_type?: string
+          total_installments?: number
+          transaction_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fialn_student_transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_transactions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiatt_client_records: {
         Row: {
           created_at: string | null
@@ -732,6 +819,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fiorc_settle_fialn_repasses: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       fiorc_confirm_shibari_projection: {
         Args: {
           p_transaction_id: string

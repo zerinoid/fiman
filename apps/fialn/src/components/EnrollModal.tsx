@@ -46,8 +46,8 @@ export function EnrollModal({
   const [receivedBy, setReceivedBy] = useState<PaymentRecipient>(enrollmentToEdit?.received_by ?? 'foraisso');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(enrollmentToEdit?.payment_method ?? 'credit');
 
-  // Projections
-  const [generateProjections, setGenerateProjections] = useState<boolean>(!isEditing);
+  // Projections / Payment Registration
+  const [registerPayment, setRegisterPayment] = useState<boolean>(!isEditing);
   const [installments, setInstallments] = useState<string>('1');
   const [amount, setAmount] = useState<string>('900');
   const [firstDueDate, setFirstDueDate] = useState<string>(toLocalDateStringFallback(new Date()));
@@ -156,7 +156,7 @@ export function EnrollModal({
     let instNum = 1;
     let amtNum = 0;
 
-    if (!isPartner && generateProjections) {
+    if (!isPartner && registerPayment) {
       instNum = paymentMethod === 'pix' ? 1 : parseInt(installments, 10);
       amtNum = parseFloat(amount);
       if (paymentMethod === 'credit' && (isNaN(instNum) || instNum <= 0)) {
@@ -180,10 +180,10 @@ export function EnrollModal({
       partner_details: isPartner ? partnerDetails.trim() : null,
       received_by: isPartner ? null : receivedBy,
       payment_method: isPartner ? null : paymentMethod,
-      generateProjections: !isPartner && generateProjections,
-      total_installments: !isPartner && generateProjections ? instNum : undefined,
-      amount_per_installment: !isPartner && generateProjections ? amtNum : undefined,
-      first_due_date: !isPartner && generateProjections ? firstDueDate : undefined,
+      registerPayment: !isPartner && registerPayment,
+      total_installments: !isPartner && registerPayment ? instNum : undefined,
+      amount_per_installment: !isPartner && registerPayment ? amtNum : undefined,
+      first_due_date: !isPartner && registerPayment ? firstDueDate : undefined,
     });
 
     if (ok) {
@@ -345,7 +345,7 @@ export function EnrollModal({
                   required={isPartner}
                 />
                 <p className="text-xs text-muted mt-1" style={{ color: '#eab308' }}>
-                  ℹ️ Alunos parceiros não geram dívidas, projeções nem registros financeiros no FIORC.
+                  ℹ️ Alunos parceiros não geram registros financeiros.
                 </p>
               </div>
             )}
@@ -378,15 +378,15 @@ export function EnrollModal({
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={generateProjections}
-                  onChange={(e) => setGenerateProjections(e.target.checked)}
+                  checked={registerPayment}
+                  onChange={(e) => setRegisterPayment(e.target.checked)}
                 />
                 <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>
-                  💳 {isEditing ? 'Re-gerar projeções financeiras no FIORC' : 'Registrar Integração Financeira FIORC'}
+                  💳 {isEditing ? 'Atualizar Dados de Pagamento' : 'Registrar Pagamento'}
                 </span>
               </label>
 
-              {generateProjections && (
+              {registerPayment && (
                 <div className="stack-4 mt-2">
                   {/* Parte que recebeu */}
                   <div className="form-group">
@@ -536,11 +536,11 @@ export function EnrollModal({
                     </p>
                     {receivedBy === 'shibarihouse' ? (
                       <p style={{ color: 'var(--fi-color-success)' }}>
-                        📈 <strong>Projeção (75% Shibari House):</strong> Você tem a receber R$ {split75Amount} {paymentMethod === 'credit' ? '/parcela' : ''} na data do vencimento.
+                        📈 <strong>Shibari House recebeu:</strong> Foraisso tem a receber R$ {split75Amount}{paymentMethod === 'credit' ? '/parcela' : ''} no dia 5 do mês seguinte.
                       </p>
                     ) : (
                       <p style={{ color: 'var(--fi-color-danger)' }}>
-                        💸 <strong>Repasse Devido (25% Shibari House):</strong> Você deve repassar R$ {split25Amount} {paymentMethod === 'credit' ? '/parcela' : ''} com vencimento no dia 5 do mês seguinte.
+                        💸 <strong>Foraisso recebeu:</strong> Foraisso deve repassar R$ {split25Amount}{paymentMethod === 'credit' ? '/parcela' : ''} no dia 5 do mês seguinte.
                       </p>
                     )}
                   </div>

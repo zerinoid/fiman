@@ -4,6 +4,7 @@ import { useMonthlyTarget } from '../hooks/useMonthlyTarget';
 import { useTransactions } from '../hooks/useTransactions';
 import { usePeople } from '../hooks/usePeople';
 import { useHouseSettings } from '../hooks/useHouseSettings';
+import { useFialnProjections } from '../hooks/useFialnProjections';
 import { MonthSummaryCard } from '../components/Dashboard/MonthSummaryCard';
 import { GoalProgressBar } from '../components/Dashboard/GoalProgressBar';
 import { RecentTransactionsList } from '../components/Dashboard/RecentTransactionsList';
@@ -20,6 +21,7 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
     addTransaction, updateTransaction, refetch,
   } = useTransactions(year, month);
   const { people } = usePeople();
+  const { totalReceivable, totalDebt, netBalance, loading: fialnLoading } = useFialnProjections(year, month);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -94,6 +96,37 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
             commitments={commitments}
             activeRoommatesCount={activeRoommatesCount}
           />
+
+          {/* ── Repasses FIALN ─────────────────── */}
+          {!fialnLoading && (totalReceivable > 0 || totalDebt > 0) && (
+            <div className="card" style={{ marginBottom: 'var(--fi-space-6)', borderLeft: '3px solid var(--fi-color-primary)' }}>
+              <div className="section-header" style={{ marginBottom: 'var(--fi-space-4)' }}>
+                <span className="section-title">🎓 Repasses FIALN — {monthLabel}</span>
+                <span className={`badge ${netBalance >= 0 ? 'badge-success' : 'badge-danger'}`}>
+                  {netBalance >= 0 ? '✅ Saldo positivo' : '⚠️ Saldo negativo'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--fi-space-4)', fontSize: '0.9rem' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-success)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>📈 A Receber</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>SH → Foraisso</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-success)' }}>{formatCurrency(totalReceivable)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-danger)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>💸 A Repassar</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>Foraisso → SH</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-danger)' }}>{formatCurrency(totalDebt)}</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Saldo Líquido</div>
+                  <div style={{ height: '1.25rem', marginBottom: '0.5rem' }} />
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: netBalance >= 0 ? 'var(--fi-color-success)' : 'var(--fi-color-danger)' }}>
+                    {netBalance < 0 ? '− ' : ''}{formatCurrency(Math.abs(netBalance))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Recent Transactions ────────── */}
           <div className="section">

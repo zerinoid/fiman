@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Transaction } from '@fi/types';
+import type { StudentTransaction } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
 export interface AttendanceRecord {
@@ -16,7 +16,7 @@ export interface AttendanceRecord {
 }
 
 export interface UseStudentFinancialsReturn {
-  incomeTransactions: Transaction[];
+  studentTransactions: StudentTransaction[];
   attendance: AttendanceRecord[];
   loading: boolean;
   error: string | null;
@@ -24,14 +24,14 @@ export interface UseStudentFinancialsReturn {
 }
 
 export function useStudentFinancials(personId: string | null): UseStudentFinancialsReturn {
-  const [incomeTransactions, setIncomeTransactions] = useState<Transaction[]>([]);
+  const [studentTransactions, setStudentTransactions] = useState<StudentTransaction[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchFinancials = useCallback(async () => {
     if (!personId) {
-      setIncomeTransactions([]);
+      setStudentTransactions([]);
       setAttendance([]);
       return;
     }
@@ -40,17 +40,17 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
     setError(null);
 
     try {
-      // 1. Income transactions linked to this student
-      const { data: transactions, error: txError } = await supabase
-        .from('fiorc_transactions')
+      // 1. Student financial transactions from the new fialn_student_transactions table.
+      //    This table is accessible by associates (unlike fiorc_transactions which is admin-only).
+      const { data: txnRows, error: txnError } = await supabase
+        .from('fialn_student_transactions')
         .select('*')
         .eq('person_id', personId)
-        .in('category', ['private_lesson', 'study_group', 'workshop', 'session'])
-        .order('due_date', { ascending: false });
+        .order('transaction_date', { ascending: false });
 
-      if (txError) throw txError;
+      if (txnError) throw txnError;
 
-      // 2. Attendance records with class info
+      // 2. Attendance records with class info (for the Timeline tab)
       const { data: attendanceRows, error: attError } = await supabase
         .from('fiteo_attendance')
         .select(`
@@ -88,7 +88,7 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
         };
       });
 
-      setIncomeTransactions((transactions ?? []) as Transaction[]);
+      setStudentTransactions((txnRows ?? []) as unknown as StudentTransaction[]);
       setAttendance(flatAttendance);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar financeiro');
@@ -99,5 +99,5 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
 
   useEffect(() => { fetchFinancials(); }, [fetchFinancials]);
 
-  return { incomeTransactions, attendance, loading, error, refresh: fetchFinancials };
+  return { studentTransactions, attendance, loading, error, refresh: fetchFinancials };
 }

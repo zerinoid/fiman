@@ -196,6 +196,48 @@ export interface LessonBundle {
   updated_at: string;
 }
 
+export type SplitType   = 'receivable' | 'debt';
+export type FiorcStatus = 'pending' | 'settled';
+
+/**
+ * Central financial transaction for a student.
+ * Written by FIALN (associates/admin) when registering enrollment payments.
+ * Read by FIORC (admin) to display projections and repasses.
+ *
+ * split_type='receivable': ShibariHouse received → Foraisso will collect 75%
+ * split_type='debt':       Foraisso received     → Foraisso must repay 25% to ShibariHouse
+ */
+export interface StudentTransaction {
+  id: string;
+  person_id: string;
+  enrollment_id: string | null;
+  bundle_id: string | null;
+
+  // Columns visible in FIALN Financeiro tab
+  transaction_date: string;            // "Data" — YYYY-MM-DD
+  description: string;                 // "Descrição"
+  received_by: PaymentRecipient;       // "Recebedor"
+  amount: number;                      // "Valor" — gross received amount
+  payment_method: PaymentMethod;       // "Tipo de Pagamento"
+  due_date: string | null;             // "Vencimento" — null for PIX; installment date for credit
+
+  // Split fields (read by FIORC for projection display)
+  split_percent: number;               // 75.00 or 25.00
+  split_amount: number;                // calculated split value
+  split_type: SplitType;
+  fiorc_projection_due_date: string;   // day 5 of next month — pre-calculated at INSERT time
+  fiorc_status: FiorcStatus;
+
+  // Installment tracking
+  installment_index: number;
+  total_installments: number;
+
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Extended profile for a person who is a student (Shibari). */
 export interface StudentProfile {
   id: string;

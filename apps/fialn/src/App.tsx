@@ -4,16 +4,17 @@ import { LoginPage } from './pages/LoginPage';
 import { StudentsPage } from './pages/StudentsPage';
 import { StudentProfilePage } from './pages/StudentProfilePage';
 import { QuickLogPage } from './pages/QuickLogPage';
+import { ValoresPage } from './pages/ValoresPage';
 import { AppShell } from './components/Layout/AppShell';
 import './index.css';
 
 
 // ---- Types ----
 
-export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password';
+export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password' | 'valores';
 export type Navigate = (to: Route, params?: Record<string, string>) => void;
 
-const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password'];
+const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password', 'valores'];
 
 // ---- Hash-based routing ----
 
@@ -103,6 +104,9 @@ export function App() {
       )}
       {route === 'log' && (
         <QuickLogPage prefilledPersonId={params.get('person_id')} navigate={navigate} />
+      )}
+      {route === 'valores' && (
+        <ValoresPage />
       )}
     </AppShell>
   );

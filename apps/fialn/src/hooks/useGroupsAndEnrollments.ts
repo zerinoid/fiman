@@ -29,6 +29,28 @@ export function calculateEndDate(startDateStr: string, modality: ModalityType): 
   return toLocalDateString(d);
 }
 
+// ---- Financial calculation helpers ----
+
+/** Returns a new ISO date string (YYYY-MM-DD) with `months` added. */
+function addMonths(dateStr: string, months: number): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return toLocalDateString(d);
+}
+
+/** Returns the date of day 5 of the month following the given date string. */
+function day5OfNextMonth(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(1);
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(5);
+  return toLocalDateString(d);
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export interface CreateEnrollmentPayload {
   person_id: string;
   group_id: string | null;
@@ -40,8 +62,8 @@ export interface CreateEnrollmentPayload {
   partner_details?: string | null;
   received_by?: PaymentRecipient | null;
   payment_method?: PaymentMethod | null;
-  // Optional financial projection parameters:
-  generateProjections?: boolean;
+  // Optional financial registration parameters:
+  registerPayment?: boolean;         // renamed from generateProjections
   total_installments?: number;
   amount_per_installment?: number;
   first_due_date?: string;
@@ -178,49 +200,66 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
 
       if (enrollError) throw enrollError;
 
-      // 2. If not a partner and financial projections requested, call RPC function
+      // 2. If not a partner and payment registration is requested, insert directly into fialn_student_transactions
       if (
         !payload.is_partner &&
-        payload.generateProjections &&
+        payload.registerPayment &&
         payload.amount_per_installment &&
         payload.amount_per_installment > 0 &&
         payload.first_due_date
       ) {
+        const isForaisso   = (payload.received_by ?? 'foraisso') === 'foraisso';
+        const installments = payload.payment_method === 'pix' ? 1 : (payload.total_installments ?? 1);
+
         const category: TransactionCategory =
           payload.modality === 'private_bundle' || payload.modality === 'single_private'
             ? 'private_lesson'
             : 'study_group';
 
+        // Build description from group name + modality
         const groupName = (newEnrollment as unknown as StudentEnrollment).group?.name;
         const modalityLabel =
-          payload.modality === 'monthly_group'
-            ? 'Plano Mensal'
-            : payload.modality === 'quarterly_group'
-            ? 'Plano Trimestral'
-            : payload.modality === 'private_bundle'
-            ? 'Pacote Particular'
-            : payload.modality === 'single_group'
-            ? 'Aula Avulsa Grupo'
-            : 'Aula Particular Avulsa';
+          payload.modality === 'monthly_group'   ? 'Plano Mensal'
+          : payload.modality === 'quarterly_group' ? 'Plano Trimestral'
+          : payload.modality === 'private_bundle'  ? 'Pacote Particular'
+          : payload.modality === 'single_group'    ? 'Aula Avulsa Grupo'
+          : 'Aula Particular Avulsa';
+        const desc = groupName ? `${modalityLabel} (${groupName})` : modalityLabel;
 
-        const desc = groupName
-          ? `${modalityLabel} (${groupName})`
-          : modalityLabel;
+        // Suppress unused variable warning for category (kept for future filtering)
+        void category;
 
-        const { error: rpcError } = await supabase.rpc('fialn_create_enrollment_financials', {
-          p_person_id: payload.person_id,
-          p_enrollment_id: newEnrollment.id,
-          p_category: category,
-          p_payment_method: payload.payment_method || 'credit',
-          p_received_by: payload.received_by || 'foraisso',
-          p_total_installments: payload.payment_method === 'pix' ? 1 : (payload.total_installments || 1),
-          p_amount_per_installment: payload.amount_per_installment,
-          p_first_due_date: payload.first_due_date,
-          p_description: desc,
-          p_is_partner: false,
+        const rows = Array.from({ length: installments }, (_, i) => {
+          // For credit: each installment has its own due_date (monthly)
+          // For PIX: single transaction on the first_due_date; due_date is null
+          const txnDate  = addMonths(payload.first_due_date!, i);
+          const dueDate  = payload.payment_method === 'credit' ? txnDate : null;
+          const projDue  = day5OfNextMonth(txnDate);
+
+          return {
+            person_id:                 payload.person_id,
+            enrollment_id:             newEnrollment.id,
+            transaction_date:          txnDate,
+            description:               desc,
+            received_by:               payload.received_by ?? 'foraisso',
+            amount:                    payload.amount_per_installment!,
+            payment_method:            payload.payment_method ?? 'pix',
+            due_date:                  dueDate,
+            split_percent:             isForaisso ? 25 : 75,
+            split_amount:              round2(payload.amount_per_installment! * (isForaisso ? 0.25 : 0.75)),
+            split_type:                isForaisso ? 'debt' : 'receivable',
+            fiorc_projection_due_date: projDue,
+            fiorc_status:              'pending',
+            installment_index:         i + 1,
+            total_installments:        installments,
+          };
         });
 
-        if (rpcError) throw rpcError;
+        const { error: txnError } = await supabase
+          .from('fialn_student_transactions')
+          .insert(rows);
+
+        if (txnError) throw txnError;
       }
 
       setEnrollments((prev) => [newEnrollment as unknown as StudentEnrollment, ...prev]);

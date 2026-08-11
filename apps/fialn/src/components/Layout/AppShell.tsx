@@ -9,6 +9,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { route: 'students', icon: '🎓', label: 'Alunos' },
   { route: 'log',      icon: '✏️', label: 'Registrar Aula' },
+  { route: 'valores',  icon: '💰', label: 'Valores' },
 ];
 
 interface AppShellProps {

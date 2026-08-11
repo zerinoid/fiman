@@ -8,14 +8,15 @@ import { TargetsPage } from './pages/TargetsPage';
 import { BoletoPage } from './pages/BoletoPage';
 import { QuickAddPage } from './pages/QuickAddPage';
 import { UpdatePasswordPage } from './pages/UpdatePasswordPage';
+import { FiorcValoresPage } from './pages/ValoresPage';
 import { AppShell } from './components/Layout/AppShell';
 import { formatMonthYear } from './utils/categories';
 
 // ---- Hash-based routing ----
 
-export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add' | 'reset-password' | 'update-password';
+export type Route = 'dashboard' | 'transactions' | 'targets' | 'boleto' | 'add' | 'reset-password' | 'update-password' | 'valores';
 
-const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add', 'reset-password', 'update-password'];
+const VALID_ROUTES: Route[] = ['dashboard', 'transactions', 'targets', 'boleto', 'add', 'reset-password', 'update-password', 'valores'];
 
 function getRouteFromHash(): Route {
   // 1. If explicit hash is present in URL (e.g. #transactions, #add), honor hash first
@@ -169,6 +170,7 @@ export function App() {
       {route === 'targets'      && <TargetsPage      {...monthProps} />}
       {route === 'boleto'       && <BoletoPage />}
       {route === 'add'          && <QuickAddPage     {...monthProps} />}
+      {route === 'valores'      && <FiorcValoresPage />}
     </AppShell>
   );
 }

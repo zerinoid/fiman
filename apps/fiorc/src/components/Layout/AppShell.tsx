@@ -15,6 +15,7 @@ const NAV_ITEMS: { icon: string; label: string; route: Route }[] = [
   { icon: '💸', label: 'Transações',  route: 'transactions' },
   { icon: '🎯', label: 'Metas',       route: 'targets'      },
   { icon: '📄', label: 'Boleto',      route: 'boleto'       },
+  { icon: '💰', label: 'Valores',     route: 'valores'      },
 ];
 
 export function AppShell({ route, navigate, onSignOut, email, children }: AppShellProps) {

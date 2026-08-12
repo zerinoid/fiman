@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { MonthProps } from '../App';
 import { useMonthlyTarget } from '../hooks/useMonthlyTarget';
 import { useTransactions } from '../hooks/useTransactions';
-import { usePeople } from '../hooks/usePeople';
 import { useHouseSettings } from '../hooks/useHouseSettings';
 import { useFialnProjections } from '../hooks/useFialnProjections';
 import { MonthSummaryCard } from '../components/Dashboard/MonthSummaryCard';
@@ -20,7 +19,6 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
     totalIncome, totalExpenses, totalProjected,
     addTransaction, updateTransaction, refetch,
   } = useTransactions(year, month);
-  const { people } = usePeople();
   const { totalReceivable, totalDebt, netBalance, loading: fialnLoading } = useFialnProjections(year, month);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -159,7 +157,6 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
         addTransaction={addTransaction}
         updateTransaction={updateTransaction}
         transactionToEdit={null}
-        people={people}
         onSuccess={refetch}
         defaultMonth={`${year}-${String(month).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`}
       />

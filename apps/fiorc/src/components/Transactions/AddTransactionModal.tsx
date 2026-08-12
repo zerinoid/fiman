@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { Person, TransactionCategory, Transaction } from '@fi/types';
+import type { TransactionCategory, Transaction } from '@fi/types';
 import type { NewTransaction } from '../../hooks/useTransactions';
 import {
   INCOME_CATEGORIES, EXPENSE_CATEGORIES,
@@ -13,7 +13,6 @@ interface AddTransactionModalProps {
   addTransaction: (tx: NewTransaction | NewTransaction[]) => Promise<unknown>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<unknown>;
   transactionToEdit: Transaction | null;
-  people: Person[];
   onSuccess: () => void;
   defaultMonth: string;
 }
@@ -26,7 +25,7 @@ function getCurrentLocalTime(): string {
 }
 
 export function AddTransactionModal({
-  open, onClose, addTransaction, updateTransaction, transactionToEdit, people, onSuccess, defaultMonth,
+  open, onClose, addTransaction, updateTransaction, transactionToEdit, onSuccess, defaultMonth,
 }: AddTransactionModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -55,8 +54,6 @@ export function AddTransactionModal({
   const [description, setDesc]  = useState('');
   const [tags, setTags]         = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [personId, setPersonId] = useState('');
-  const [receivedBy, setReceivedBy] = useState<'foraisso' | 'shibarihouse' | ''>('');
   const [isCreditCard, setIsCreditCard] = useState(false);
   const [installments, setInstallments] = useState(false);
   const [nInstall, setNInstall] = useState(2);
@@ -92,8 +89,6 @@ export function AddTransactionModal({
         }
         setTags(transactionToEdit.tags || []);
         setDesc(transactionToEdit.description || '');
-        setPersonId(transactionToEdit.person_id || '');
-        setReceivedBy(transactionToEdit.received_by || '');
         setIsCreditCard(transactionToEdit.is_credit_card || false);
         
         if (totalInst > 1 && !transactionToEdit.parent_id) {
@@ -111,7 +106,7 @@ export function AddTransactionModal({
 
   const reset = () => {
     setTxType('expense'); setCategory('food_grocery'); setAmount('');
-    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setPersonId(''); setReceivedBy(''); setTags([]); setTagInput('');
+    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setTags([]); setTagInput('');
     setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
   };
 
@@ -164,8 +159,8 @@ export function AddTransactionModal({
         const dividedAmount = isParent ? baseAmount / finalInstallments : baseAmount;
 
         await updateTransaction(transactionToEdit.id, {
-          person_id: personId || null,
-          received_by: receivedBy || null,
+          person_id: null,
+          received_by: null,
           type: txType,
           category,
           amount: dividedAmount,
@@ -207,8 +202,8 @@ export function AddTransactionModal({
             records.push({
               id:                i === 0 ? parentId : crypto.randomUUID(),
               parent_id:         i === 0 ? null : parentId,
-              person_id:         personId || null,
-              received_by:       receivedBy || null,
+              person_id:         null,
+              received_by:       null,
               type:              txType,
               category,
               amount:            dividedAmount,
@@ -226,8 +221,8 @@ export function AddTransactionModal({
           await addTransaction(records);
         } else {
           await addTransaction({
-            person_id:          personId || null,
-            received_by:        receivedBy || null,
+            person_id:          null,
+            received_by:        null,
             type:               txType,
             category,
             amount:             baseAmount,
@@ -254,25 +249,35 @@ export function AddTransactionModal({
   };
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} onClick={handleDialogClick}>
-      <div className="dialog-header">
-        <span className="dialog-title">{transactionToEdit ? 'Editar Transação' : 'Nova Transação'}</span>
-        <button className="btn btn-ghost btn-icon" onClick={handleClose} aria-label="Fechar">✕</button>
-      </div>
+    <dialog ref={dialogRef} onClose={onClose} onClick={handleDialogClick} className="dialog-backdrop">
+      <form onSubmit={handleSubmit} className="dialog-card stack-4">
+        <div className="dialog-header flex-between">
+          <span className="dialog-title">{transactionToEdit ? 'Editar Transação' : 'Nova Transação'}</span>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={handleClose} aria-label="Fechar">✕</button>
+        </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="dialog-body">
+        <div className="dialog-body stack-4">
           {/* Type */}
+          <div className="type-toggle flex">
+            <button type="button"
+              className={`type-toggle-btn ${txType === 'expense' ? 'active-expense' : ''}`}
+              onClick={() => { setTxType('expense'); setCategory('food_grocery'); }}>💸 Despesa</button>
+            <button type="button"
+              className={`type-toggle-btn ${txType === 'income' ? 'active-income' : ''}`}
+              onClick={() => { setTxType('income'); setCategory('session'); }}>💰 Receita</button>
+          </div>
+
+          {/* Amount */}
           <div className="form-group">
-            <label className="form-label">Tipo</label>
-            <div className="type-toggle">
-              <button type="button"
-                className={`type-toggle-btn${txType === 'income' ? ' active income' : ''}`}
-                onClick={() => { setTxType('income'); setCategory('session'); }}>💚 Receita</button>
-              <button type="button"
-                className={`type-toggle-btn${txType === 'expense' ? ' active expense' : ''}`}
-                onClick={() => { setTxType('expense'); setCategory('housing'); }}>❤️ Despesa</button>
-            </div>
+            <label className="form-label" htmlFor="modal-amount">Valor (R$)</label>
+            <CurrencyInput
+              id="modal-amount"
+              className="form-input form-input-lg"
+              placeholder="0,00"
+              value={amount}
+              onChange={val => setAmount(val)}
+              required
+            />
           </div>
 
           {/* Category */}
@@ -290,22 +295,9 @@ export function AddTransactionModal({
             </select>
           </div>
 
-          {/* Amount */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="modal-amount">Valor (R$)</label>
-            <CurrencyInput
-              id="modal-amount"
-              className="form-input"
-              placeholder="0,00"
-              value={amount}
-              onChange={val => setAmount(val)}
-              required
-            />
-          </div>
-
           {/* Date and Time */}
-          <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
-            <div style={{ flex: 1 }}>
+          <div className="grid-2">
+            <div className="form-group">
               <label className="form-label" htmlFor="modal-date">Data</label>
               <input
                 id="modal-date"
@@ -316,8 +308,8 @@ export function AddTransactionModal({
                 required
               />
             </div>
-            <div style={{ flex: 1 }}>
-              <label className="form-label" htmlFor="modal-time">Hora Exata (opcional)</label>
+            <div className="form-group">
+              <label className="form-label" htmlFor="modal-time">Hora (opcional)</label>
               <input
                 id="modal-time"
                 type="time"
@@ -352,7 +344,7 @@ export function AddTransactionModal({
               value={tagInput}
               onChange={e => setTagInput(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
+                if (e.key === 'Enter' || e.key === ',') {
                   e.preventDefault();
                   processTags(tagInput);
                 }
@@ -366,7 +358,7 @@ export function AddTransactionModal({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
               {tags.map(t => (
                 <span key={t} style={{
-                  background: 'var(--fi-color-primary-light)', color: 'var(--fi-color-primary-dark)',
+                  background: 'var(--fi-color-surface-2)',
                   padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem',
                   display: 'flex', alignItems: 'center', gap: '0.25rem'
                 }}>
@@ -375,39 +367,6 @@ export function AddTransactionModal({
                 </span>
               ))}
             </div>
-          </div>
-
-          {/* Person */}
-          {people.length > 0 && (
-            <div className="form-group">
-              <label className="form-label" htmlFor="modal-person">Pessoa (opcional)</label>
-              <select
-                id="modal-person"
-                className="form-input"
-                value={personId}
-                onChange={e => setPersonId(e.target.value)}
-              >
-                <option value="">— Nenhuma —</option>
-                {people.map(p => (
-                  <option key={p.id} value={p.id}>{p.full_name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Shibari House Partnership Recipient */}
-          <div className="form-group">
-            <label className="form-label" htmlFor="modal-received-by">Parceria Shibari House (opcional)</label>
-            <select
-              id="modal-received-by"
-              className="form-input"
-              value={receivedBy}
-              onChange={e => setReceivedBy(e.target.value as 'foraisso' | 'shibarihouse' | '')}
-            >
-              <option value="">— Nenhuma parceria especial —</option>
-              <option value="foraisso">👤 Recebido por Foraisso (Gera repasse 25% due 05/mês+1)</option>
-              <option value="shibarihouse">🏛️ Recebido por Shibari House (Gera projeção 75%)</option>
-            </select>
           </div>
 
           {/* Installments & Credit Card */}
@@ -472,8 +431,8 @@ export function AddTransactionModal({
 
         <div className="dialog-footer">
           <button type="button" className="btn btn-secondary" onClick={handleClose}>Cancelar</button>
-          <button id="btn-modal-submit" type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? <><span className="spinner" /> Salvando…</> : 'Salvar'}
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Salvando...' : 'Salvar'}
           </button>
         </div>
       </form>

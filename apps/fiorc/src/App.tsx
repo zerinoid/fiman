@@ -111,15 +111,58 @@ export function App() {
     fetchRole();
   }, [fetchRole]);
 
-  const onPrevMonth = () => {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); }
-    else setMonth(m => m - 1);
-  };
+  const onPrevMonth = useCallback(() => {
+    setMonth(m => {
+      if (m === 1) {
+        setYear(y => y - 1);
+        return 12;
+      }
+      return m - 1;
+    });
+  }, []);
 
-  const onNextMonth = () => {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); }
-    else setMonth(m => m + 1);
-  };
+  const onNextMonth = useCallback(() => {
+    setMonth(m => {
+      if (m === 12) {
+        setYear(y => y + 1);
+        return 1;
+      }
+      return m + 1;
+    });
+  }, []);
+
+  // Hotkey for active month navigation (spacebar -> next month, shift+spacebar -> prev month)
+  useEffect(() => {
+    const activeRoutes: Route[] = ['dashboard', 'transactions', 'targets'];
+    if (!activeRoutes.includes(route)) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.key === ' ') {
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (
+            ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName) ||
+            target.isContentEditable ||
+            target.closest('[role="dialog"]') !== null ||
+            target.closest('.modal') !== null
+          )
+        ) {
+          return;
+        }
+
+        e.preventDefault();
+        if (e.shiftKey) {
+          onPrevMonth();
+        } else {
+          onNextMonth();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [route, onPrevMonth, onNextMonth]);
 
   // Update route state when browser hash changes (back/forward, nav clicks)
   useEffect(() => {

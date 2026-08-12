@@ -234,6 +234,8 @@ export interface StudentTransaction {
 
   notes: string | null;
   person_name?: string | null;
+  settled_at?: string | null;
+  settlement_batch_id?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -5,21 +5,45 @@ function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function formatDateTime(isoString: string): string {
+  if (!isoString) return '—';
+  try {
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return isoString;
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return isoString;
+  }
+}
+
 /**
- * FIORC ValoresPage — admin-only view of all pending FIALN repasses.
- * Allows selective settlement of open debt/receivable transactions via checkboxes.
- * Calculates dynamic settlement summary based on user selection.
+ * FIORC ValoresPage — admin-only view of pending FIALN repasses and historical consummated settlements.
+ * Grouped by settlement batch ("agrupe por lote").
  */
 export function FiorcValoresPage() {
-  const { pendingTransactions, loading, error, settling, settle, refresh } = useValoresFiorc();
+  const { pendingTransactions, settledBatches, loading, error, settling, settle, refresh } = useValoresFiorc();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [settleMsg, setSettleMsg] = useState<string | null>(null);
   const [settleError, setSettleError] = useState<string | null>(null);
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
 
   // Initialize selection with all pending transactions whenever pendingTransactions changes
   useEffect(() => {
     setSelectedIds(new Set(pendingTransactions.map((tx) => tx.id)));
   }, [pendingTransactions]);
+
+  // Default all batchaccordions to open
+  useEffect(() => {
+    if (settledBatches.length > 0) {
+      setExpandedBatches(new Set(settledBatches.map((b) => b.batch_id)));
+    }
+  }, [settledBatches]);
 
   const allSelected = pendingTransactions.length > 0 && selectedIds.size === pendingTransactions.length;
   const isSomeSelected = selectedIds.size > 0 && selectedIds.size < pendingTransactions.length;
@@ -39,6 +63,18 @@ export function FiorcValoresPage() {
         next.delete(id);
       } else {
         next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleBatchExpand = (batchId: string) => {
+    setExpandedBatches((prev) => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
       }
       return next;
     });
@@ -89,7 +125,7 @@ export function FiorcValoresPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">💰 Valores — Repasses FIALN</h1>
-          <p className="page-subtitle">Quitação seletiva de dívidas e recebíveis entre Foraisso e Shibari House</p>
+          <p className="page-subtitle">Quitação seletiva de dívidas/recebíveis e histórico de quitações consumadas</p>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={refresh} disabled={loading}>
           ↺ Atualizar
@@ -103,13 +139,13 @@ export function FiorcValoresPage() {
       {loading ? (
         <div className="loading-center"><div className="spinner spinner-lg" /></div>
       ) : (
-        <>
+        <div className="stack-6">
           {/* Dynamic Summary Card */}
           <div
             className="card"
             style={{
               maxWidth: '580px',
-              marginBottom: 'var(--fi-space-8)',
+              margin: '0 auto',
               padding: 'var(--fi-space-8)',
             }}
           >
@@ -194,17 +230,17 @@ export function FiorcValoresPage() {
               </button>
             ) : (
               <div style={{ textAlign: 'center', color: 'var(--fi-color-text-muted)' }}>
-                Nenhum repasse pendente.
+                Nenhum repasse pendente no momento.
               </div>
             )}
           </div>
 
-          {/* Interactive Table with Checkboxes */}
+          {/* 1. Interactive Pending Table with Checkboxes */}
           {pendingTransactions.length > 0 && (
             <div className="card">
               <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <span className="section-title">Transações Pendentes (Dívidas e Recebíveis)</span>
+                  <span className="section-title">⏳ Transações Pendentes (Dívidas e Recebíveis)</span>
                   <span className="badge badge-neutral ml-2">{pendingTransactions.length}</span>
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)' }}>
@@ -229,6 +265,7 @@ export function FiorcValoresPage() {
                       <th>Vencimento FIORC</th>
                       <th>Aluno</th>
                       <th>Descrição</th>
+                      <th>Pagamento</th>
                       <th>Tipo Split</th>
                       <th style={{ textAlign: 'right' }}>Valor Split</th>
                     </tr>
@@ -256,6 +293,11 @@ export function FiorcValoresPage() {
                           <td style={{ fontSize: '0.85rem' }}>{tx.person_name ?? '—'}</td>
                           <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
                           <td>
+                            <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
+                              {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                            </span>
+                          </td>
+                          <td>
                             {tx.split_type === 'receivable' ? (
                               <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
                             ) : (
@@ -273,7 +315,143 @@ export function FiorcValoresPage() {
               </div>
             </div>
           )}
-        </>
+
+          {/* 2. Quitações Consumadas (Histórico Agrupado por Lote) */}
+          <div className="card">
+            <div className="section-header" style={{ marginBottom: '1rem' }}>
+              <div>
+                <span className="section-title">📜 Quitações Consumadas (Histórico por Lote)</span>
+                <span className="badge badge-success ml-2">{settledBatches.length} lote(s)</span>
+              </div>
+            </div>
+
+            {settledBatches.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--fi-color-text-muted)', fontSize: '0.9rem' }}>
+                Nenhuma quitação consumada registrada até o momento.
+              </div>
+            ) : (
+              <div className="stack-4">
+                {settledBatches.map((batch, index) => {
+                  const isExpanded = expandedBatches.has(batch.batch_id);
+                  const absBatchNet = Math.abs(batch.netBalance);
+
+                  return (
+                    <div
+                      key={batch.batch_id || index}
+                      style={{
+                        background: 'var(--fi-color-surface-2, rgba(255,255,255,0.02))',
+                        border: '1px solid var(--fi-color-border)',
+                        borderRadius: 'var(--fi-radius-md)',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {/* Batch Header */}
+                      <div
+                        style={{
+                          padding: '1rem 1.25rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          background: 'rgba(255,255,255,0.02)',
+                        }}
+                        onClick={() => toggleBatchExpand(batch.batch_id)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                          <span style={{ fontSize: '1.1rem' }}>{isExpanded ? '▼' : '▶'}</span>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
+                              🗓️ Quitação consumada em {formatDateTime(batch.settled_at)}
+                            </div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
+                              {batch.transactions.length} transação(ões) quitada(s) no lote
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div>
+                            <div style={{ fontSize: '0.72rem', color: 'var(--fi-color-text-muted)' }}>Saldo Quitado</div>
+                            <div
+                              style={{
+                                fontWeight: 800,
+                                fontSize: '1.1rem',
+                                color:
+                                  batch.direction === 'receive'
+                                    ? 'var(--fi-color-success)'
+                                    : batch.direction === 'pay'
+                                    ? 'var(--fi-color-danger)'
+                                    : 'var(--fi-color-text-muted)',
+                              }}
+                            >
+                              {batch.direction === 'pay' ? '− ' : ''}{formatCurrency(absBatchNet)}
+                            </div>
+                          </div>
+                          <span
+                            className={`badge ${
+                              batch.direction === 'receive'
+                                ? 'badge-success'
+                                : batch.direction === 'pay'
+                                ? 'badge-danger'
+                                : 'badge-neutral'
+                            }`}
+                            style={{ fontSize: '0.75rem' }}
+                          >
+                            {batch.direction === 'receive' && 'Recebido'}
+                            {batch.direction === 'pay' && 'Pago'}
+                            {batch.direction === 'zero' && 'Zerado'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Expanded Transactions List inside Batch */}
+                      {isExpanded && (
+                        <div style={{ borderTop: '1px solid var(--fi-color-border)', padding: '0.5rem 1rem 1rem 1rem' }}>
+                          <table className="fi-table">
+                            <thead>
+                              <tr>
+                                <th>Vencimento Original</th>
+                                <th>Aluno</th>
+                                <th>Descrição</th>
+                                <th>Pagamento</th>
+                                <th>Tipo Split</th>
+                                <th style={{ textAlign: 'right' }}>Valor Split</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {batch.transactions.map((tx) => (
+                                <tr key={tx.id}>
+                                  <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
+                                  <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
+                                  <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                                  <td>
+                                    <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
+                                      {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    {tx.split_type === 'receivable' ? (
+                                      <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
+                                    ) : (
+                                      <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>💸 Dívida (25%)</span>
+                                    )}
+                                  </td>
+                                  <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700 }}>
+                                    {formatCurrency(tx.split_amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

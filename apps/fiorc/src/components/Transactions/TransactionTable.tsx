@@ -57,7 +57,14 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
                 </span>
               </td>
               <td style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.85rem' }}>
-                {tx.description ?? '—'}
+                <div>{tx.description ?? '—'}</div>
+                {tx.tags && tx.tags.length > 0 && (
+                  <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    {tx.tags.map(t => (
+                      <span key={t} className="tag-badge">#{t}</span>
+                    ))}
+                  </div>
+                )}
               </td>
               <td>
                 <span className={`badge badge-${tx.type}`}>
@@ -68,7 +75,7 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
                 )}
                 {tx.is_credit_card && (
                   <span className="badge badge-credit-card" style={{ marginLeft: '0.25rem' }} title={`Fatura com vencimento em ${formatDate(tx.due_date)}`}>
-                    💳 Fatura {formatDate(tx.due_date).substring(0, 5)}
+                    💳 {formatDate(tx.due_date).substring(0, 5)}
                   </span>
                 )}
               </td>

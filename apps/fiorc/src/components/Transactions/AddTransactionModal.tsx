@@ -6,6 +6,8 @@ import {
   CATEGORY_LABELS, calculateCreditCardDueDate,
 } from '../../utils/categories';
 import { CurrencyInput } from '../Common/CurrencyInput';
+import { TagInputCombobox } from '../Common/TagInputCombobox';
+import { useTags } from '../../hooks/useTags';
 
 interface AddTransactionModalProps {
   open: boolean;
@@ -53,12 +55,12 @@ export function AddTransactionModal({
   const [time, setTime]         = useState(getCurrentLocalTime);
   const [description, setDesc]  = useState('');
   const [tags, setTags]         = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
   const [isCreditCard, setIsCreditCard] = useState(false);
   const [installments, setInstallments] = useState(false);
   const [nInstall, setNInstall] = useState(2);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState<string | null>(null);
+  const { tags: availableTags } = useTags();
 
   const categories = txType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -106,23 +108,8 @@ export function AddTransactionModal({
 
   const reset = () => {
     setTxType('expense'); setCategory('food_grocery'); setAmount('');
-    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setTags([]); setTagInput('');
+    setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setTags([]);
     setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
-  };
-
-  const processTags = (inputStr: string) => {
-    const rawTags = inputStr.split(/[,;]/);
-    const newTagsList = [...tags];
-    let changed = false;
-    for (const raw of rawTags) {
-      const val = raw.trim();
-      if (val && !newTagsList.includes(val)) {
-        newTagsList.push(val);
-        changed = true;
-      }
-    }
-    if (changed) setTags(newTagsList);
-    setTagInput('');
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -336,37 +323,12 @@ export function AddTransactionModal({
           {/* Tags */}
           <div className="form-group">
             <label className="form-label" htmlFor="modal-tags">Tags (opcional)</label>
-            <input
+            <TagInputCombobox
               id="modal-tags"
-              type="text"
-              className="form-input"
-              placeholder="ex: rolê, ifood, farmácia"
-              value={tagInput}
-              onChange={e => setTagInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ',') {
-                  e.preventDefault();
-                  processTags(tagInput);
-                }
-              }}
-              onBlur={() => {
-                if (tagInput.trim()) {
-                  processTags(tagInput);
-                }
-              }}
+              tags={tags}
+              onTagsChange={setTags}
+              availableTags={availableTags}
             />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-              {tags.map(t => (
-                <span key={t} style={{
-                  background: 'var(--fi-color-surface-2)',
-                  padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem',
-                  display: 'flex', alignItems: 'center', gap: '0.25rem'
-                }}>
-                  {t}
-                  <button type="button" onClick={() => setTags(tags.filter(x => x !== t))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}>×</button>
-                </span>
-              ))}
-            </div>
           </div>
 
           {/* Installments & Credit Card */}

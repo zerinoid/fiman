@@ -38,13 +38,20 @@ export function RecentTransactionsList({ transactions }: Props) {
                 )}
                 {tx.is_credit_card && (
                   <span className="badge badge-credit-card" style={{ marginLeft: '0.4rem' }} title={`Fatura com vencimento em ${formatDate(tx.due_date)}`}>
-                    💳 Fatura {formatDate(tx.due_date).substring(0, 5)}
+                    💳 {formatDate(tx.due_date).substring(0, 5)}
                   </span>
                 )}
                 {tx.is_projection && (
                   <span className="badge badge-projection" style={{ marginLeft: '0.4rem' }}>Projeção</span>
                 )}
               </div>
+              {tx.tags && tx.tags.length > 0 && (
+                <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                  {tx.tags.map(t => (
+                    <span key={t} className="tag-badge">#{t}</span>
+                  ))}
+                </div>
+              )}
             </div>
             <div className={`tx-amount ${tx.type}`}>
               {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}

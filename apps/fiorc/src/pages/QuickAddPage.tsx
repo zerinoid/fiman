@@ -5,14 +5,16 @@ import { useTransactions } from '../hooks/useTransactions';
 import { EXPENSE_CATEGORIES, CATEGORY_LABELS, calculateCreditCardDueDate } from '../utils/categories';
 import { MonthProps } from '../App';
 import { CurrencyInput } from '../components/Common/CurrencyInput';
+import { TagInputCombobox } from '../components/Common/TagInputCombobox';
+import { useTags } from '../hooks/useTags';
 
 export function QuickAddPage({ year, month }: MonthProps) {
   const { addTransaction } = useTransactions(year, month);
+  const { tags: availableTags } = useTags();
   const [amount, setAmount] = useState('');
   const [description, setDesc] = useState('');
   const [category, setCategory] = useState<TransactionCategory>('food_grocery');
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
   const [isCreditCard, setIsCreditCard] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,30 +34,6 @@ export function QuickAddPage({ year, month }: MonthProps) {
       descRef.current?.focus();
     }
   };
-
-  const processTags = (inputStr: string) => {
-    const rawTags = inputStr.split(/[,;]/);
-    const newTagsList = [...tags];
-    let changed = false;
-    for (const raw of rawTags) {
-      const val = raw.trim();
-      if (val && !newTagsList.includes(val)) {
-        newTagsList.push(val);
-        changed = true;
-      }
-    }
-    if (changed) setTags(newTagsList);
-    setTagInput('');
-  };
-
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',' || e.key === ';') {
-      e.preventDefault();
-      processTags(tagInput);
-    }
-  };
-
-  const removeTag = (t: string) => setTags(tags.filter(tag => tag !== t));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,36 +170,13 @@ export function QuickAddPage({ year, month }: MonthProps) {
 
         {/* Tags */}
         <div className="form-group">
-          <label className="form-label" htmlFor="quick-tags">Tags (separadas por vírgula ou Enter)</label>
-          <input
+          <label className="form-label" htmlFor="quick-tags">Tags (opcional)</label>
+          <TagInputCombobox
             id="quick-tags"
-            type="text"
-            className="form-input"
-            placeholder="ex: rolê, ifood, farmácia"
-            value={tagInput}
-            onChange={e => setTagInput(e.target.value)}
-            onKeyDown={handleTagKeyDown}
-            onBlur={() => {
-              if (tagInput.trim()) {
-                processTags(tagInput);
-              }
-            }}
+            tags={tags}
+            onTagsChange={setTags}
+            availableTags={availableTags}
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.5rem' }}>
-            {tags.map(t => (
-              <span key={t} style={{
-                background: 'var(--fi-color-primary-light)',
-                color: 'var(--fi-color-primary-dark)',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '9999px',
-                fontSize: '0.875rem',
-                display: 'flex', alignItems: 'center', gap: '0.25rem'
-              }}>
-                {t}
-                <button type="button" onClick={() => removeTag(t)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'inherit' }}>×</button>
-              </span>
-            ))}
-          </div>
         </div>
 
         {error && <p className="form-error">{error}</p>}

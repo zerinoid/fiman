@@ -101,10 +101,10 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
           </div>
         </div>
 
-        {targetLoading ? (
+        {targetLoading && !target ? (
           <div className="loading-center"><div className="spinner" /></div>
         ) : (
-          <>
+          <div style={{ opacity: targetLoading ? 0.6 : 1, transition: 'opacity 0.15s ease', pointerEvents: targetLoading ? 'none' : 'auto' }}>
             {/* 1. Receivables Summary Card */}
             <ReceivablesSummaryCard
               commitments={commitments}
@@ -129,7 +129,7 @@ export function TargetsPage({ year, month, monthLabel, onPrevMonth, onNextMonth 
                 loading={analyticsLoading}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
 

@@ -9,11 +9,11 @@ interface Props {
 }
 
 export function TransactionTable({ transactions, loading, onEdit, onDelete }: Props) {
-  if (loading) {
+  if (loading && transactions.length === 0) {
     return <div className="loading-center"><div className="spinner" /></div>;
   }
 
-  if (transactions.length === 0) {
+  if (!loading && transactions.length === 0) {
     return (
       <div className="empty-state">
         <span className="empty-state-icon">📭</span>
@@ -23,7 +23,7 @@ export function TransactionTable({ transactions, loading, onEdit, onDelete }: Pr
   }
 
   return (
-    <div className="table-wrapper">
+    <div className="table-wrapper" style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.15s ease', pointerEvents: loading ? 'none' : 'auto' }}>
       <table>
         <thead>
           <tr>

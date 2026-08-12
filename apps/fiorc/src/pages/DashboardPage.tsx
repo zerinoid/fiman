@@ -56,94 +56,90 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
         </div>
       </div>
 
-      {/* ── Stat Cards ─────────────────────── */}
-      {loading ? (
-        <div className="loading-center"><div className="spinner" /></div>
-      ) : (
-        <>
-          <div className="stat-grid">
-            <MonthSummaryCard
-              title="Meta do Mês"
-              value={totalTarget}
-              sub={target ? 'Definida' : 'Não definida'}
-            />
-            <MonthSummaryCard
-              title="Receita Realizada"
-              value={totalIncome}
-              variant="income"
-              sub={`${formatCurrency(totalProjected)} projetado`}
-            />
-            <MonthSummaryCard
-              title="Despesas"
-              value={totalExpenses}
-              variant="expense"
-              sub="Realizadas"
-            />
-          </div>
-
-          {/* ── Goal Progress ─────────────── */}
-          <div className="card" style={{ marginBottom: 'var(--fi-space-6)' }}>
-            <GoalProgressBar
-              income={totalIncome}
-              target={totalTarget}
-              projected={totalProjected}
-              pct={progressPct}
-            />
-          </div>
-
-          {/* ── Receivables Summary ─────────────── */}
-          <ReceivablesSummaryCard
-            commitments={commitments}
-            activeRoommatesCount={activeRoommatesCount}
+      {/* ── Stat Cards & Main Content ─────────────────────── */}
+      <div style={{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.15s ease', pointerEvents: loading ? 'none' : 'auto' }}>
+        <div className="stat-grid">
+          <MonthSummaryCard
+            title="Meta do Mês"
+            value={totalTarget}
+            sub={target ? 'Definida' : 'Não definida'}
           />
+          <MonthSummaryCard
+            title="Receita Realizada"
+            value={totalIncome}
+            variant="income"
+            sub={`${formatCurrency(totalProjected)} projetado`}
+          />
+          <MonthSummaryCard
+            title="Despesas"
+            value={totalExpenses}
+            variant="expense"
+            sub="Realizadas"
+          />
+        </div>
 
-          {/* ── Repasses FIALN ─────────────────── */}
-          {!fialnLoading && (totalReceivable > 0 || totalDebt > 0) && (
-            <div className="card" style={{ marginBottom: 'var(--fi-space-6)', borderLeft: '3px solid var(--fi-color-primary)' }}>
-              <div className="section-header" style={{ marginBottom: 'var(--fi-space-4)' }}>
-                <span className="section-title">🎓 Repasses FIALN — {monthLabel}</span>
-                <span className={`badge ${netBalance >= 0 ? 'badge-success' : 'badge-danger'}`}>
-                  {netBalance >= 0 ? '✅ Saldo positivo' : '⚠️ Saldo negativo'}
-                </span>
+        {/* ── Goal Progress ─────────────── */}
+        <div className="card" style={{ marginBottom: 'var(--fi-space-6)' }}>
+          <GoalProgressBar
+            income={totalIncome}
+            target={totalTarget}
+            projected={totalProjected}
+            pct={progressPct}
+          />
+        </div>
+
+        {/* ── Receivables Summary ─────────────── */}
+        <ReceivablesSummaryCard
+          commitments={commitments}
+          activeRoommatesCount={activeRoommatesCount}
+        />
+
+        {/* ── Repasses FIALN ─────────────────── */}
+        {!fialnLoading && (totalReceivable > 0 || totalDebt > 0) && (
+          <div className="card" style={{ marginBottom: 'var(--fi-space-6)', borderLeft: '3px solid var(--fi-color-primary)' }}>
+            <div className="section-header" style={{ marginBottom: 'var(--fi-space-4)' }}>
+              <span className="section-title">🎓 Repasses FIALN — {monthLabel}</span>
+              <span className={`badge ${netBalance >= 0 ? 'badge-success' : 'badge-danger'}`}>
+                {netBalance >= 0 ? '✅ Saldo positivo' : '⚠️ Saldo negativo'}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--fi-space-4)', fontSize: '0.9rem' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-success)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>📈 A Receber</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>SH → Foraisso</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-success)' }}>{formatCurrency(totalReceivable)}</div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--fi-space-4)', fontSize: '0.9rem' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-success)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>📈 A Receber</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>SH → Foraisso</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-success)' }}>{formatCurrency(totalReceivable)}</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-danger)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>💸 A Repassar</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>Foraisso → SH</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-danger)' }}>{formatCurrency(totalDebt)}</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Saldo Líquido</div>
-                  <div style={{ height: '1.25rem', marginBottom: '0.5rem' }} />
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: netBalance >= 0 ? 'var(--fi-color-success)' : 'var(--fi-color-danger)' }}>
-                    {netBalance < 0 ? '− ' : ''}{formatCurrency(Math.abs(netBalance))}
-                  </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-danger)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>💸 A Repassar</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>Foraisso → SH</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fi-color-danger)' }}>{formatCurrency(totalDebt)}</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', fontWeight: 600, marginBottom: '0.25rem', textTransform: 'uppercase' }}>Saldo Líquido</div>
+                <div style={{ height: '1.25rem', marginBottom: '0.5rem' }} />
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: netBalance >= 0 ? 'var(--fi-color-success)' : 'var(--fi-color-danger)' }}>
+                  {netBalance < 0 ? '− ' : ''}{formatCurrency(Math.abs(netBalance))}
                 </div>
               </div>
             </div>
-          )}
-
-          {/* ── Recent Transactions ────────── */}
-          <div className="section">
-            <div className="section-header">
-              <span className="section-title">Transações Recentes</span>
-              <button
-                id="btn-add-transaction-section"
-                className="btn btn-secondary btn-sm"
-                onClick={() => setModalOpen(true)}
-              >
-                + Adicionar
-              </button>
-            </div>
-            <RecentTransactionsList transactions={transactions.slice(0, 10)} />
           </div>
-        </>
-      )}
+        )}
+
+        {/* ── Recent Transactions ────────── */}
+        <div className="section">
+          <div className="section-header">
+            <span className="section-title">Transações Recentes</span>
+            <button
+              id="btn-add-transaction-section"
+              className="btn btn-secondary btn-sm"
+              onClick={() => setModalOpen(true)}
+            >
+              + Adicionar
+            </button>
+          </div>
+          <RecentTransactionsList transactions={transactions.slice(0, 10)} />
+        </div>
+      </div>
 
       {/* ── Mobile FAB ─────────────────────── */}
       <button

@@ -10,7 +10,7 @@ import { CATEGORY_LABELS } from '../utils/categories';
 const PAGE_SIZE = 25;
 
 export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextMonth }: MonthProps) {
-  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, refetch } = useTransactions(year, month);
+  const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, toggleProjection, refetch } = useTransactions(year, month);
   const { tags: systemTags } = useTags();
 
   const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
@@ -123,6 +123,7 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
         loading={loading} 
         onEdit={tx => { setTxToEdit(tx); setModalOpen(true); }}
         onDelete={deleteTransaction}
+        onToggleProjection={toggleProjection}
       />
 
       {/* Pagination */}

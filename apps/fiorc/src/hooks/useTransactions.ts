@@ -14,6 +14,7 @@ export interface UseTransactionsReturn {
   addTransaction: (tx: NewTransaction | NewTransaction[]) => Promise<Transaction[]>;
   updateTransaction: (id: string, updates: Partial<Transaction>) => Promise<Transaction>;
   deleteTransaction: (id: string) => Promise<void>;
+  toggleProjection: (id: string, isReceived: boolean, paidAtDate?: string) => Promise<Transaction>;
   refetch: () => void;
 }
 
@@ -214,6 +215,32 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     setTransactions(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  const toggleProjection = useCallback(
+    async (id: string, isReceived: boolean, paidAtDate?: string) => {
+      const today = new Date().toISOString().split('T')[0];
+      const updates: Partial<Transaction> = {
+        is_projection: !isReceived,
+        paid_at: isReceived ? (paidAtDate || today) : null,
+      };
+
+      const { data, error: updateErr } = await supabase
+        .from('fiorc_transactions')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (updateErr) throw new Error(updateErr.message);
+      const updated = data as Transaction;
+
+      setTransactions(prev =>
+        sortTransactions(prev.map(t => (t.id === id ? updated : t)))
+      );
+      return updated;
+    },
+    []
+  );
+
   const derived = useMemo(() => {
     let totalIncome   = 0;
     let totalExpenses = 0;
@@ -239,6 +266,7 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    toggleProjection,
     refetch: fetchTransactions,
     ...derived,
   };

@@ -17,7 +17,7 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
   const {
     transactions, loading: txLoading,
     totalIncome, totalExpenses, totalProjected,
-    addTransaction, updateTransaction, refetch,
+    addTransaction, updateTransaction, toggleProjection, refetch,
   } = useTransactions(year, month);
   const { totalReceivable, totalDebt, netBalance, loading: fialnLoading } = useFialnProjections(year, month);
 
@@ -135,7 +135,7 @@ export function DashboardPage({ year, month, monthLabel, onPrevMonth, onNextMont
               + Adicionar
             </button>
           </div>
-          <RecentTransactionsList transactions={transactions.slice(0, 10)} />
+          <RecentTransactionsList transactions={transactions.slice(0, 10)} onToggleProjection={toggleProjection} />
         </div>
       </div>
 

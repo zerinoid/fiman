@@ -56,6 +56,7 @@ export function AddTransactionModal({
   const [description, setDesc]  = useState('');
   const [tags, setTags]         = useState<string[]>([]);
   const [isCreditCard, setIsCreditCard] = useState(false);
+  const [isProjection, setIsProjection] = useState(false);
   const [installments, setInstallments] = useState(false);
   const [nInstall, setNInstall] = useState(2);
   const [loading, setLoading]   = useState(false);
@@ -92,6 +93,7 @@ export function AddTransactionModal({
         setTags(transactionToEdit.tags || []);
         setDesc(transactionToEdit.description || '');
         setIsCreditCard(transactionToEdit.is_credit_card || false);
+        setIsProjection(transactionToEdit.is_projection || false);
         
         if (totalInst > 1 && !transactionToEdit.parent_id) {
           setInstallments(true);
@@ -109,7 +111,7 @@ export function AddTransactionModal({
   const reset = () => {
     setTxType('expense'); setCategory('food_grocery'); setAmount('');
     setDate(defaultMonth); setTime(getCurrentLocalTime()); setDesc(''); setTags([]);
-    setIsCreditCard(false); setInstallments(false); setNInstall(2); setError(null);
+    setIsCreditCard(false); setIsProjection(false); setInstallments(false); setNInstall(2); setError(null);
   };
 
   const handleClose = () => { reset(); onClose(); };
@@ -156,6 +158,7 @@ export function AddTransactionModal({
           transaction_datetime,
           tags: tags.length > 0 ? tags : undefined,
           is_credit_card: isCreditCard,
+          is_projection: txType === 'income' ? isProjection : (transactionToEdit.is_projection || false),
           total_installments: finalInstallments,
         });
       } else {
@@ -196,7 +199,7 @@ export function AddTransactionModal({
               amount:            dividedAmount,
               due_date:          itemDueDate,
               paid_at:           null,
-              is_projection:     i > 0, // First one is not necessarily a projection, others are
+              is_projection:     txType === 'income' ? true : (i > 0),
               is_credit_card:    txType === 'expense' ? isCreditCard : false,
               installment_index: i + 1,
               total_installments: nInstall,
@@ -215,7 +218,7 @@ export function AddTransactionModal({
             amount:             baseAmount,
             due_date:           computedDueDate,
             paid_at:            null,
-            is_projection:      false,
+            is_projection:      txType === 'income' ? isProjection : false,
             is_credit_card:     txType === 'expense' ? isCreditCard : false,
             installment_index:  1,
             total_installments: 1,
@@ -343,14 +346,31 @@ export function AddTransactionModal({
                 <span className="form-label" style={{ margin: 0 }}>Pagar no Cartão de Crédito</span>
               </label>
             ) : (
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={installments}
-                  onChange={e => setInstallments(e.target.checked)}
-                />
-                <span className="form-label" style={{ margin: 0 }}>Receita Parcelada / Projetada</span>
-              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={isProjection}
+                    onChange={e => {
+                      const val = e.target.checked;
+                      setIsProjection(val);
+                      if (!val) setInstallments(false);
+                    }}
+                  />
+                  <span className="form-label" style={{ margin: 0 }}>Projeção / Receita Futura (Vencimento PIX / Pacote)</span>
+                </label>
+
+                {isProjection && (!transactionToEdit || !transactionToEdit.parent_id) && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginLeft: '1.25rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={installments}
+                      onChange={e => setInstallments(e.target.checked)}
+                    />
+                    <span className="form-label" style={{ margin: 0 }}>Parcelar em múltiplos meses</span>
+                  </label>
+                )}
+              </div>
             )}
 
             {(!transactionToEdit || !transactionToEdit.parent_id) && (
@@ -369,9 +389,9 @@ export function AddTransactionModal({
                 )}
                 
                 {installments && (
-                  <div style={{ marginTop: txType === 'income' ? '0.75rem' : 0, padding: txType === 'income' ? '0.75rem' : 0, background: txType === 'income' ? 'var(--fi-color-bg-alt)' : 'transparent', borderRadius: 'var(--fi-radius-md)' }}>
+                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--fi-color-surface-2)', borderRadius: 'var(--fi-radius-md)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span className="form-label" style={{ margin: 0 }}>Parcelas:</span>
+                      <span className="form-label" style={{ margin: 0 }}>Quantidade de Parcelas:</span>
                       <input
                         type="number"
                         className="form-input"

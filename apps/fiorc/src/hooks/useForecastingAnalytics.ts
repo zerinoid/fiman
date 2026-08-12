@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CommitmentItem } from '@fi/types';
 import { supabase } from '../lib/supabase';
-import { calculateMoMVariation, calculateWeightedMovingAverage } from '../utils/splitting';
+import { calculateMoMVariation, calculateWeightedMovingAverage, getCanonicalCommitmentName } from '../utils/splitting';
 import { toMonthDate } from '../utils/categories';
 
 export interface MoMItemResult {
@@ -63,11 +63,12 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
 
       // 2. MoM Variation calculation
       const variations: MoMItemResult[] = currentCommitments.map(c => {
-        const matchingPrev = prevCommitments.find(p => p.name.toLowerCase() === c.name.toLowerCase());
+        const canonicalC = getCanonicalCommitmentName(c.name);
+        const matchingPrev = prevCommitments.find(p => getCanonicalCommitmentName(p.name) === canonicalC);
         const prevVal = matchingPrev ? matchingPrev.amount : null;
         const mom = calculateMoMVariation(c.amount, prevVal);
         return {
-          name: c.name,
+          name: canonicalC,
           currentAmount: c.amount,
           previousAmount: prevVal,
           text: mom.text,
@@ -83,9 +84,12 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
         const items = (t.commitments as unknown as CommitmentItem[]) || [];
         for (const item of items) {
           if (item.amount > 0) {
-            const key = item.name.trim().toLowerCase();
-            if (!historyByName[key]) historyByName[key] = [];
-            historyByName[key].push(item.amount);
+            const canonicalName = getCanonicalCommitmentName(item.name);
+            // Exclude credit card fatura from forecasting motor
+            if (canonicalName === 'Fatura do Cartão') continue;
+
+            if (!historyByName[canonicalName]) historyByName[canonicalName] = [];
+            historyByName[canonicalName].push(item.amount);
           }
         }
       }
@@ -96,16 +100,19 @@ export function useForecastingAnalytics(currentYear: number, currentMonth: numbe
       }
       setForecastMap(map);
 
-      // Generate next month projections
-      const projections: CommitmentItem[] = currentCommitments.map(c => {
-        const key = c.name.trim().toLowerCase();
-        const forecastedAmount = map[key] || c.amount;
-        return {
-          ...c,
-          amount: forecastedAmount,
-          is_paid: false,
-        };
-      });
+      // Generate next month projections (excluding Fatura do Cartão)
+      const projections: CommitmentItem[] = currentCommitments
+        .filter(c => getCanonicalCommitmentName(c.name) !== 'Fatura do Cartão')
+        .map(c => {
+          const canonicalName = getCanonicalCommitmentName(c.name);
+          const forecastedAmount = map[canonicalName] || c.amount;
+          return {
+            ...c,
+            name: canonicalName,
+            amount: forecastedAmount,
+            is_paid: false,
+          };
+        });
 
       setProjectedNextMonth(projections);
     } catch (err) {

@@ -4,7 +4,7 @@ import { formatCurrency } from '../../utils/categories';
 import { useTransactions } from '../../hooks/useTransactions';
 import { toMonthDate } from '../../utils/categories';
 import { CommitmentModal } from './CommitmentModal';
-import { inferSplitRuleAndCategory, calculateSplitShare, findForecastAmount } from '../../utils/splitting';
+import { inferSplitRuleAndCategory, calculateSplitShare, findForecastAmount, getCanonicalCommitmentName } from '../../utils/splitting';
 
 interface Props {
   target: MonthlyTarget | null;
@@ -231,7 +231,8 @@ export function CommitmentsBreakdown({
       {/* Unified Masonry Grid */}
       <div className="masonry-grid">
         {mergedCommitments.map(c => {
-          const isCcFatura = c.name === 'Fatura do Cartão';
+          const canonicalName = getCanonicalCommitmentName(c.name);
+          const isCcFatura = canonicalName === 'Fatura do Cartão';
           const isActive = c.is_active !== false;
 
           const inferred = inferSplitRuleAndCategory(c.name);
@@ -241,8 +242,8 @@ export function CommitmentsBreakdown({
 
           const rule = c.split_rule || inferred.splitRule;
 
-          // Placeholders ONLY exist for 'fixed' and 'optional' commitments
-          const supportsPlaceholder = catType === 'fixed' || catType === 'optional';
+          // Placeholders ONLY exist for 'fixed' and 'optional' commitments (excluding credit card fatura)
+          const supportsPlaceholder = (catType === 'fixed' || catType === 'optional') && !isCcFatura;
           const isForecast = supportsPlaceholder && !c.is_paid && !c.is_manually_set && (isFutureMonth || c.amount === 0);
           const forecastedVal = isForecast && forecastMap ? findForecastAmount(c.name, forecastMap) : 0;
           const displayAmount = forecastedVal > 0 ? forecastedVal : c.amount;

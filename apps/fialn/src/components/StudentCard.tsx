@@ -30,12 +30,14 @@ function formatRelativeDate(isoDate: string | null): string {
 export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick }: StudentCardProps) {
   const initials = getInitials(student.full_name);
   const relDate = formatRelativeDate(lastLessonDate);
-  const hasProfile = student.profile !== null;
+  const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
+  const hasLessons = Boolean(lastLessonDate);
+  const isActive = hasActiveEnrollments || hasLessons;
 
   return (
     <div
       id={`student-card-${student.id}`}
-      className="card card-hover student-card"
+      className={`card card-hover student-card ${!isActive ? 'student-card-inactive' : ''}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -47,23 +49,28 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick
       <div className="student-info">
         <div className="student-name">{student.full_name}</div>
         <div className="student-meta">{relDate}</div>
-        {activeGroupNames && activeGroupNames.length > 0 && (
+        {hasActiveEnrollments ? (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-            {activeGroupNames.map((g) => (
+            {activeGroupNames!.map((g) => (
               <span key={g} className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
                 {g}
               </span>
             ))}
           </div>
+        ) : (
+          <div style={{ marginTop: '4px', fontSize: '0.72rem', color: 'var(--fi-color-text-muted)', fontStyle: 'italic' }}>
+            Sem matrículas ativas
+          </div>
         )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-        {hasProfile ? (
-          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>Perfil ✓</span>
-        ) : (
-          <span className="badge badge-neutral" style={{ fontSize: '0.68rem' }}>Sem perfil</span>
-        )}
+        <span
+          className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}
+          style={{ fontSize: '0.68rem', opacity: isActive ? 1 : 0.7 }}
+        >
+          {isActive ? 'Ativo' : 'Inativo'}
+        </span>
         {student.profile?.financial_status && (
           <span
             className={`badge ${

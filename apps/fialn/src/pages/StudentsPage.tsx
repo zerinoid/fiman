@@ -102,6 +102,18 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     s.full_name.toLowerCase().includes(query.toLowerCase()),
   );
 
+  const activeStudents = filtered.filter((s) => {
+    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
+    const hasLessons = Boolean(lastLessonMap[s.id]);
+    return hasEnrollments || hasLessons;
+  });
+
+  const inactiveStudents = filtered.filter((s) => {
+    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
+    const hasLessons = Boolean(lastLessonMap[s.id]);
+    return !hasEnrollments && !hasLessons;
+  });
+
   const openProfile = (personId: string) => {
     navigate('profile', { person_id: personId });
   };
@@ -169,16 +181,50 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="stack-4">
-          {filtered.map((student) => (
-            <StudentCard
-              key={student.id}
-              student={student}
-              lastLessonDate={lastLessonMap[student.id] ?? null}
-              activeGroupNames={groupsMap[student.id]}
-              onClick={() => openProfile(student.id)}
-            />
-          ))}
+        <div className="stack-6">
+          {activeStudents.length > 0 && (
+            <div className="stack-4">
+              {activeStudents.map((student) => (
+                <StudentCard
+                  key={student.id}
+                  student={student}
+                  lastLessonDate={lastLessonMap[student.id] ?? null}
+                  activeGroupNames={groupsMap[student.id]}
+                  onClick={() => openProfile(student.id)}
+                />
+              ))}
+            </div>
+          )}
+
+          {inactiveStudents.length > 0 && (
+            <div className="stack-4 mt-6">
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'var(--fi-color-text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid var(--fi-color-border)',
+                  marginBottom: '0.5rem',
+                }}
+              >
+                Alunos Inativos ({inactiveStudents.length})
+              </div>
+              <div className="stack-4">
+                {inactiveStudents.map((student) => (
+                  <StudentCard
+                    key={student.id}
+                    student={student}
+                    lastLessonDate={lastLessonMap[student.id] ?? null}
+                    activeGroupNames={groupsMap[student.id]}
+                    onClick={() => openProfile(student.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

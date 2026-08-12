@@ -352,6 +352,17 @@ a:hover { text-decoration: underline; }
   gap: var(--fi-space-4);
 }
 
+.student-card-inactive {
+  opacity: 0.55;
+  filter: grayscale(25%);
+  transition: opacity var(--fi-transition-fast), filter var(--fi-transition-fast);
+}
+
+.student-card-inactive:hover {
+  opacity: 0.85;
+  filter: grayscale(0%);
+}
+
 .student-avatar {
   width: 48px;
   height: 48px;

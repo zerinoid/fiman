@@ -44,7 +44,7 @@ export function EnrollModal({
 
   // Split payment recipient & payment method
   const [receivedBy, setReceivedBy] = useState<PaymentRecipient>(enrollmentToEdit?.received_by ?? 'foraisso');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(enrollmentToEdit?.payment_method ?? 'credit');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(enrollmentToEdit?.payment_method ?? 'pix');
 
   // Projections / Payment Registration
   const [registerPayment, setRegisterPayment] = useState<boolean>(!isEditing);

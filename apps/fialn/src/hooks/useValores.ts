@@ -41,13 +41,21 @@ export function useValores(): UseValoresReturn {
     try {
       const { data, error: fetchError } = await supabase
         .from('fialn_student_transactions')
-        .select('*')
+        .select(`*, person:people(full_name)`)
         .eq('fiorc_status', 'pending')
         .order('transaction_date', { ascending: false });
 
       if (fetchError) throw fetchError;
 
-      setPendingTransactions((data ?? []) as unknown as StudentTransaction[]);
+      const mapped = (data ?? []).map((row) => {
+        const person = (row as unknown as { person: { full_name: string } | null }).person;
+        return {
+          ...(row as unknown as StudentTransaction),
+          person_name: person?.full_name ?? null,
+        };
+      });
+
+      setPendingTransactions(mapped as unknown as StudentTransaction[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar valores');
     } finally {

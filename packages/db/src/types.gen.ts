@@ -820,7 +820,9 @@ export type Database = {
     }
     Functions: {
       fiorc_settle_fialn_repasses: {
-        Args: Record<PropertyKey, never>
+        Args: {
+          p_transaction_ids?: string[] | null
+        }
         Returns: Json
       }
       fiorc_confirm_shibari_projection: {

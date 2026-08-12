@@ -193,7 +193,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
           is_partner: payload.is_partner ?? false,
           partner_details: payload.is_partner ? payload.partner_details : null,
           received_by: payload.is_partner ? null : (payload.received_by ?? 'foraisso'),
-          payment_method: payload.is_partner ? null : (payload.payment_method ?? 'credit'),
+          payment_method: payload.is_partner ? null : (payload.payment_method ?? 'pix'),
         })
         .select(`*, group:fialn_groups(*)`)
         .single();

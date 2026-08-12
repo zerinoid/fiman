@@ -16,7 +16,7 @@ export interface UseValoresFiorcReturn {
   loading: boolean;
   error: string | null;
   settling: boolean;
-  settle: () => Promise<{ success: boolean; message: string }>;
+  settle: (selectedIds?: string[]) => Promise<{ success: boolean; message: string }>;
   refresh: () => void;
 }
 
@@ -31,7 +31,7 @@ const EMPTY_SUMMARY: FiorcValoresSummary = {
 /**
  * FIORC-side hook for the Valores page.
  * Same data as useValores (in FIALN) but includes person name via join,
- * and the settle() function calls fiorc_settle_fialn_repasses.
+ * and the settle() function calls fiorc_settle_fialn_repasses with selected transaction IDs.
  */
 export function useValoresFiorc(): UseValoresFiorcReturn {
   const [pendingTransactions, setPendingTransactions] = useState<FialnProjection[]>([]);
@@ -88,11 +88,13 @@ export function useValoresFiorc(): UseValoresFiorcReturn {
     };
   })();
 
-  const settle = async (): Promise<{ success: boolean; message: string }> => {
+  const settle = async (selectedIds?: string[]): Promise<{ success: boolean; message: string }> => {
     setSettling(true);
     setError(null);
     try {
-      const { data, error: rpcError } = await supabase.rpc('fiorc_settle_fialn_repasses');
+      const { data, error: rpcError } = await supabase.rpc('fiorc_settle_fialn_repasses', {
+        p_transaction_ids: selectedIds && selectedIds.length > 0 ? selectedIds : null,
+      });
       if (rpcError) throw rpcError;
 
       const result = data as { settled: boolean; net: number; message?: string };
@@ -107,7 +109,7 @@ export function useValoresFiorc(): UseValoresFiorcReturn {
         await fetchAll();
         return { success: true, message: msg };
       }
-      return { success: false, message: result.message ?? 'Nenhum repasse pendente.' };
+      return { success: false, message: result.message ?? 'Nenhum repasse pendente selecionado.' };
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao quitar';
       setError(msg);
@@ -127,3 +129,5 @@ export function useValoresFiorc(): UseValoresFiorcReturn {
     refresh: fetchAll,
   };
 }
+
+export default useValoresFiorc;

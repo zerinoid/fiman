@@ -233,6 +233,7 @@ export interface StudentTransaction {
   total_installments: number;
 
   notes: string | null;
+  person_name?: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

@@ -51,6 +51,9 @@ importers:
       vite:
         specifier: ^6.0.7
         version: 6.4.3(terser@5.49.0)
+      vite-plugin-pwa:
+        specifier: ^0.20.0
+        version: 0.20.5(vite@6.4.3(terser@5.49.0))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
 
   apps/fiatt:
     dependencies:
@@ -156,6 +159,9 @@ importers:
       vite:
         specifier: ^6.0.7
         version: 6.4.3(terser@5.49.0)
+      vite-plugin-pwa:
+        specifier: ^0.20.0
+        version: 0.20.5(vite@6.4.3(terser@5.49.0))(workbox-build@7.4.1(@types/babel__core@7.20.5))(workbox-window@7.4.1)
 
   packages/db:
     dependencies:

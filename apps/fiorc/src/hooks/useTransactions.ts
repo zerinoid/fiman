@@ -154,10 +154,21 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
         const description = updates.description ?? oldTx.description;
         const isCreditCard = updates.is_credit_card ?? oldTx.is_credit_card;
 
+        const baseTxDt = updates.transaction_datetime ?? oldTx.transaction_datetime;
+
         for (let i = 1; i < newTotal; i++) {
           const m = ((mo - 1 + i) % 12) + 1;
           const y = yr + Math.floor((mo - 1 + i) / 12);
           const pad = (n: number) => String(n).padStart(2, '0');
+
+          let childTxDatetime: string | null = null;
+          if (baseTxDt) {
+            const dt = new Date(baseTxDt);
+            if (!isNaN(dt.getTime())) {
+              dt.setMonth(dt.getMonth() + i);
+              childTxDatetime = dt.toISOString();
+            }
+          }
 
           newChildren.push({
             id: crypto.randomUUID(),
@@ -173,6 +184,7 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
             installment_index: i + 1,
             total_installments: newTotal,
             description: description,
+            transaction_datetime: childTxDatetime,
           } as NewTransaction);
         }
 

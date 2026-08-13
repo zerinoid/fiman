@@ -683,8 +683,21 @@ input[type="checkbox"] { accent-color: var(--fi-color-primary); cursor: pointer;
   transition: background var(--fi-transition-fast), color var(--fi-transition-fast);
 }
 
-.type-toggle-btn.active.income  { background: hsl(142, 60%, 52%, 0.2); color: var(--fi-color-success); }
-.type-toggle-btn.active.expense { background: hsl(  4, 78%, 58%, 0.2); color: var(--fi-color-danger);  }
+.type-toggle-btn.active.income,
+.type-toggle-btn.active-income {
+  background: hsl(142, 60%, 52%, 0.2);
+  color: var(--fi-color-success);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px hsl(142, 60%, 52%, 0.4);
+}
+
+.type-toggle-btn.active.expense,
+.type-toggle-btn.active-expense {
+  background: hsl(4, 78%, 58%, 0.2);
+  color: var(--fi-color-danger);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px hsl(4, 78%, 58%, 0.4);
+}
 
 /* ==========================================
    NATIVE DIALOG MODAL

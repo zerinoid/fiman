@@ -189,6 +189,15 @@ export function AddTransactionModal({
               itemDueDate = `${y}-${pad(m)}-${pad(dy)}`;
             }
 
+            let itemTxDatetime: string | null = null;
+            if (transaction_datetime) {
+              const dt = new Date(transaction_datetime);
+              if (!isNaN(dt.getTime())) {
+                dt.setMonth(dt.getMonth() + i);
+                itemTxDatetime = dt.toISOString();
+              }
+            }
+
             records.push({
               id:                i === 0 ? parentId : crypto.randomUUID(),
               parent_id:         i === 0 ? null : parentId,
@@ -204,7 +213,7 @@ export function AddTransactionModal({
               installment_index: i + 1,
               total_installments: nInstall,
               description:       description || null,
-              transaction_datetime: i === 0 ? transaction_datetime : null,
+              transaction_datetime: itemTxDatetime,
               tags: tags.length > 0 ? tags : undefined,
             } as NewTransaction);
           }
@@ -250,10 +259,10 @@ export function AddTransactionModal({
           {/* Type */}
           <div className="type-toggle flex">
             <button type="button"
-              className={`type-toggle-btn ${txType === 'expense' ? 'active-expense' : ''}`}
+              className={`type-toggle-btn ${txType === 'expense' ? 'active expense active-expense' : ''}`}
               onClick={() => { setTxType('expense'); setCategory('food_grocery'); }}>💸 Despesa</button>
             <button type="button"
-              className={`type-toggle-btn ${txType === 'income' ? 'active-income' : ''}`}
+              className={`type-toggle-btn ${txType === 'income' ? 'active income active-income' : ''}`}
               onClick={() => { setTxType('income'); setCategory('session'); }}>💰 Receita</button>
           </div>
 

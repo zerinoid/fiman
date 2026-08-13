@@ -10,12 +10,12 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const NAV_ITEMS: { icon: string; label: string; route: Route }[] = [
-  { icon: '🏠', label: 'Dashboard',   route: 'dashboard'    },
-  { icon: '💸', label: 'Transações',  route: 'transactions' },
-  { icon: '🎯', label: 'Metas',       route: 'targets'      },
-  { icon: '📄', label: 'Boleto',      route: 'boleto'       },
-  { icon: '💰', label: 'Valores',     route: 'valores'      },
+const NAV_ITEMS: { icon: string; label: string; route: Route; shortcut: string }[] = [
+  { icon: '🏠', label: 'Dashboard',   route: 'dashboard',    shortcut: '1' },
+  { icon: '💸', label: 'Transações',  route: 'transactions', shortcut: '2' },
+  { icon: '🎯', label: 'Metas',       route: 'targets',      shortcut: '3' },
+  { icon: '📄', label: 'Boleto',      route: 'boleto',       shortcut: '4' },
+  { icon: '💰', label: 'Valores',     route: 'valores',      shortcut: '5' },
 ];
 
 export function AppShell({ route, navigate, onSignOut, email, children }: AppShellProps) {

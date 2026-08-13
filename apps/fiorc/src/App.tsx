@@ -131,30 +131,58 @@ export function App() {
     });
   }, []);
 
-  // Hotkey for active month navigation (spacebar -> next month, shift+spacebar -> prev month)
+  const navigate = useCallback((to: Route) => {
+    window.location.hash = to;
+    setRoute(to);
+  }, []);
+
+  // Hotkeys:
+  // - h: mes anterior
+  // - l: mes seguinte
+  // - 1, 2, 3, 4, 5: rotas no site
   useEffect(() => {
-    const activeRoutes: Route[] = ['dashboard', 'transactions', 'targets'];
-    if (!activeRoutes.includes(route)) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.key === ' ') {
-        const target = e.target as HTMLElement | null;
-        if (
-          target &&
-          (
-            ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName) ||
-            target.isContentEditable ||
-            target.closest('[role="dialog"]') !== null ||
-            target.closest('.modal') !== null
-          )
-        ) {
-          return;
-        }
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
 
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (
+          ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName) ||
+          target.isContentEditable ||
+          target.closest('[role="dialog"]') !== null ||
+          target.closest('.modal') !== null
+        )
+      ) {
+        return;
+      }
+
+      // Route hotkeys (1-5)
+      if (e.key === '1') {
         e.preventDefault();
-        if (e.shiftKey) {
+        navigate('dashboard');
+      } else if (e.key === '2') {
+        e.preventDefault();
+        navigate('transactions');
+      } else if (e.key === '3') {
+        e.preventDefault();
+        navigate('targets');
+      } else if (e.key === '4') {
+        e.preventDefault();
+        navigate('boleto');
+      } else if (e.key === '5') {
+        e.preventDefault();
+        navigate('valores');
+      }
+
+      // Month hotkeys (h / l - strictly lowercase)
+      const monthRoutes: Route[] = ['dashboard', 'transactions', 'targets', 'add'];
+      if (monthRoutes.includes(route)) {
+        if (e.key === 'h') {
+          e.preventDefault();
           onPrevMonth();
-        } else {
+        } else if (e.key === 'l') {
+          e.preventDefault();
           onNextMonth();
         }
       }
@@ -162,7 +190,7 @@ export function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [route, onPrevMonth, onNextMonth]);
+  }, [route, navigate, onPrevMonth, onNextMonth]);
 
   // Update route state when browser hash changes (back/forward, nav clicks)
   useEffect(() => {
@@ -170,11 +198,6 @@ export function App() {
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-
-  const navigate = (to: Route) => {
-    window.location.hash = to;
-    setRoute(to);
-  };
 
   if (loading || (session && roleLoading)) {
     return (

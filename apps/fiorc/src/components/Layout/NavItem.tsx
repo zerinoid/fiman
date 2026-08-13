@@ -4,11 +4,12 @@ interface NavItemProps {
   icon: string;
   label: string;
   route: Route;
+  shortcut?: string;
   current: Route;
   navigate: (to: Route) => void;
 }
 
-export function NavItem({ icon, label, route, current, navigate }: NavItemProps) {
+export function NavItem({ icon, label, route, shortcut, current, navigate }: NavItemProps) {
   const active = route === current;
   return (
     <button
@@ -16,9 +17,25 @@ export function NavItem({ icon, label, route, current, navigate }: NavItemProps)
       className={`nav-item${active ? ' active' : ''}`}
       onClick={() => navigate(route)}
       aria-current={active ? 'page' : undefined}
+      title={shortcut ? `${label} (Atalho: ${shortcut})` : label}
     >
       <span className="nav-item-icon">{icon}</span>
-      {label}
+      <span style={{ flex: 1 }}>{label}</span>
+      {shortcut && (
+        <span
+          style={{
+            fontSize: '0.7rem',
+            opacity: 0.5,
+            padding: '2px 5px',
+            borderRadius: '4px',
+            border: '1px solid currentColor',
+            lineHeight: 1,
+            marginLeft: '4px',
+          }}
+        >
+          {shortcut}
+        </span>
+      )}
     </button>
   );
 }

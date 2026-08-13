@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { MonthProps } from '../App';
 import type { Transaction, TransactionCategory } from '@fi/types';
 import { useTransactions } from '../hooks/useTransactions';
@@ -54,6 +54,38 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // Hotkeys for internal pagination:
+  // - i: pagina anterior
+  // - o: proxima pagina
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (
+          ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target.tagName) ||
+          target.isContentEditable ||
+          target.closest('[role="dialog"]') !== null ||
+          target.closest('.modal') !== null
+        )
+      ) {
+        return;
+      }
+
+      if (e.key === 'i') {
+        e.preventDefault();
+        setPage(p => Math.max(1, p - 1));
+      } else if (e.key === 'o') {
+        e.preventDefault();
+        setPage(p => Math.min(totalPages, p + 1));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [totalPages]);
+
   return (
     <div className="page">
       <div className="page-header">
@@ -66,9 +98,9 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
 
         <div style={{ display: 'flex', gap: 'var(--fi-space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
           <div className="month-selector">
-            <button className="month-nav-btn" onClick={onPrevMonth}>‹</button>
+            <button className="month-nav-btn" onClick={onPrevMonth} title="Mês anterior (atalho: h)">‹</button>
             <span className="month-selector-label">{monthLabel}</span>
-            <button className="month-nav-btn" onClick={onNextMonth}>›</button>
+            <button className="month-nav-btn" onClick={onNextMonth} title="Próximo mês (atalho: l)">›</button>
           </div>
           <button id="btn-add-tx" className="btn btn-primary" onClick={() => setModalOpen(true)}>+ Adicionar</button>
         </div>
@@ -129,9 +161,9 @@ export function TransactionsPage({ year, month, monthLabel, onPrevMonth, onNextM
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="pagination">
-          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>‹</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} title="Página anterior (atalho: i)">‹</button>
           <span>Página {page} de {totalPages}</span>
-          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>›</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} title="Próxima página (atalho: o)">›</button>
         </div>
       )}
 

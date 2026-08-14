@@ -257,7 +257,7 @@ export function FiorcValoresPage() {
                       </th>
                       <th>Vencimento FIORC</th>
                       <th>Aluno</th>
-                      <th>Descrição</th>
+                      <th>Código</th>
                       <th>Pagamento</th>
                       <th>Tipo Split</th>
                       <th style={{ textAlign: 'right' }}>Valor Split</th>
@@ -284,7 +284,7 @@ export function FiorcValoresPage() {
                           </td>
                           <td className="text-mono text-xs">{tx.fiorc_projection_due_date}</td>
                           <td style={{ fontSize: '0.85rem' }}>{tx.person_name ?? '—'}</td>
-                          <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                          <td style={{ fontSize: '0.85rem', fontWeight: 600 }} className="text-mono">{tx.codigo}</td>
                           <td>
                             <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
                               {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
@@ -395,7 +395,7 @@ export function FiorcValoresPage() {
                                 <tr>
                                   <th>Vencimento Original</th>
                                   <th>Aluno</th>
-                                  <th>Descrição</th>
+                                  <th>Código</th>
                                   <th>Pagamento</th>
                                   <th>Tipo Split</th>
                                   <th style={{ textAlign: 'right' }}>Valor Split</th>
@@ -406,7 +406,7 @@ export function FiorcValoresPage() {
                                   <tr key={tx.id}>
                                     <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
                                     <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
-                                    <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                                    <td style={{ fontSize: '0.85rem' }} className="text-mono">{tx.codigo}</td>
                                     <td>
                                       <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
                                         {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}

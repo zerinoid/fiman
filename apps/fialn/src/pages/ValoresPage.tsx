@@ -156,7 +156,7 @@ export function ValoresPage() {
                     <tr>
                       <th>Data</th>
                       <th>Aluno</th>
-                      <th>Descrição</th>
+                      <th>Código</th>
                       <th>Recebedor</th>
                       <th>Meio</th>
                       <th>Tipo Split</th>
@@ -168,7 +168,7 @@ export function ValoresPage() {
                       <tr key={tx.id}>
                         <td className="text-mono text-xs">{tx.transaction_date}</td>
                         <td style={{ fontSize: '0.85rem' }}>{tx.person_name ?? '—'}</td>
-                        <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                        <td style={{ fontSize: '0.85rem', fontWeight: 600 }} className="text-mono">{tx.codigo}</td>
                         <td style={{ fontSize: '0.8rem' }}>
                           {tx.received_by === 'shibarihouse' ? '🏛️ SbHs' : '🩸 Foraisso'}
                         </td>
@@ -281,7 +281,7 @@ export function ValoresPage() {
                                 <tr>
                                   <th>Data Original</th>
                                   <th>Aluno</th>
-                                  <th>Descrição</th>
+                                  <th>Código</th>
                                   <th>Recebedor</th>
                                   <th>Pagamento</th>
                                   <th>Tipo Split</th>
@@ -293,7 +293,7 @@ export function ValoresPage() {
                                   <tr key={tx.id}>
                                     <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
                                     <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
-                                    <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                                    <td style={{ fontSize: '0.85rem' }} className="text-mono">{tx.codigo}</td>
                                     <td style={{ fontSize: '0.8rem' }}>
                                       {tx.received_by === 'shibarihouse' ? '🏛️ SbHs' : '🩸 Foraisso'}
                                     </td>

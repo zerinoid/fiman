@@ -199,6 +199,10 @@ export interface LessonBundle {
 export type SplitType   = 'receivable' | 'debt';
 export type FiorcStatus = 'pending' | 'settled';
 
+export type GroupCode = 'SOB' | 'TEO';
+export type ModalityCode = 'ME' | 'TR' | 'AV';
+export type StudentTransactionCode = 'SOBME' | 'SOBTR' | 'SOBAV' | 'TEOME' | 'TEOTR' | 'TEOAV';
+
 /**
  * Central financial transaction for a student.
  * Written by FIALN (associates/admin) when registering enrollment payments.
@@ -216,6 +220,7 @@ export interface StudentTransaction {
   // Columns visible in FIALN Financeiro tab
   transaction_date: string;            // "Data" — YYYY-MM-DD
   description: string;                 // "Descrição"
+  codigo: string;                      // "Código" (ex: SOBME, TEOTR)
   received_by: PaymentRecipient;       // "Recebedor"
   amount: number;                      // "Valor" — gross received amount
   payment_method: PaymentMethod;       // "Tipo de Pagamento"

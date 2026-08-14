@@ -250,6 +250,7 @@ export type Database = {
         Row: {
           amount: number
           bundle_id: string | null
+          codigo: string
           created_at: string | null
           created_by: string | null
           description: string
@@ -263,6 +264,8 @@ export type Database = {
           payment_method: string
           person_id: string
           received_by: string
+          settled_at: string | null
+          settlement_batch_id: string | null
           split_amount: number
           split_percent: number
           split_type: string
@@ -273,6 +276,7 @@ export type Database = {
         Insert: {
           amount: number
           bundle_id?: string | null
+          codigo: string
           created_at?: string | null
           created_by?: string | null
           description: string
@@ -286,6 +290,8 @@ export type Database = {
           payment_method: string
           person_id: string
           received_by: string
+          settled_at?: string | null
+          settlement_batch_id?: string | null
           split_amount: number
           split_percent: number
           split_type: string
@@ -296,6 +302,7 @@ export type Database = {
         Update: {
           amount?: number
           bundle_id?: string | null
+          codigo?: string
           created_at?: string | null
           created_by?: string | null
           description?: string
@@ -309,6 +316,8 @@ export type Database = {
           payment_method?: string
           person_id?: string
           received_by?: string
+          settled_at?: string | null
+          settlement_batch_id?: string | null
           split_amount?: number
           split_percent?: number
           split_type?: string

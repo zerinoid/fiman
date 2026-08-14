@@ -51,6 +51,30 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+function getTransactionCode(groupName: string | undefined, modality: ModalityType): string {
+  if (!groupName) return 'SOBAV'; // safe fallback to satisfy DB constraints
+  const name = groupName.toLowerCase();
+  let prefix = '';
+  if (name.includes('sobre nós') || name.includes('sobre nos')) {
+    prefix = 'SOB';
+  } else if (name.includes('teoria das cordas')) {
+    prefix = 'TEO';
+  } else {
+    prefix = 'SOB'; // default fallback for constraint
+  }
+
+  let suffix = 'AV';
+  if (modality === 'monthly_group') {
+    suffix = 'ME';
+  } else if (modality === 'quarterly_group') {
+    suffix = 'TR';
+  } else {
+    suffix = 'AV';
+  }
+
+  return `${prefix}${suffix}`;
+}
+
 export interface CreateEnrollmentPayload {
   person_id: string;
   group_id: string | null;
@@ -222,6 +246,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
 
         // Build description from group name + modality
         const groupName = (newEnrollment as unknown as StudentEnrollment).group?.name;
+        const codigo = getTransactionCode(groupName, payload.modality);
         const modalityLabel =
           payload.modality === 'monthly_group'   ? 'Plano Mensal'
           : payload.modality === 'quarterly_group' ? 'Plano Trimestral'
@@ -245,6 +270,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
             enrollment_id:             newEnrollment.id,
             transaction_date:          txnDate,
             description:               desc,
+            codigo:                    codigo,
             received_by:               payload.received_by ?? 'foraisso',
             amount:                    payload.amount_per_installment!,
             payment_method:            payload.payment_method ?? 'pix',
@@ -339,6 +365,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
 
         const groupName = (updatedData as unknown as StudentEnrollment).group?.name;
         const currentModality = payload.modality ?? updatedData.modality;
+        const codigo = getTransactionCode(groupName, currentModality);
         const modalityLabel =
           currentModality === 'monthly_group' ? 'Plano Mensal'
           : currentModality === 'quarterly_group' ? 'Plano Trimestral'
@@ -357,6 +384,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
             enrollment_id: enrollmentId,
             transaction_date: txnDate,
             description: desc,
+            codigo: codigo,
             received_by: payload.received_by ?? 'foraisso',
             amount: payload.amount_per_installment!,
             payment_method: payload.payment_method ?? 'pix',

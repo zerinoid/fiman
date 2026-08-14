@@ -141,62 +141,46 @@ export function FiorcValoresPage() {
       ) : (
         <div className="stack-6">
           {/* Dynamic Summary Card */}
-          <div
-            className="card"
-            style={{
-              maxWidth: '580px',
-              margin: '0 auto',
-              padding: 'var(--fi-space-8)',
-            }}
-          >
+          <div className="card valores-summary-card">
             <div style={{ textAlign: 'center', marginBottom: 'var(--fi-space-4)', fontSize: '0.85rem', color: 'var(--fi-color-text-muted)' }}>
               Somatória dos itens selecionados ({dynamicSummary.selectedCount} de {pendingTransactions.length})
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 'var(--fi-space-6)',
-                marginBottom: 'var(--fi-space-8)',
-              }}
-            >
+            <div className="valores-grid">
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fi-color-danger)', marginBottom: '0.25rem' }}>
+                <div className="valores-metric-title" style={{ color: 'var(--fi-color-danger)' }}>
                   💸 Dívidas
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>
+                <div className="valores-metric-sub">
                   Foraisso → Shibari House
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--fi-color-danger)' }}>
+                <div className="valores-metric-value" style={{ color: 'var(--fi-color-danger)' }}>
                   {formatCurrency(dynamicSummary.totalDebts)}
                 </div>
               </div>
 
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--fi-color-success)', marginBottom: '0.25rem' }}>
+                <div className="valores-metric-title" style={{ color: 'var(--fi-color-success)' }}>
                   📈 Recebíveis
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.5rem' }}>
+                <div className="valores-metric-sub">
                   Shibari House → Foraisso
                 </div>
-                <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--fi-color-success)' }}>
+                <div className="valores-metric-value" style={{ color: 'var(--fi-color-success)' }}>
                   {formatCurrency(dynamicSummary.totalReceivables)}
                 </div>
               </div>
             </div>
 
-            <div style={{ height: '1px', background: 'var(--fi-color-border)', marginBottom: 'var(--fi-space-6)' }} />
+            <div className="valores-divider" />
 
-            <div style={{ textAlign: 'center', marginBottom: 'var(--fi-space-6)' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', marginBottom: 'var(--fi-space-2)' }}>
+            <div className="valores-net-container">
+              <div className="valores-net-label">
                 Saldo Líquido a Quitar
               </div>
               <div
+                className="valores-net-value"
                 style={{
-                  fontSize: '3rem',
-                  fontWeight: 900,
-                  lineHeight: 1,
                   color:
                     dynamicSummary.direction === 'receive'
                       ? 'var(--fi-color-success)'
@@ -207,18 +191,27 @@ export function FiorcValoresPage() {
               >
                 {dynamicSummary.direction === 'pay' ? '− ' : ''}{formatCurrency(absNet)}
               </div>
-              <div style={{ marginTop: 'var(--fi-space-3)', fontSize: '1rem', fontWeight: 600 }}>
-                {dynamicSummary.direction === 'receive' && <span style={{ color: 'var(--fi-color-success)' }}>✅ Foraisso tem a RECEBER de Shibari House</span>}
-                {dynamicSummary.direction === 'pay' && <span style={{ color: 'var(--fi-color-danger)' }}>⚠️ Foraisso deve PAGAR à Shibari House</span>}
-                {dynamicSummary.direction === 'zero' && <span style={{ color: 'var(--fi-color-text-muted)' }}>⚖️ Saldo zerado</span>}
+              <div
+                className="valores-net-status"
+                style={{
+                  color:
+                    dynamicSummary.direction === 'receive'
+                      ? 'var(--fi-color-success)'
+                      : dynamicSummary.direction === 'pay'
+                      ? 'var(--fi-color-danger)'
+                      : 'var(--fi-color-text-muted)',
+                }}
+              >
+                {dynamicSummary.direction === 'receive' && '✅ Foraisso tem a RECEBER de Shibari House'}
+                {dynamicSummary.direction === 'pay' && '⚠️ Foraisso deve PAGAR à Shibari House'}
+                {dynamicSummary.direction === 'zero' && '⚖️ Saldo zerado'}
               </div>
             </div>
 
             {pendingTransactions.length > 0 ? (
               <button
                 id="btn-quitar-repasses"
-                className="btn btn-primary w-full"
-                style={{ fontSize: '1rem', padding: '0.75rem', width: '100%' }}
+                className="btn btn-primary valores-settle-btn"
                 onClick={handleSettle}
                 disabled={settling || dynamicSummary.selectedCount === 0}
               >
@@ -338,30 +331,18 @@ export function FiorcValoresPage() {
                   return (
                     <div
                       key={batch.batch_id || index}
-                      style={{
-                        background: 'var(--fi-color-surface-2, rgba(255,255,255,0.02))',
-                        border: '1px solid var(--fi-color-border)',
-                        borderRadius: 'var(--fi-radius-md)',
-                        overflow: 'hidden',
-                      }}
+                      className="batch-card"
                     >
                       {/* Batch Header */}
                       <div
-                        style={{
-                          padding: '1rem 1.25rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          background: 'rgba(255,255,255,0.02)',
-                        }}
+                        className="batch-header"
                         onClick={() => toggleBatchExpand(batch.batch_id)}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <span style={{ fontSize: '1.1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                              🗓️ Quitação consumada em {formatDateTime(batch.settled_at)}
+                              🗓️ Quitação consumada em <span className="text-mono">{formatDateTime(batch.settled_at)}</span>
                             </div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
                               {batch.transactions.length} transação(ões) quitada(s) no lote
@@ -369,10 +350,11 @@ export function FiorcValoresPage() {
                           </div>
                         </div>
 
-                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                           <div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--fi-color-text-muted)' }}>Saldo Quitado</div>
                             <div
+                              className="text-mono"
                               style={{
                                 fontWeight: 800,
                                 fontSize: '1.1rem',
@@ -406,43 +388,45 @@ export function FiorcValoresPage() {
 
                       {/* Expanded Transactions List inside Batch */}
                       {isExpanded && (
-                        <div style={{ borderTop: '1px solid var(--fi-color-border)', padding: '0.5rem 1rem 1rem 1rem' }}>
-                          <table className="fi-table">
-                            <thead>
-                              <tr>
-                                <th>Vencimento Original</th>
-                                <th>Aluno</th>
-                                <th>Descrição</th>
-                                <th>Pagamento</th>
-                                <th>Tipo Split</th>
-                                <th style={{ textAlign: 'right' }}>Valor Split</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {batch.transactions.map((tx) => (
-                                <tr key={tx.id}>
-                                  <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
-                                  <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
-                                  <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
-                                  <td>
-                                    <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
-                                      {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    {tx.split_type === 'receivable' ? (
-                                      <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
-                                    ) : (
-                                      <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>💸 Dívida (25%)</span>
-                                    )}
-                                  </td>
-                                  <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700 }}>
-                                    {formatCurrency(tx.split_amount)}
-                                  </td>
+                        <div className="batch-content">
+                          <div className="table-wrapper table-wrapper-nested">
+                            <table className="fi-table">
+                              <thead>
+                                <tr>
+                                  <th>Vencimento Original</th>
+                                  <th>Aluno</th>
+                                  <th>Descrição</th>
+                                  <th>Pagamento</th>
+                                  <th>Tipo Split</th>
+                                  <th style={{ textAlign: 'right' }}>Valor Split</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {batch.transactions.map((tx) => (
+                                  <tr key={tx.id}>
+                                    <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
+                                    <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
+                                    <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                                    <td>
+                                      <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
+                                        {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {tx.split_type === 'receivable' ? (
+                                        <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
+                                      ) : (
+                                        <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>💸 Dívida (25%)</span>
+                                      )}
+                                    </td>
+                                    <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700 }}>
+                                      {formatCurrency(tx.split_amount)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>

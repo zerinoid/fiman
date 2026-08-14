@@ -565,27 +565,43 @@ a:hover { text-decoration: underline; }
 }
 
 /* ==========================================
-   FINANCIAL TABLE
+   TABLE & FINANCIAL TABLE
    ========================================== */
+.table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--fi-radius-lg);
+  border: 1px solid var(--fi-color-border);
+  width: 100%;
+}
+
+.table-wrapper-nested {
+  border: none;
+  border-radius: 0;
+}
+
 .fi-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  min-width: 620px;
 }
 
 .fi-table th {
   text-align: left;
-  padding: var(--fi-space-2) var(--fi-space-3);
+  padding: var(--fi-space-3) var(--fi-space-4);
   color: var(--fi-color-text-muted);
   font-weight: 600;
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  background: var(--fi-color-surface-2);
   border-bottom: 1px solid var(--fi-color-border);
+  white-space: nowrap;
 }
 
 .fi-table td {
-  padding: var(--fi-space-3) var(--fi-space-3);
+  padding: var(--fi-space-3) var(--fi-space-4);
   border-bottom: 1px solid var(--fi-color-border);
   color: var(--fi-color-text);
   vertical-align: middle;
@@ -1001,7 +1017,7 @@ textarea.form-input {
 .text-danger { color: var(--fi-color-danger); }
 .text-primary { color: var(--fi-color-primary); }
 .text-accent { color: var(--fi-color-accent); }
-.text-mono { font-family: var(--fi-font-mono); }
+.text-mono { font-family: var(--fi-font-mono); font-variant-numeric: tabular-nums; }
 .text-sm { font-size: 0.875rem; }
 .text-xs { font-size: 0.78rem; }
 
@@ -1015,3 +1031,123 @@ textarea.form-input {
 
 .stack-4 { display: flex; flex-direction: column; gap: var(--fi-space-4); }
 .stack-6 { display: flex; flex-direction: column; gap: var(--fi-space-6); }
+
+/* ==========================================
+   VALORES PAGE (Shared Structure)
+   ========================================== */
+.valores-summary-card {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: var(--fi-space-8);
+  width: 100%;
+}
+
+.valores-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--fi-space-6);
+  margin-bottom: var(--fi-space-8);
+}
+
+.valores-metric-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: var(--fi-space-2);
+}
+
+.valores-metric-sub {
+  font-size: 0.75rem;
+  color: var(--fi-color-text-muted);
+  margin-bottom: var(--fi-space-3);
+}
+
+.valores-metric-value {
+  font-size: clamp(1.35rem, 5.5vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  font-family: var(--fi-font-mono);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.valores-divider {
+  height: 1px;
+  background: var(--fi-color-border);
+  margin-bottom: var(--fi-space-6);
+}
+
+.valores-net-container {
+  text-align: center;
+}
+
+.valores-net-label {
+  font-size: 0.85rem;
+  color: var(--fi-color-text-muted);
+  margin-bottom: var(--fi-space-2);
+}
+
+.valores-net-value {
+  font-size: clamp(1.85rem, 7.5vw, 2.75rem);
+  font-weight: 900;
+  line-height: 1.1;
+  font-family: var(--fi-font-mono);
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.valores-net-status {
+  margin-top: var(--fi-space-3);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.batch-card {
+  background: var(--fi-color-surface-2, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--fi-color-border);
+  border-radius: var(--fi-radius-md);
+  overflow: hidden;
+}
+
+.batch-header {
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  gap: var(--fi-space-3);
+}
+
+.batch-content {
+  border-top: 1px solid var(--fi-color-border);
+}
+
+@media (max-width: 640px) {
+  .valores-summary-card {
+    padding: var(--fi-space-4);
+  }
+  .valores-grid {
+    gap: var(--fi-space-3);
+    margin-bottom: var(--fi-space-4);
+  }
+  .valores-metric-title {
+    font-size: 0.72rem;
+  }
+  .valores-metric-sub {
+    font-size: 0.68rem;
+    margin-bottom: var(--fi-space-2);
+  }
+  .valores-divider {
+    margin-bottom: var(--fi-space-4);
+  }
+  .valores-net-status {
+    font-size: 0.825rem;
+  }
+  .batch-header {
+    padding: 0.75rem 0.875rem;
+  }
+}
+

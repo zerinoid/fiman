@@ -69,63 +69,47 @@ export function ValoresPage() {
       ) : (
         <div className="stack-6">
           {/* Summary Card */}
-          <div
-            className="card"
-            style={{
-              maxWidth: '580px',
-              margin: '0 auto',
-              padding: 'var(--fi-space-8)',
-            }}
-          >
+          <div className="card valores-summary-card">
             {/* Dívidas / Recebíveis */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 'var(--fi-space-6)',
-                marginBottom: 'var(--fi-space-8)',
-              }}
-            >
+            <div className="valores-grid">
               {/* Dívidas */}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--fi-color-danger)', marginBottom: 'var(--fi-space-2)' }}>
+                <div className="valores-metric-title" style={{ color: 'var(--fi-color-danger)' }}>
                   💸 Dívidas
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: 'var(--fi-space-3)' }}>
+                <div className="valores-metric-sub">
                   Foraisso → Shibari House
                 </div>
-                <div style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--fi-color-danger)', lineHeight: 1 }}>
+                <div className="valores-metric-value" style={{ color: 'var(--fi-color-danger)' }}>
                   {formatCurrency(summary.totalDebts)}
                 </div>
               </div>
 
               {/* Recebíveis */}
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '0.8rem', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--fi-color-success)', marginBottom: 'var(--fi-space-2)' }}>
+                <div className="valores-metric-title" style={{ color: 'var(--fi-color-success)' }}>
                   📈 Recebíveis
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', marginBottom: 'var(--fi-space-3)' }}>
+                <div className="valores-metric-sub">
                   Shibari House → Foraisso
                 </div>
-                <div style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--fi-color-success)', lineHeight: 1 }}>
+                <div className="valores-metric-value" style={{ color: 'var(--fi-color-success)' }}>
                   {formatCurrency(summary.totalReceivables)}
                 </div>
               </div>
             </div>
 
             {/* Divider */}
-            <div style={{ height: '1px', background: 'var(--fi-color-border)', marginBottom: 'var(--fi-space-6)' }} />
+            <div className="valores-divider" />
 
             {/* Saldo */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)', marginBottom: 'var(--fi-space-2)' }}>
+            <div className="valores-net-container">
+              <div className="valores-net-label">
                 Saldo Líquido Pendente
               </div>
               <div
+                className="valores-net-value"
                 style={{
-                  fontSize: '2.75rem',
-                  fontWeight: 900,
-                  lineHeight: 1,
                   color:
                     summary.direction === 'receive'
                       ? 'var(--fi-color-success)'
@@ -137,10 +121,8 @@ export function ValoresPage() {
                 {summary.direction === 'pay' ? '− ' : ''}{formatCurrency(absNet)}
               </div>
               <div
+                className="valores-net-status"
                 style={{
-                  marginTop: 'var(--fi-space-3)',
-                  fontSize: '0.95rem',
-                  fontWeight: 600,
                   color:
                     summary.direction === 'receive'
                       ? 'var(--fi-color-success)'
@@ -235,30 +217,18 @@ export function ValoresPage() {
                   return (
                     <div
                       key={batch.batch_id || index}
-                      style={{
-                        background: 'var(--fi-color-surface-2, rgba(255,255,255,0.02))',
-                        border: '1px solid var(--fi-color-border)',
-                        borderRadius: 'var(--fi-radius-md)',
-                        overflow: 'hidden',
-                      }}
+                      className="batch-card"
                     >
                       {/* Batch Header */}
                       <div
-                        style={{
-                          padding: '1rem 1.25rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          cursor: 'pointer',
-                          background: 'rgba(255,255,255,0.02)',
-                        }}
+                        className="batch-header"
                         onClick={() => toggleBatchExpand(batch.batch_id)}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <span style={{ fontSize: '1.1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
-                              🗓️ Quitação consumada em {formatDateTime(batch.settled_at)}
+                              🗓️ Quitação consumada em <span className="text-mono">{formatDateTime(batch.settled_at)}</span>
                             </div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)' }}>
                               {batch.transactions.length} transação(ões) quitada(s) no lote
@@ -266,10 +236,11 @@ export function ValoresPage() {
                           </div>
                         </div>
 
-                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                           <div>
                             <div style={{ fontSize: '0.72rem', color: 'var(--fi-color-text-muted)' }}>Saldo Quitado</div>
                             <div
+                              className="text-mono"
                               style={{
                                 fontWeight: 800,
                                 fontSize: '1.1rem',
@@ -303,47 +274,49 @@ export function ValoresPage() {
 
                       {/* Expanded Transactions List inside Batch */}
                       {isExpanded && (
-                        <div style={{ borderTop: '1px solid var(--fi-color-border)', padding: '0.5rem 1rem 1rem 1rem' }}>
-                          <table className="fi-table">
-                            <thead>
-                              <tr>
-                                <th>Data Original</th>
-                                <th>Aluno</th>
-                                <th>Descrição</th>
-                                <th>Recebedor</th>
-                                <th>Pagamento</th>
-                                <th>Tipo Split</th>
-                                <th style={{ textAlign: 'right' }}>Valor Split</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {batch.transactions.map((tx) => (
-                                <tr key={tx.id}>
-                                  <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
-                                  <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
-                                  <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
-                                  <td style={{ fontSize: '0.8rem' }}>
-                                    {tx.received_by === 'shibarihouse' ? '🏛️ ShibariHouse' : '🩸 Foraisso'}
-                                  </td>
-                                  <td>
-                                    <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
-                                      {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
-                                    </span>
-                                  </td>
-                                  <td>
-                                    {tx.split_type === 'receivable' ? (
-                                      <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
-                                    ) : (
-                                      <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>💸 Dívida (25%)</span>
-                                    )}
-                                  </td>
-                                  <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700 }}>
-                                    {formatCurrency(tx.split_amount)}
-                                  </td>
+                        <div className="batch-content">
+                          <div className="table-wrapper table-wrapper-nested">
+                            <table className="fi-table">
+                              <thead>
+                                <tr>
+                                  <th>Data Original</th>
+                                  <th>Aluno</th>
+                                  <th>Descrição</th>
+                                  <th>Recebedor</th>
+                                  <th>Pagamento</th>
+                                  <th>Tipo Split</th>
+                                  <th style={{ textAlign: 'right' }}>Valor Split</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {batch.transactions.map((tx) => (
+                                  <tr key={tx.id}>
+                                    <td className="text-mono text-xs">{tx.fiorc_projection_due_date || tx.transaction_date}</td>
+                                    <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
+                                    <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
+                                    <td style={{ fontSize: '0.8rem' }}>
+                                      {tx.received_by === 'shibarihouse' ? '🏛️ ShibariHouse' : '🩸 Foraisso'}
+                                    </td>
+                                    <td>
+                                      <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
+                                        {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      {tx.split_type === 'receivable' ? (
+                                        <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>📈 Recebível (75%)</span>
+                                      ) : (
+                                        <span className="badge badge-danger" style={{ fontSize: '0.75rem' }}>💸 Dívida (25%)</span>
+                                      )}
+                                    </td>
+                                    <td className="text-mono" style={{ textAlign: 'right', fontWeight: 700 }}>
+                                      {formatCurrency(tx.split_amount)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         </div>
                       )}
                     </div>

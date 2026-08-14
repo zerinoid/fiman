@@ -65,6 +65,12 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const { bundles, unconsumedLessonsCount, saving: bundleSaving, createBundle, refresh: refreshBundles } = useLessonBundles(personId);
   const { updateStudent, saving: studentSaving } = useStudents();
 
+  const sortedAttendance = [...attendance].sort((a, b) => {
+    const dateA = a.class_date || '';
+    const dateB = b.class_date || '';
+    return dateB.localeCompare(dateA);
+  });
+
   const refetchPerson = () => {
     supabase
       .from('people')
@@ -215,6 +221,14 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               <div className="stack-2 mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {activeEnrollments.map((en) => {
                   const isExpiring = en.status === 'active' && en.end_date && en.end_date >= todayStr && en.end_date <= maxWarningStr;
+                  let remainingDays = 0;
+                  if (isExpiring && en.end_date) {
+                    const todayDate = new Date();
+                    todayDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(en.end_date + 'T00:00:00');
+                    const diffTime = endDate.getTime() - todayDate.getTime();
+                    remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  }
                   return (
                     <div
                       key={en.id}
@@ -239,7 +253,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         </span>
                         {isExpiring && (
                           <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
-                            ⚠️ À vencer
+                            ⚠️ {remainingDays === 0 ? 'VENCE HOJE' : remainingDays === 1 ? 'VENCE EM 1 DIA' : `VENCE EM ${remainingDays} DIAS`}
                           </span>
                         )}
                         {en.is_partner ? (
@@ -475,6 +489,14 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               {groupEnrollments.map((en) => {
                 const isInactive = en.status === 'completed' || en.status === 'cancelled';
                 const isExpiring = en.status === 'active' && en.end_date && en.end_date >= todayStr && en.end_date <= maxWarningStr;
+                let remainingDays = 0;
+                if (isExpiring && en.end_date) {
+                  const todayDate = new Date();
+                  todayDate.setHours(0, 0, 0, 0);
+                  const endDate = new Date(en.end_date + 'T00:00:00');
+                  const diffTime = endDate.getTime() - todayDate.getTime();
+                  remainingDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                }
                 return (
                   <div
                     key={en.id}
@@ -508,7 +530,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         </span>
 
                         {isExpiring ? (
-                          <span className="badge badge-warning">⚠️ À vencer</span>
+                          <span className="badge badge-warning">⚠️ {remainingDays === 0 ? 'VENCE HOJE' : remainingDays === 1 ? 'VENCE EM 1 DIA' : `VENCE EM ${remainingDays} DIAS`}</span>
                         ) : en.status === 'active' ? (
                           <span className="badge badge-success">✓ Ativa</span>
                         ) : en.status === 'completed' ? (
@@ -695,6 +717,41 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             </div>
           )}
 
+          {/* Histórico de Grupos (presença em aulas coletivas) — migrado da aba Financeiro */}
+          {sortedAttendance.length > 0 && (
+            <div className="card card-sm">
+              <div className="section-header">
+                <span className="section-title">Histórico de Grupos</span>
+                <span className="badge badge-neutral">{sortedAttendance.filter((a) => a.present).length} presenças</span>
+              </div>
+              <table className="fi-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Trilha</th>
+                    <th>Tema</th>
+                    <th>Presença</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedAttendance.map((att) => (
+                    <tr key={att.id}>
+                      <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
+                      <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{att.course_title ?? '—'}</td>
+                      <td>{att.proposed_theme ?? '—'}</td>
+                      <td>
+                        {att.present
+                          ? <span className="badge badge-success">✓ Presente</span>
+                          : <span className="badge badge-danger">✗ Ausente</span>
+                        }
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {lessonsLoading && (
             <div className="loading-center">
               <div className="spinner spinner-lg" />
@@ -717,41 +774,6 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               {lessons.map((lesson) => (
                 <LessonEntry key={lesson.id} lesson={lesson} />
               ))}
-            </div>
-          )}
-
-          {/* Histórico de Grupos (presença em aulas coletivas) — migrado da aba Financeiro */}
-          {attendance.length > 0 && (
-            <div className="card card-sm">
-              <div className="section-header">
-                <span className="section-title">Histórico de Grupos</span>
-                <span className="badge badge-neutral">{attendance.filter((a) => a.present).length} presenças</span>
-              </div>
-              <table className="fi-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Trilha</th>
-                    <th>Tema</th>
-                    <th>Presença</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {attendance.map((att) => (
-                    <tr key={att.id}>
-                      <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
-                      <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{att.course_title ?? '—'}</td>
-                      <td>{att.proposed_theme ?? '—'}</td>
-                      <td>
-                        {att.present
-                          ? <span className="badge badge-success">✓ Presente</span>
-                          : <span className="badge badge-danger">✗ Ausente</span>
-                        }
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           )}
         </div>

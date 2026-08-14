@@ -4,7 +4,7 @@ interface StudentCardProps {
   student: StudentWithProfile;
   lastLessonDate: string | null;
   activeGroupNames?: string[];
-  isExpiringSoon?: boolean;
+  daysToExpire?: number;
   onClick: () => void;
 }
 
@@ -28,12 +28,13 @@ function formatRelativeDate(isoDate: string | null): string {
   return `Última aula: ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 }
 
-export function StudentCard({ student, lastLessonDate, activeGroupNames, isExpiringSoon = false, onClick }: StudentCardProps) {
+export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToExpire, onClick }: StudentCardProps) {
   const initials = getInitials(student.full_name);
   const relDate = formatRelativeDate(lastLessonDate);
   const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
   const hasLessons = Boolean(lastLessonDate);
   const isActive = hasActiveEnrollments || hasLessons;
+  const isExpiringSoon = daysToExpire !== undefined;
 
   return (
     <div
@@ -75,7 +76,7 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, isExpir
         {student.profile?.financial_status && (
           isExpiringSoon && student.profile.financial_status === 'em_dia' ? (
             <span className="badge badge-warning">
-              ⚠️ Á VENCER
+              ⚠️ {daysToExpire === 0 ? 'VENCE HOJE' : daysToExpire === 1 ? 'VENCE EM 1 DIA' : `VENCE EM ${daysToExpire} DIAS`}
             </span>
           ) : (
             <span

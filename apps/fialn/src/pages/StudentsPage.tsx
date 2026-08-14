@@ -50,16 +50,16 @@ function useLastLessonDates(personIds: string[]): LastLessonMap {
 
 function useStudentEnrollmentsData(personIds: string[]): {
   groupsMap: GroupsMap;
-  expiringSoonMap: { [personId: string]: boolean };
+  expiringSoonDaysMap: { [personId: string]: number };
 } {
   const [map, setMap] = useState<{
     groupsMap: GroupsMap;
-    expiringSoonMap: { [personId: string]: boolean };
-  }>({ groupsMap: {}, expiringSoonMap: {} });
+    expiringSoonDaysMap: { [personId: string]: number };
+  }>({ groupsMap: {}, expiringSoonDaysMap: {} });
 
   const fetch = useCallback(async () => {
     if (personIds.length === 0) {
-      setMap({ groupsMap: {}, expiringSoonMap: {} });
+      setMap({ groupsMap: {}, expiringSoonDaysMap: {} });
       return;
     }
 
@@ -96,7 +96,10 @@ function useStudentEnrollmentsData(personIds: string[]): {
     const maxWarningStr = get7DaysLaterDateStr();
 
     const gMap: GroupsMap = {};
-    const eSoonMap: { [personId: string]: boolean } = {};
+    const eSoonDaysMap: { [personId: string]: number } = {};
+
+    const todayDate = new Date();
+    todayDate.setHours(0, 0, 0, 0);
 
     for (const row of data) {
       const pid = row.person_id;
@@ -114,10 +117,16 @@ function useStudentEnrollmentsData(personIds: string[]): {
 
       // Check if expiring soon (within 7 days)
       if (row.end_date && row.end_date >= todayStr && row.end_date <= maxWarningStr) {
-        eSoonMap[pid] = true;
+        const endDate = new Date(row.end_date + 'T00:00:00');
+        const diffTime = endDate.getTime() - todayDate.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (eSoonDaysMap[pid] === undefined || diffDays < eSoonDaysMap[pid]) {
+          eSoonDaysMap[pid] = diffDays;
+        }
       }
     }
-    setMap({ groupsMap: gMap, expiringSoonMap: eSoonMap });
+    setMap({ groupsMap: gMap, expiringSoonDaysMap: eSoonDaysMap });
   }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
@@ -136,7 +145,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
 
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
-  const { groupsMap, expiringSoonMap } = useStudentEnrollmentsData(personIds);
+  const { groupsMap, expiringSoonDaysMap } = useStudentEnrollmentsData(personIds);
 
   const filtered = students.filter((s) =>
     s.full_name.toLowerCase().includes(query.toLowerCase()),
@@ -146,6 +155,22 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
     const hasLessons = Boolean(lastLessonMap[s.id]);
     return hasEnrollments || hasLessons;
+  });
+
+  // Sort activeStudents: expiring soon first (ascending by remaining days), then alphabetical
+  activeStudents.sort((a, b) => {
+    const daysA = expiringSoonDaysMap[a.id];
+    const daysB = expiringSoonDaysMap[b.id];
+    const aIsExpiring = daysA !== undefined;
+    const bIsExpiring = daysB !== undefined;
+
+    if (aIsExpiring && bIsExpiring) {
+      return daysA - daysB; // Expiring sooner comes first
+    }
+    if (aIsExpiring) return -1;
+    if (bIsExpiring) return 1;
+
+    return 0; // Both not expiring, keep alphabetical (students is loaded pre-sorted by full_name)
   });
 
   const inactiveStudents = filtered.filter((s) => {
@@ -214,7 +239,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
           </p>
           <p className="empty-state-desc">
             {query
-              ? `Nenhum aluno corresponde a "${query}"`
+              ? `Nenhum aluno corresponds a "${query}"`
               : 'Clique no botão "+ Novo Aluno" acima para cadastrar um novo aluno.'}
           </p>
         </div>
@@ -230,7 +255,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
                   student={student}
                   lastLessonDate={lastLessonMap[student.id] ?? null}
                   activeGroupNames={groupsMap[student.id]}
-                  isExpiringSoon={expiringSoonMap[student.id] || false}
+                  daysToExpire={expiringSoonDaysMap[student.id]}
                   onClick={() => openProfile(student.id)}
                 />
               ))}
@@ -260,7 +285,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
                     student={student}
                     lastLessonDate={lastLessonMap[student.id] ?? null}
                     activeGroupNames={groupsMap[student.id]}
-                    isExpiringSoon={expiringSoonMap[student.id] || false}
+                    daysToExpire={expiringSoonDaysMap[student.id]}
                     onClick={() => openProfile(student.id)}
                   />
                 ))}

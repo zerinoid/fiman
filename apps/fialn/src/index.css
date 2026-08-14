@@ -236,9 +236,9 @@ a:hover { text-decoration: underline; }
 }
 
 .page-wrapper {
-  max-width: 900px;
+  max-width: 960px;
   margin: 0 auto;
-  padding: var(--fi-space-8) var(--fi-space-6);
+  padding: var(--fi-space-8) 0;
 }
 
 .page-header {
@@ -449,6 +449,7 @@ a:hover { text-decoration: underline; }
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  width: max-content;
 }
 
 .badge-success {

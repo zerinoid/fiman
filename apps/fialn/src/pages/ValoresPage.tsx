@@ -158,7 +158,7 @@ export function ValoresPage() {
                       <th>Aluno</th>
                       <th>Descrição</th>
                       <th>Recebedor</th>
-                      <th>Pagamento</th>
+                      <th>Meio</th>
                       <th>Tipo Split</th>
                       <th style={{ textAlign: 'right' }}>Valor Split</th>
                     </tr>
@@ -170,7 +170,7 @@ export function ValoresPage() {
                         <td style={{ fontSize: '0.85rem' }}>{tx.person_name ?? '—'}</td>
                         <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
                         <td style={{ fontSize: '0.8rem' }}>
-                          {tx.received_by === 'shibarihouse' ? '🏛️ ShibariHouse' : '🩸 Foraisso'}
+                          {tx.received_by === 'shibarihouse' ? '🏛️ SbHs' : '🩸 Foraisso'}
                         </td>
                         <td>
                           <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>
@@ -295,7 +295,7 @@ export function ValoresPage() {
                                     <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{tx.person_name ?? '—'}</td>
                                     <td style={{ fontSize: '0.85rem' }}>{tx.description}</td>
                                     <td style={{ fontSize: '0.8rem' }}>
-                                      {tx.received_by === 'shibarihouse' ? '🏛️ ShibariHouse' : '🩸 Foraisso'}
+                                      {tx.received_by === 'shibarihouse' ? '🏛️ SbHs' : '🩸 Foraisso'}
                                     </td>
                                     <td>
                                       <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.72rem' }}>

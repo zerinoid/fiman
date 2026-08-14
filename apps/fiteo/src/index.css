@@ -507,13 +507,13 @@ a:hover { text-decoration: underline; }
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--fi-color-primary), hsl(var(--fi-hue-primary), 60%, 46%));
+  background: var(--course-border-gradient, linear-gradient(90deg, var(--fi-color-primary), hsl(var(--fi-hue-primary), 60%, 46%)));
   opacity: 0;
   transition: opacity 0.2s;
 }
 
 .course-card:hover {
-  border-color: hsl(var(--fi-hue-primary), 40%, 32%);
+  border-color: var(--course-hover-border, hsl(var(--fi-hue-primary), 40%, 32%));
   box-shadow: 0 8px 32px hsl(0 0% 0% / 0.35);
   transform: translateY(-2px);
 }

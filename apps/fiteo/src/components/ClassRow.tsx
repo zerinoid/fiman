@@ -40,6 +40,14 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
   const trackTheme = COURSE_THEMES[trackTitle] ?? DEFAULT_THEME;
 
   const getCardStyle = (): React.CSSProperties => {
+    if (schedule.is_cancelled) {
+      return {
+        borderLeft: `4px solid ${trackTheme.border}`,
+        opacity: 0.6,
+        backgroundColor: 'rgba(10, 10, 14, 0.95)',
+      };
+    }
+
     if (schedule.is_highlighted) {
       return {
         border: '1px solid rgba(234, 179, 8, 0.4)',
@@ -178,7 +186,7 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
       </div>
 
       <div className="class-row-actions">
-        <PlanningBadge isPlanned={isPlannedEffective} isPast={isPast} />
+        <PlanningBadge isPlanned={isPlannedEffective} isPast={isPast} isCancelled={schedule.is_cancelled ?? undefined} />
         <span style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.875rem' }}>›</span>
       </div>
     </div>

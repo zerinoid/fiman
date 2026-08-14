@@ -11,8 +11,13 @@ export function CoursesPage({ navigate }: CoursesPageProps) {
   const { courses, loading, error } = useCourses();
   const { schedules } = useSchedules(); // all schedules, to count per course
 
-  const countForCourse = (courseId: string) =>
-    schedules.filter((s) => s.course_id === courseId).length;
+  const getCountsForCourse = (courseId: string) => {
+    const courseSchedules = schedules.filter((s) => s.course_id === courseId);
+    const now = Date.now();
+    const pastCount = courseSchedules.filter((s) => new Date(s.class_date).getTime() < now).length;
+    const futureCount = courseSchedules.filter((s) => new Date(s.class_date).getTime() >= now).length;
+    return { pastCount, futureCount };
+  };
 
   if (loading) {
     return (
@@ -35,14 +40,18 @@ export function CoursesPage({ navigate }: CoursesPageProps) {
       {error && <div className="alert alert-danger" style={{ marginBottom: 'var(--fi-space-6)' }}>{error}</div>}
 
       <div className="grid-2">
-        {courses.map((course) => (
-          <CourseCard
-            key={course.id}
-            course={course}
-            scheduledCount={countForCourse(course.id)}
-            onClick={() => navigate(`calendar?course_id=${course.id}`)}
-          />
-        ))}
+        {courses.map((course) => {
+          const { pastCount, futureCount } = getCountsForCourse(course.id);
+          return (
+            <CourseCard
+              key={course.id}
+              course={course}
+              pastCount={pastCount}
+              futureCount={futureCount}
+              onClick={() => navigate(`calendar?course_id=${course.id}`)}
+            />
+          );
+        })}
       </div>
 
       {!loading && courses.length === 0 && (

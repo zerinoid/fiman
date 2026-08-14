@@ -12,6 +12,7 @@ export interface CreateSchedulePayload {
   has_photo_content?: boolean;
   has_video_content?: boolean;
   is_highlighted?: boolean;
+  is_cancelled?: boolean;
 }
 
 export interface UpdateSchedulePayload {
@@ -24,6 +25,7 @@ export interface UpdateSchedulePayload {
   has_photo_content?: boolean;
   has_video_content?: boolean;
   is_highlighted?: boolean;
+  is_cancelled?: boolean;
 }
 
 export interface UseSchedulesReturn {
@@ -49,6 +51,7 @@ function normalizeClassSchedule(item: any): ClassSchedule {
     has_photo_content: Boolean(item.has_photo_content),
     has_video_content: Boolean(item.has_video_content),
     is_highlighted: Boolean(item.is_highlighted),
+    is_cancelled: Boolean(item.is_cancelled),
   };
 }
 
@@ -112,6 +115,7 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
           has_photo_content: payload.has_photo_content ?? false,
           has_video_content: payload.has_video_content ?? false,
           is_highlighted: payload.is_highlighted ?? false,
+          is_cancelled: payload.is_cancelled ?? false,
         })
         .select('*, course:fiteo_courses(*)')
         .single();
@@ -141,6 +145,7 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
       if (payload.has_photo_content !== undefined) updateData.has_photo_content = payload.has_photo_content;
       if (payload.has_video_content !== undefined) updateData.has_video_content = payload.has_video_content;
       if (payload.is_highlighted !== undefined) updateData.is_highlighted = payload.is_highlighted;
+      if (payload.is_cancelled !== undefined) updateData.is_cancelled = payload.is_cancelled;
 
       if (payload.class_date !== undefined) {
         const isPast = new Date(payload.class_date).getTime() < Date.now();

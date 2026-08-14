@@ -117,7 +117,7 @@ export function App() {
 
       {/* Class detail */}
       {route === 'class-detail' && classId && (
-        <ClassDetailPage classId={classId} navigate={navigate} isAdmin={isAdmin} />
+        <ClassDetailPage classId={classId} navigate={navigate} isAdmin={isAdmin} activeCourseId={courseId} />
       )}
       {route === 'class-detail' && !classId && (
         // Fallback: no class_id in URL → go back to calendar

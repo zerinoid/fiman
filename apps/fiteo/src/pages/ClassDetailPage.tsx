@@ -56,9 +56,10 @@ interface ClassDetailPageProps {
   classId: string;
   navigate: Navigate;
   isAdmin: boolean;
+  activeCourseId?: string | null;
 }
 
-export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageProps) {
+export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: ClassDetailPageProps) {
   const [schedule, setSchedule] = useState<ClassSchedule | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [activeTab, setActiveTab] = useState<DetailTab>('attendance');
@@ -70,8 +71,9 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
   const { courses } = useCourses();
   const { updateSchedule, deleteSchedule, saving: scheduleSaving } = useSchedules();
 
-  // Retrieve track schedules for internal pagination (ordered newest first)
-  const { schedules: trackSchedules } = useSchedules(schedule?.course_id ?? null);
+  // Retrieve track schedules for internal pagination
+  const filterCourseId = activeCourseId === 'all' ? null : (activeCourseId ?? schedule?.course_id ?? null);
+  const { schedules: trackSchedules } = useSchedules(filterCourseId);
   const currentIndex = trackSchedules.findIndex((s) => s.id === classId);
   const prevClass =
     currentIndex !== -1 && currentIndex + 1 < trackSchedules.length
@@ -152,7 +154,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
     setDeleteError(null);
     const res = await deleteSchedule(schedule.id, schedule.class_date);
     if (res.success) {
-      navigate('calendar');
+      navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar');
     } else {
       setDeleteError(res.error ?? 'Erro ao excluir aula.');
     }
@@ -176,8 +178,8 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
 
   if (!schedule) {
     return (
-      <div>
-        <button className="back-btn" onClick={() => navigate('calendar')}>
+      <div className="detail-container">
+        <button className="back-btn" onClick={() => navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar')}>
           ← Voltar à Agenda
         </button>
         <div className="alert alert-danger">Aula não encontrada.</div>
@@ -196,7 +198,11 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
         flexWrap: 'wrap',
       }}
     >
-      <button className="back-btn" onClick={() => navigate('calendar')} style={{ margin: 0 }}>
+      <button
+        className="back-btn"
+        onClick={() => navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar')}
+        style={{ margin: 0 }}
+      >
         ← Voltar à Agenda
       </button>
 
@@ -206,7 +212,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
             id="prev-class-btn"
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`class-detail?class_id=${prevClass.id}`)}
+            onClick={() => navigate(`class-detail?class_id=${prevClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
             title={`Aula Anterior: ${prevClass.proposed_theme}`}
             style={{ fontSize: '0.8rem', padding: '4px 10px' }}
           >
@@ -219,7 +225,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
             id="next-class-btn"
             type="button"
             className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`class-detail?class_id=${nextClass.id}`)}
+            onClick={() => navigate(`class-detail?class_id=${nextClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
             title={`Próxima Aula: ${nextClass.proposed_theme}`}
             style={{ fontSize: '0.8rem', padding: '4px 10px' }}
           >
@@ -357,7 +363,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin }: ClassDetailPageP
               gap: 'var(--fi-space-2)',
             }}
           >
-            <PlanningBadge isPlanned={schedule.is_planned || !isFutureClass} isPast={!isFutureClass} />
+            <PlanningBadge isPlanned={schedule.is_planned || !isFutureClass} isPast={!isFutureClass} isCancelled={schedule.is_cancelled ?? undefined} />
 
             <button
               id="toggle-highlight-btn"

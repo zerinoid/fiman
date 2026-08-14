@@ -1,9 +1,29 @@
 interface PlanningBadgeProps {
   isPlanned: boolean;
   isPast?: boolean;
+  isCancelled?: boolean;
 }
 
-export function PlanningBadge({ isPlanned, isPast }: PlanningBadgeProps) {
+export function PlanningBadge({ isPlanned, isPast, isCancelled }: PlanningBadgeProps) {
+  if (isCancelled) {
+    return (
+      <span
+        className="planning-badge"
+        style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.15)',
+          color: '#fca5a5',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          fontSize: '0.72rem',
+          fontWeight: 600,
+          padding: '2px 8px',
+          borderRadius: '12px',
+        }}
+      >
+        ✕ Cancelada
+      </span>
+    );
+  }
+
   if (isPast) {
     return (
       <span

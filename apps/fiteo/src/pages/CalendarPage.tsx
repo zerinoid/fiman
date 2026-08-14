@@ -47,6 +47,7 @@ export function ScheduleModal({
     initialSchedule?.theme_description ?? '',
   );
   const [isPlanned, setIsPlanned] = useState(initialSchedule?.is_planned ?? false);
+  const [isCancelled, setIsCancelled] = useState<boolean>(initialSchedule?.is_cancelled ?? false);
 
   // FITEO extensions: techniques tags and media toggles
   const [techniques, setTechniques] = useState<string[]>(
@@ -105,6 +106,7 @@ export function ScheduleModal({
       has_photo_content: hasPhotoContent,
       has_video_content: hasVideoContent,
       is_highlighted: isHighlighted,
+      is_cancelled: isCancelled,
     });
 
     if (ok) onClose();
@@ -379,6 +381,27 @@ export function ScheduleModal({
             <span>Aula já planejada (material e exercícios definidos)</span>
           </label>
 
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--fi-space-3)',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              marginTop: 'var(--fi-space-2)',
+            }}
+          >
+            <input
+              id="sm-cancelled"
+              type="checkbox"
+              checked={isCancelled}
+              onChange={(e) => setIsCancelled(e.target.checked)}
+            />
+            <span style={{ color: 'var(--fi-color-danger)', fontWeight: isCancelled ? 600 : 400 }}>
+              Aula cancelada
+            </span>
+          </label>
+
           {error && <p className="form-error">⚠ {error}</p>}
 
           <div className="modal-actions">
@@ -562,7 +585,7 @@ export function CalendarPage({
             <ClassRow
               key={schedule.id}
               schedule={schedule}
-              onClick={() => navigate(`class-detail?class_id=${schedule.id}`)}
+              onClick={() => navigate(`class-detail?class_id=${schedule.id}&course_id=${activeCourseId ?? 'all'}`)}
             />
           ))}
         </div>

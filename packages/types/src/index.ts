@@ -306,6 +306,8 @@ export interface ClassSchedule {
   has_video_content?: boolean | null;
   /** Flag for featured/exceptional classes ("Aula Destaque"). */
   is_highlighted?: boolean | null;
+  /** Flag for cancelled classes. */
+  is_cancelled?: boolean | null;
   created_at: string;
   /** Joined course track (available when fetched with select('*, course:fiteo_courses(*)')). */
   course?: CourseTrack | null;

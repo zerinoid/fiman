@@ -260,7 +260,9 @@ export function useTransactions(year: number, month: number): UseTransactionsRet
 
     for (const t of transactions) {
       if (t.is_projection) {
-        totalProjected += t.amount;
+        if (t.type === 'income') {
+          totalProjected += t.amount;
+        }
       } else if (t.type === 'income') {
         totalIncome += t.amount;
       } else if (!t.is_credit_card) {

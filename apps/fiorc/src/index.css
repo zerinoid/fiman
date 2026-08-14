@@ -417,6 +417,7 @@ a:hover { text-decoration: underline; }
   border-radius: var(--fi-radius-full);
   background: var(--fi-color-surface-2);
   overflow: hidden;
+  position: relative;
 }
 
 .progress-fill {

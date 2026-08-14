@@ -8,8 +8,11 @@ interface GoalProgressBarProps {
 }
 
 export function GoalProgressBar({ income, target, projected, pct }: GoalProgressBarProps) {
+  const realizedPct = target > 0 ? (income / target) * 100 : 0;
+  const projectedPct = target > 0 ? (projected / target) * 100 : 0;
+  const displayRealizedPct = Math.min(realizedPct, 100);
+  const displayTotalPct = Math.min(realizedPct + projectedPct, 100);
   const colorClass = pct >= 100 ? 'good' : pct >= 70 ? 'warning' : 'danger';
-  const displayPct = Math.min(pct, 100);
 
   return (
     <div className="progress-wrapper">
@@ -33,12 +36,28 @@ export function GoalProgressBar({ income, target, projected, pct }: GoalProgress
         </span>
       </div>
 
-      <div className="progress-track">
+      <div className="progress-track" style={{ position: 'relative' }}>
+        {projectedPct > 0 && (
+          <div
+            className="progress-fill warning"
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: `${displayTotalPct}%`,
+            }}
+          />
+        )}
         <div
           className={`progress-fill ${colorClass}`}
-          style={{ width: `${displayPct}%` }}
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: `${displayRealizedPct}%`,
+          }}
           role="progressbar"
-          aria-valuenow={pct}
+          aria-valuenow={realizedPct}
           aria-valuemin={0}
           aria-valuemax={100}
         />

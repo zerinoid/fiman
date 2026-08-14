@@ -4,6 +4,7 @@ interface StudentCardProps {
   student: StudentWithProfile;
   lastLessonDate: string | null;
   activeGroupNames?: string[];
+  isExpiringSoon?: boolean;
   onClick: () => void;
 }
 
@@ -27,7 +28,7 @@ function formatRelativeDate(isoDate: string | null): string {
   return `Última aula: ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 }
 
-export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick }: StudentCardProps) {
+export function StudentCard({ student, lastLessonDate, activeGroupNames, isExpiringSoon = false, onClick }: StudentCardProps) {
   const initials = getInitials(student.full_name);
   const relDate = formatRelativeDate(lastLessonDate);
   const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
@@ -37,7 +38,7 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick
   return (
     <div
       id={`student-card-${student.id}`}
-      className={`card card-hover student-card ${!isActive ? 'student-card-inactive' : ''}`}
+      className={`card card-hover student-card ${!isActive ? 'student-card-inactive' : ''} ${isExpiringSoon ? 'card-warning-highlight' : ''}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -72,21 +73,27 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, onClick
           {isActive ? 'Ativo' : 'Inativo'}
         </span>
         {student.profile?.financial_status && (
-          <span
-            className={`badge ${
-              student.profile.financial_status === 'em_dia'
-                ? 'badge-success'
+          isExpiringSoon && student.profile.financial_status === 'em_dia' ? (
+            <span className="badge badge-warning">
+              ⚠️ Á VENCER
+            </span>
+          ) : (
+            <span
+              className={`badge ${
+                student.profile.financial_status === 'em_dia'
+                  ? 'badge-success'
+                  : student.profile.financial_status === 'pendente'
+                  ? 'badge-warning'
+                  : 'badge-danger'
+              }`}
+            >
+              {student.profile.financial_status === 'em_dia'
+                ? '✓ Em dia'
                 : student.profile.financial_status === 'pendente'
-                ? 'badge-warning'
-                : 'badge-danger'
-            }`}
-          >
-            {student.profile.financial_status === 'em_dia'
-              ? '✓ Em dia'
-              : student.profile.financial_status === 'pendente'
-              ? '⚠ Pendente'
-              : '✗ Inadimplente'}
-          </span>
+                ? '⚠ Pendente'
+                : '✗ Inadimplente'}
+            </span>
+          )
         )}
       </div>
     </div>

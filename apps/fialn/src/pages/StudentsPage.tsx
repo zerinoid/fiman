@@ -48,11 +48,20 @@ function useLastLessonDates(personIds: string[]): LastLessonMap {
   return map;
 }
 
-function useActiveGroupsMap(personIds: string[]): GroupsMap {
-  const [map, setMap] = useState<GroupsMap>({});
+function useStudentEnrollmentsData(personIds: string[]): {
+  groupsMap: GroupsMap;
+  expiringSoonMap: { [personId: string]: boolean };
+} {
+  const [map, setMap] = useState<{
+    groupsMap: GroupsMap;
+    expiringSoonMap: { [personId: string]: boolean };
+  }>({ groupsMap: {}, expiringSoonMap: {} });
 
   const fetch = useCallback(async () => {
-    if (personIds.length === 0) return;
+    if (personIds.length === 0) {
+      setMap({ groupsMap: {}, expiringSoonMap: {} });
+      return;
+    }
 
     const { data } = await supabase
       .from('fialn_enrollments')
@@ -74,9 +83,21 @@ function useActiveGroupsMap(personIds: string[]): GroupsMap {
       const dd = String(d.getDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     };
-    const todayStr = getLocalDateStr();
+    const get7DaysLaterDateStr = () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
 
-    const result: GroupsMap = {};
+    const todayStr = getLocalDateStr();
+    const maxWarningStr = get7DaysLaterDateStr();
+
+    const gMap: GroupsMap = {};
+    const eSoonMap: { [personId: string]: boolean } = {};
+
     for (const row of data) {
       const pid = row.person_id;
       if (!pid) continue;
@@ -87,11 +108,16 @@ function useActiveGroupsMap(personIds: string[]): GroupsMap {
       const groupObj = row.group as unknown as { name: string } | null;
       const name = groupObj?.name ?? (row.modality === 'private_bundle' ? 'Pacote Particular' : null);
       if (name) {
-        if (!result[pid]) result[pid] = [];
-        if (!result[pid].includes(name)) result[pid].push(name);
+        if (!gMap[pid]) gMap[pid] = [];
+        if (!gMap[pid].includes(name)) gMap[pid].push(name);
+      }
+
+      // Check if expiring soon (within 7 days)
+      if (row.end_date && row.end_date >= todayStr && row.end_date <= maxWarningStr) {
+        eSoonMap[pid] = true;
       }
     }
-    setMap(result);
+    setMap({ groupsMap: gMap, expiringSoonMap: eSoonMap });
   }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
@@ -110,7 +136,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
 
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
-  const groupsMap = useActiveGroupsMap(personIds);
+  const { groupsMap, expiringSoonMap } = useStudentEnrollmentsData(personIds);
 
   const filtered = students.filter((s) =>
     s.full_name.toLowerCase().includes(query.toLowerCase()),
@@ -204,6 +230,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
                   student={student}
                   lastLessonDate={lastLessonMap[student.id] ?? null}
                   activeGroupNames={groupsMap[student.id]}
+                  isExpiringSoon={expiringSoonMap[student.id] || false}
                   onClick={() => openProfile(student.id)}
                 />
               ))}
@@ -233,6 +260,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
                     student={student}
                     lastLessonDate={lastLessonMap[student.id] ?? null}
                     activeGroupNames={groupsMap[student.id]}
+                    isExpiringSoon={expiringSoonMap[student.id] || false}
                     onClick={() => openProfile(student.id)}
                   />
                 ))}

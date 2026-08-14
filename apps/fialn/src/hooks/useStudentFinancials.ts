@@ -13,6 +13,7 @@ export interface AttendanceRecord {
   // Joined from fiteo_class_schedules:
   class_date: string | null;
   proposed_theme: string | null;
+  course_title: string | null;
 }
 
 export interface UseStudentFinancialsReturn {
@@ -63,7 +64,10 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
           created_at,
           fiteo_class_schedules (
             class_date,
-            proposed_theme
+            proposed_theme,
+            course:fiteo_courses (
+              title
+            )
           )
         `)
         .eq('person_id', personId)
@@ -73,7 +77,7 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
 
       // Flatten the joined class schedule columns
       const flatAttendance: AttendanceRecord[] = (attendanceRows ?? []).map((row) => {
-        const schedule = (row as unknown as { fiteo_class_schedules: { class_date: string; proposed_theme: string } | null })
+        const schedule = (row as unknown as { fiteo_class_schedules: { class_date: string; proposed_theme: string; course: { title: string } | null } | null })
           .fiteo_class_schedules;
         return {
           id: row.id,
@@ -85,6 +89,7 @@ export function useStudentFinancials(personId: string | null): UseStudentFinanci
           created_at: row.created_at ?? '',
           class_date: schedule?.class_date ?? null,
           proposed_theme: schedule?.proposed_theme ?? null,
+          course_title: schedule?.course?.title ?? null,
         };
       });
 

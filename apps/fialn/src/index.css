@@ -363,6 +363,17 @@ a:hover { text-decoration: underline; }
   filter: grayscale(0%);
 }
 
+.card-warning-highlight {
+  border-color: var(--fi-color-warning) !important;
+  box-shadow: 0 0 0 1px hsl(38, 92%, 56%, 0.15), var(--fi-shadow-sm) !important;
+  background: hsl(38, 92%, 56%, 0.03) !important;
+}
+
+.card-warning-highlight:hover {
+  border-color: var(--fi-color-warning) !important;
+  box-shadow: 0 0 0 2px hsl(38, 92%, 56%, 0.25), var(--fi-shadow-md) !important;
+}
+
 .student-avatar {
   width: 48px;
   height: 48px;

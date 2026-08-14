@@ -37,11 +37,6 @@ function formatDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString('pt-BR');
 }
 
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  quarterly_plan: 'Plano Trimestral',
-  single_class: 'Aula Avulsa',
-  private_lesson: 'Aula Particular',
-};
 
 const MODALITY_LABELS: Record<string, string> = {
   monthly_group: 'Plano Mensal Grupo',
@@ -128,7 +123,16 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
     const dd = String(d.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
   };
+  const get7DaysLaterDateStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
   const todayStr = getLocalDateStr();
+  const maxWarningStr = get7DaysLaterDateStr();
 
   const groupEnrollments = enrollments
     .filter(
@@ -209,84 +213,93 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               </div>
 
               <div className="stack-2 mt-4" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {activeEnrollments.map((en) => (
-                  <div
-                    key={en.id}
-                    style={{
-                      background: 'var(--fi-color-surface-2)',
-                      border: '1px solid var(--fi-color-border)',
-                      borderRadius: 'var(--fi-radius-md)',
-                      padding: '0.5rem 0.75rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: '0.5rem',
-                      fontSize: '0.85rem',
-                      width: '100%',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                      <span style={{ fontWeight: 600 }}>
-                        {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
-                      </span>
-                      {en.is_partner ? (
-                        <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
-                          🤝 Bolsista
+                {activeEnrollments.map((en) => {
+                  const isExpiring = en.status === 'active' && en.end_date && en.end_date >= todayStr && en.end_date <= maxWarningStr;
+                  return (
+                    <div
+                      key={en.id}
+                      style={{
+                        background: isExpiring ? 'hsl(38, 92%, 56%, 0.03)' : 'var(--fi-color-surface-2)',
+                        border: `1px solid ${isExpiring ? 'var(--fi-color-warning)' : 'var(--fi-color-border)'}`,
+                        borderRadius: 'var(--fi-radius-md)',
+                        padding: '0.5rem 0.75rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem',
+                        fontSize: '0.85rem',
+                        width: '100%',
+                        boxShadow: isExpiring ? '0 0 0 1px hsl(38, 92%, 56%, 0.15)' : undefined,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <span style={{ fontWeight: 600 }}>
+                          {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
                         </span>
-                      ) : en.received_by === 'shibarihouse' ? (
-                        <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                          🏛️ Shibari House
+                        {isExpiring && (
+                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>
+                            ⚠️ À vencer
+                          </span>
+                        )}
+                        {en.is_partner ? (
+                          <span className="badge badge-warning" style={{ fontSize: '0.7rem' }} title={en.partner_details || 'Parceria / Troca de Serviços'}>
+                            🤝 Bolsista
+                          </span>
+                        ) : en.received_by === 'shibarihouse' ? (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                            🏛️ Shibari House
+                          </span>
+                        ) : en.received_by === 'foraisso' ? (
+                          <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
+                            👤 Foraisso
+                          </span>
+                        ) : null}
+                        <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
+                          {en.modality === 'monthly_group' ? 'Mensal' : en.modality === 'quarterly_group' ? 'Trimestral' : en.modality === 'single_group' ? 'Avulsa' : 'Pacote'}
                         </span>
-                      ) : en.received_by === 'foraisso' ? (
-                        <span className="badge badge-neutral" style={{ fontSize: '0.7rem' }}>
-                          👤 Foraisso
-                        </span>
-                      ) : null}
-                      <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>
-                        {en.modality === 'monthly_group' ? 'Mensal' : en.modality === 'quarterly_group' ? 'Trimestral' : en.modality === 'single_group' ? 'Avulsa' : 'Pacote'}
-                      </span>
-                      {en.end_date && (
-                        <span className="text-xs text-mono text-muted" title={en.modality === 'single_group' ? 'Data da aula' : 'Data do fim previsto de expiração'}>
-                          {en.modality === 'single_group' ? `(Aula: ${formatDate(en.start_date)})` : `até ${formatDate(en.end_date)}`}
-                        </span>
-                      )}
+                        {en.end_date && (
+                          <span className="text-xs text-mono text-muted" title={en.modality === 'single_group' ? 'Data da aula' : 'Data do fim previsto de expiração'}>
+                            {en.modality === 'single_group' ? `(Aula: ${formatDate(en.start_date)})` : `até ${formatDate(en.end_date)}`}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          title="Editar matrícula"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            setEnrollmentToEdit(en);
+                            setShowEnrollModal(true);
+                          }}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          type="button"
+                          title="Concluir matrícula"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
+                          onClick={() => updateEnrollmentStatus(en.id, 'completed')}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          title="Excluir matrícula"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
+                              deleteEnrollment(en.id);
+                            }
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.55rem', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        title="Editar matrícula"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          setEnrollmentToEdit(en);
-                          setShowEnrollModal(true);
-                        }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        type="button"
-                        title="Concluir matrícula"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fi-color-text-muted)', fontSize: '0.8rem' }}
-                        onClick={() => updateEnrollmentStatus(en.id, 'completed')}
-                      >
-                        ✓
-                      </button>
-                      <button
-                        type="button"
-                        title="Excluir matrícula"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem' }}
-                        onClick={() => {
-                          if (window.confirm('Tem certeza que deseja excluir esta matrícula?')) {
-                            deleteEnrollment(en.id);
-                          }
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -461,12 +474,23 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             <div className="stack-3">
               {groupEnrollments.map((en) => {
                 const isInactive = en.status === 'completed' || en.status === 'cancelled';
+                const isExpiring = en.status === 'active' && en.end_date && en.end_date >= todayStr && en.end_date <= maxWarningStr;
                 return (
                   <div
                     key={en.id}
                     style={{
-                      background: isInactive ? 'var(--fi-color-surface-1)' : 'var(--fi-color-surface-2)',
-                      border: `1px solid ${isInactive ? 'var(--fi-color-border-subtle)' : 'var(--fi-color-border)'}`,
+                      background: isInactive
+                        ? 'var(--fi-color-surface-1)'
+                        : isExpiring
+                        ? 'hsl(38, 92%, 56%, 0.03)'
+                        : 'var(--fi-color-surface-2)',
+                      border: `1px solid ${
+                        isInactive
+                          ? 'var(--fi-color-border-subtle)'
+                          : isExpiring
+                          ? 'var(--fi-color-warning)'
+                          : 'var(--fi-color-border)'
+                      }`,
                       borderRadius: 'var(--fi-radius-md)',
                       padding: '0.85rem 1.1rem',
                       display: 'flex',
@@ -474,6 +498,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                       gap: '0.5rem',
                       opacity: isInactive ? 0.65 : 1,
                       transition: 'opacity 200ms ease',
+                      boxShadow: isExpiring ? '0 0 0 1px hsl(38, 92%, 56%, 0.15)' : undefined,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -482,7 +507,9 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                           {en.group?.name ?? MODALITY_LABELS[en.modality] ?? en.modality}
                         </span>
 
-                        {en.status === 'active' ? (
+                        {isExpiring ? (
+                          <span className="badge badge-warning">⚠️ À vencer</span>
+                        ) : en.status === 'active' ? (
                           <span className="badge badge-success">✓ Ativa</span>
                         ) : en.status === 'completed' ? (
                           en.end_date && en.end_date < todayStr ? (
@@ -704,8 +731,8 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                 <thead>
                   <tr>
                     <th>Data</th>
+                    <th>Trilha</th>
                     <th>Tema</th>
-                    <th>Tipo Pagamento</th>
                     <th>Presença</th>
                   </tr>
                 </thead>
@@ -713,13 +740,8 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                   {attendance.map((att) => (
                     <tr key={att.id}>
                       <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
+                      <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{att.course_title ?? '—'}</td>
                       <td>{att.proposed_theme ?? '—'}</td>
-                      <td>
-                        {att.payment_type
-                          ? <span className="badge badge-primary">{PAYMENT_TYPE_LABELS[att.payment_type] ?? att.payment_type}</span>
-                          : <span className="text-muted">—</span>
-                        }
-                      </td>
                       <td>
                         {att.present
                           ? <span className="badge badge-success">✓ Presente</span>

@@ -70,8 +70,8 @@ export function useEnrolledStudents(
         const endDate = enrollment.end_date;
         const status = enrollment.status;
 
-        // Status must be active (or completed if it covered targetDate)
-        if (status !== 'active' && status !== 'completed') return false;
+        // Status must be active
+        if (status !== 'active') return false;
 
         // For single_group (aula avulsa), student only appears on the exact day of the class
         if (modality === 'single_group') {

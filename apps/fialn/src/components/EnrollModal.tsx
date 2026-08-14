@@ -198,7 +198,7 @@ export function EnrollModal({
       const ok = await onUpdate(enrollmentToEdit.id, {
         group_id: groupId,
         modality,
-        status,
+        status: isRetroactive ? 'completed' : status,
         start_date: startDate,
         end_date: calculatedEndDate,
         notes: notes.trim() || null,
@@ -284,12 +284,13 @@ export function EnrollModal({
               <select
                 id="enroll-status"
                 className="form-input"
-                value={status}
+                value={isRetroactive ? 'completed' : status}
                 onChange={(e) => setStatus(e.target.value as StudentEnrollment['status'])}
+                disabled={isRetroactive}
               >
                 <option value="active">✓ Ativa</option>
                 <option value="paused">⏸ Pausada</option>
-                <option value="completed">✔ Concluída / Vencida</option>
+                <option value="completed">{isRetroactive ? '⌛ Vencida' : '✔ Concluída'}</option>
                 <option value="cancelled">✖ Cancelada</option>
               </select>
             </div>

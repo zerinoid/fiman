@@ -59,17 +59,31 @@ function useActiveGroupsMap(personIds: string[]): GroupsMap {
       .select(`
         person_id,
         modality,
-        group:fialn_groups(name)
+        group:fialn_groups(name),
+        end_date
       `)
       .in('person_id', personIds)
       .eq('status', 'active');
 
     if (!data) return;
 
+    const getLocalDateStr = () => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+    const todayStr = getLocalDateStr();
+
     const result: GroupsMap = {};
     for (const row of data) {
       const pid = row.person_id;
       if (!pid) continue;
+
+      // Skip active enrollments that have expired
+      if (row.end_date && row.end_date < todayStr) continue;
+
       const groupObj = row.group as unknown as { name: string } | null;
       const name = groupObj?.name ?? (row.modality === 'private_bundle' ? 'Pacote Particular' : null);
       if (name) {

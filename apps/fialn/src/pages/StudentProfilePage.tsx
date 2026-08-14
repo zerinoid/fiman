@@ -121,12 +121,21 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
   // (financial totals are shown in ValoresPage, not per-student)
 
+  const getLocalDateStr = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+  const todayStr = getLocalDateStr();
+
   const groupEnrollments = enrollments
     .filter(
       (e) => e.modality === 'monthly_group' || e.modality === 'quarterly_group' || e.modality === 'single_group'
     )
     .sort((a, b) => (b.start_date || '').localeCompare(a.start_date || ''));
-  const activeEnrollments = groupEnrollments.filter((e) => e.status === 'active');
+  const activeEnrollments = groupEnrollments.filter((e) => e.status === 'active' && !(e.end_date && e.end_date < todayStr));
   const activeBundlesList = bundles.filter((b) => b.status === 'active');
 
   return (
@@ -476,7 +485,11 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         {en.status === 'active' ? (
                           <span className="badge badge-success">✓ Ativa</span>
                         ) : en.status === 'completed' ? (
-                          <span className="badge badge-neutral">✔ Concluída / Vencida</span>
+                          en.end_date && en.end_date < todayStr ? (
+                            <span className="badge badge-neutral">⌛ Vencida</span>
+                          ) : (
+                            <span className="badge badge-neutral">✔ Concluída</span>
+                          )
                         ) : en.status === 'paused' ? (
                           <span className="badge badge-warning">⏸ Pausada</span>
                         ) : (
@@ -537,7 +550,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                         >
                           ✏️ Editar
                         </button>
-                        {en.status === 'active' && (
+                        {en.status === 'active' && !(en.end_date && en.end_date < todayStr) && (
                           <button
                             type="button"
                             className="btn btn-ghost btn-sm"
@@ -545,6 +558,16 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                             onClick={() => updateEnrollmentStatus(en.id, 'completed')}
                           >
                             ✓ Concluir
+                          </button>
+                        )}
+                        {en.status === 'completed' && !(en.end_date && en.end_date < todayStr) && (
+                          <button
+                            type="button"
+                            className="btn btn-ghost btn-sm"
+                            title="Reativar matrícula"
+                            onClick={() => updateEnrollmentStatus(en.id, 'active')}
+                          >
+                            🔄 Reativar
                           </button>
                         )}
                         {!isInactive ? (

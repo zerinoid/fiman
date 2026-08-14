@@ -314,12 +314,16 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
       const modality = payload.modality ?? existing?.modality;
       const calculatedEnd = payload.end_date ?? (startDate && modality ? calculateEndDate(startDate, modality) : undefined);
 
+      const todayStr = toLocalDateString(new Date());
+      const isExpired = calculatedEnd && calculatedEnd < todayStr;
+      const finalStatus = isExpired ? 'completed' : (payload.status ?? existing?.status);
+
       const { data: updatedData, error: updateError } = await supabase
         .from('fialn_enrollments')
         .update({
           group_id: payload.group_id,
           modality: payload.modality,
-          status: payload.status,
+          status: finalStatus,
           start_date: payload.start_date,
           end_date: calculatedEnd,
           notes: payload.notes,

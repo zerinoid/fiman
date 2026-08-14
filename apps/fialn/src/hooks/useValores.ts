@@ -10,9 +10,20 @@ export interface ValoresSummary {
   pendingCount: number;
 }
 
+export interface SettlementBatch {
+  batch_id: string;
+  settled_at: string;
+  totalDebts: number;
+  totalReceivables: number;
+  netBalance: number;
+  direction: 'receive' | 'pay' | 'zero';
+  transactions: StudentTransaction[];
+}
+
 export interface UseValoresReturn {
   summary: ValoresSummary;
   pendingTransactions: StudentTransaction[];
+  settledBatches: SettlementBatch[];
   loading: boolean;
   error: string | null;
   settling: boolean;
@@ -30,6 +41,7 @@ const EMPTY_SUMMARY: ValoresSummary = {
 
 export function useValores(): UseValoresReturn {
   const [pendingTransactions, setPendingTransactions] = useState<StudentTransaction[]>([]);
+  const [settledBatches, setSettledBatches] = useState<SettlementBatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
@@ -39,15 +51,16 @@ export function useValores(): UseValoresReturn {
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
+      // 1. Pending transactions
+      const { data: pendingData, error: pendingErr } = await supabase
         .from('fialn_student_transactions')
         .select(`*, person:people(full_name)`)
         .eq('fiorc_status', 'pending')
         .order('transaction_date', { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (pendingErr) throw pendingErr;
 
-      const mapped = (data ?? []).map((row) => {
+      const mappedPending = (pendingData ?? []).map((row) => {
         const person = (row as unknown as { person: { full_name: string } | null }).person;
         return {
           ...(row as unknown as StudentTransaction),
@@ -55,7 +68,57 @@ export function useValores(): UseValoresReturn {
         };
       });
 
-      setPendingTransactions(mapped as unknown as StudentTransaction[]);
+      setPendingTransactions(mappedPending as unknown as StudentTransaction[]);
+
+      // 2. Settled transactions (completed quittances history)
+      const { data: settledData, error: settledErr } = await supabase
+        .from('fialn_student_transactions')
+        .select(`*, person:people(full_name)`)
+        .eq('fiorc_status', 'settled')
+        .order('updated_at', { ascending: false });
+
+      if (settledErr) throw settledErr;
+
+      const mappedSettled = (settledData ?? []).map((row) => {
+        const person = (row as unknown as { person: { full_name: string } | null }).person;
+        return {
+          ...(row as unknown as StudentTransaction),
+          person_name: person?.full_name ?? null,
+        };
+      });
+
+      // Group settled transactions by batch (settlement_batch_id or fallback date)
+      const batchesMap = new Map<string, StudentTransaction[]>();
+      mappedSettled.forEach((tx) => {
+        const key = tx.settlement_batch_id || tx.settled_at || tx.updated_at || 'outros';
+        if (!batchesMap.has(key)) {
+          batchesMap.set(key, []);
+        }
+        batchesMap.get(key)!.push(tx as unknown as StudentTransaction);
+      });
+
+      const batches: SettlementBatch[] = Array.from(batchesMap.entries()).map(([batch_id, txs]) => {
+        const settled_at = txs[0].settled_at || txs[0].updated_at;
+        const totalDebts = txs
+          .filter((t) => t.split_type === 'debt')
+          .reduce((acc, t) => acc + t.split_amount, 0);
+        const totalReceivables = txs
+          .filter((t) => t.split_type === 'receivable')
+          .reduce((acc, t) => acc + t.split_amount, 0);
+        const netBalance = totalReceivables - totalDebts;
+
+        return {
+          batch_id,
+          settled_at,
+          totalDebts,
+          totalReceivables,
+          netBalance,
+          direction: netBalance > 0 ? 'receive' : netBalance < 0 ? 'pay' : 'zero',
+          transactions: txs,
+        };
+      });
+
+      setSettledBatches(batches);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar valores');
     } finally {
@@ -130,6 +193,7 @@ export function useValores(): UseValoresReturn {
   return {
     summary: loading ? EMPTY_SUMMARY : summary,
     pendingTransactions,
+    settledBatches,
     loading,
     error,
     settling,
@@ -137,3 +201,4 @@ export function useValores(): UseValoresReturn {
     refresh: fetchAll,
   };
 }
+

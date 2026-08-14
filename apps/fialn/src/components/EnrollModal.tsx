@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { GroupClassroom, ModalityType, PaymentRecipient, PaymentMethod, StudentEnrollment } from '@fi/types';
 import { calculateEndDate, toLocalDateString, type CreateEnrollmentPayload, type UpdateEnrollmentPayload } from '../hooks/useGroupsAndEnrollments';
+import { supabase } from '../lib/supabase';
 
 interface EnrollModalProps {
   personId: string;
@@ -51,12 +52,56 @@ export function EnrollModal({
   const [installments, setInstallments] = useState<string>('1');
   const [amount, setAmount] = useState<string>('900');
   const [firstDueDate, setFirstDueDate] = useState<string>(toLocalDateStringFallback(new Date()));
+  const [loadingTxns, setLoadingTxns] = useState<boolean>(isEditing);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const calculatedEndDate = calculateEndDate(startDate, modality);
   const todayStr = toLocalDateString();
   const isRetroactive = calculatedEndDate < todayStr;
+
+  // Load existing transactions when editing
+  useEffect(() => {
+    if (!enrollmentToEdit) {
+      setLoadingTxns(false);
+      return;
+    }
+
+    let cancelled = false;
+    async function loadTransactions() {
+      setLoadingTxns(true);
+      try {
+        const { data, error } = await supabase
+          .from('fialn_student_transactions')
+          .select('*')
+          .eq('enrollment_id', enrollmentToEdit!.id)
+          .order('installment_index', { ascending: true });
+
+        if (error) throw error;
+
+        if (!cancelled && data && data.length > 0) {
+          const firstTx = data[0];
+          setRegisterPayment(true);
+          if (firstTx.received_by) setReceivedBy(firstTx.received_by as PaymentRecipient);
+          if (firstTx.payment_method) setPaymentMethod(firstTx.payment_method as PaymentMethod);
+          setAmount(String(firstTx.amount));
+          setInstallments(String(firstTx.total_installments || data.length || 1));
+          setFirstDueDate(firstTx.due_date || firstTx.transaction_date || toLocalDateStringFallback(new Date()));
+        } else if (!cancelled) {
+          setRegisterPayment(false);
+        }
+      } catch (err) {
+        console.error('Erro ao buscar transações da matrícula:', err);
+      } finally {
+        if (!cancelled) setLoadingTxns(false);
+      }
+    }
+
+    loadTransactions();
+    return () => {
+      cancelled = true;
+    };
+  }, [enrollmentToEdit]);
 
   // Auto-pricing based on group and modality (only when creating)
   useEffect(() => {
@@ -133,26 +178,6 @@ export function EnrollModal({
       return;
     }
 
-    if (isEditing && enrollmentToEdit && onUpdate) {
-      const ok = await onUpdate(enrollmentToEdit.id, {
-        group_id: groupId,
-        modality,
-        status,
-        start_date: startDate,
-        end_date: calculatedEndDate,
-        notes: notes.trim() || null,
-        is_partner: isPartner,
-        partner_details: isPartner ? partnerDetails.trim() : null,
-        received_by: isPartner ? null : receivedBy,
-        payment_method: isPartner ? null : paymentMethod,
-      });
-
-      if (ok) {
-        onClose();
-      }
-      return;
-    }
-
     let instNum = 1;
     let amtNum = 0;
 
@@ -167,6 +192,30 @@ export function EnrollModal({
         setErrorMsg('Informe um valor de parcela válido.');
         return;
       }
+    }
+
+    if (isEditing && enrollmentToEdit && onUpdate) {
+      const ok = await onUpdate(enrollmentToEdit.id, {
+        group_id: groupId,
+        modality,
+        status,
+        start_date: startDate,
+        end_date: calculatedEndDate,
+        notes: notes.trim() || null,
+        is_partner: isPartner,
+        partner_details: isPartner ? partnerDetails.trim() : null,
+        received_by: isPartner ? null : receivedBy,
+        payment_method: isPartner ? null : paymentMethod,
+        registerPayment: !isPartner && registerPayment,
+        total_installments: !isPartner && registerPayment ? instNum : undefined,
+        amount_per_installment: !isPartner && registerPayment ? amtNum : undefined,
+        first_due_date: !isPartner && registerPayment ? firstDueDate : undefined,
+      });
+
+      if (ok) {
+        onClose();
+      }
+      return;
     }
 
     const ok = await onSubmit({
@@ -555,8 +604,8 @@ export function EnrollModal({
             <button type="button" className="btn btn-ghost" onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button id="enroll-submit-btn" type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? <><span className="spinner" /> Salvando…</> : isEditing ? '✓ Atualizar Matrícula' : '✓ Confirmar Matrícula'}
+            <button id="enroll-submit-btn" type="submit" className="btn btn-primary" disabled={saving || loadingTxns}>
+              {saving ? <><span className="spinner" /> Salvando…</> : loadingTxns ? 'Carregando…' : isEditing ? '✓ Atualizar Matrícula' : '✓ Confirmar Matrícula'}
             </button>
           </div>
         </form>

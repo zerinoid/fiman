@@ -80,6 +80,10 @@ export interface UpdateEnrollmentPayload {
   partner_details?: string | null;
   received_by?: PaymentRecipient | null;
   payment_method?: PaymentMethod | null;
+  registerPayment?: boolean;
+  total_installments?: number;
+  amount_per_installment?: number;
+  first_due_date?: string;
 }
 
 export interface UseGroupsAndEnrollmentsReturn {
@@ -277,6 +281,7 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
     payload: UpdateEnrollmentPayload,
   ): Promise<boolean> => {
     setSaving(true);
+    setError(null);
     try {
       const existing = enrollments.find((e) => e.id === enrollmentId);
       const startDate = payload.start_date ?? existing?.start_date;
@@ -303,6 +308,75 @@ export function useGroupsAndEnrollments(personId: string | null): UseGroupsAndEn
         .single();
 
       if (updateError) throw updateError;
+
+      // Handle financial transactions update/recalculation
+      if (payload.is_partner || payload.registerPayment === false) {
+        // If it's a partner or payment is explicitly disabled, remove pending transactions for this enrollment
+        const { error: delError } = await supabase
+          .from('fialn_student_transactions')
+          .delete()
+          .eq('enrollment_id', enrollmentId)
+          .eq('fiorc_status', 'pending');
+
+        if (delError) throw delError;
+      } else if (
+        payload.registerPayment &&
+        payload.amount_per_installment &&
+        payload.amount_per_installment > 0 &&
+        payload.first_due_date
+      ) {
+        // Delete pending transactions before inserting newly recalculated ones
+        const { error: delError } = await supabase
+          .from('fialn_student_transactions')
+          .delete()
+          .eq('enrollment_id', enrollmentId)
+          .eq('fiorc_status', 'pending');
+
+        if (delError) throw delError;
+
+        const isForaisso = (payload.received_by ?? 'foraisso') === 'foraisso';
+        const installments = payload.payment_method === 'pix' ? 1 : (payload.total_installments ?? 1);
+
+        const groupName = (updatedData as unknown as StudentEnrollment).group?.name;
+        const currentModality = payload.modality ?? updatedData.modality;
+        const modalityLabel =
+          currentModality === 'monthly_group' ? 'Plano Mensal'
+          : currentModality === 'quarterly_group' ? 'Plano Trimestral'
+          : currentModality === 'private_bundle' ? 'Pacote Particular'
+          : currentModality === 'single_group' ? 'Aula Avulsa Grupo'
+          : 'Aula Particular Avulsa';
+        const desc = groupName ? `${modalityLabel} (${groupName})` : modalityLabel;
+
+        const rows = Array.from({ length: installments }, (_, i) => {
+          const txnDate = addMonths(payload.first_due_date!, i);
+          const dueDate = payload.payment_method === 'credit' ? txnDate : null;
+          const projDue = day5OfNextMonth(txnDate);
+
+          return {
+            person_id: updatedData.person_id,
+            enrollment_id: enrollmentId,
+            transaction_date: txnDate,
+            description: desc,
+            received_by: payload.received_by ?? 'foraisso',
+            amount: payload.amount_per_installment!,
+            payment_method: payload.payment_method ?? 'pix',
+            due_date: dueDate,
+            split_percent: isForaisso ? 25 : 75,
+            split_amount: round2(payload.amount_per_installment! * (isForaisso ? 0.25 : 0.75)),
+            split_type: isForaisso ? 'debt' : 'receivable',
+            fiorc_projection_due_date: projDue,
+            fiorc_status: 'pending',
+            installment_index: i + 1,
+            total_installments: installments,
+          };
+        });
+
+        const { error: txnError } = await supabase
+          .from('fialn_student_transactions')
+          .insert(rows);
+
+        if (txnError) throw txnError;
+      }
 
       setEnrollments((prev) =>
         prev.map((e) => (e.id === enrollmentId ? (updatedData as unknown as StudentEnrollment) : e))

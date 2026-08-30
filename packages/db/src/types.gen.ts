@@ -216,6 +216,8 @@ export type Database = {
           growth_pathway: string | null
           id: string
           person_id: string | null
+          shibari_experience: string | null
+          shibari_goals: string | null
           strengths: string | null
         }
         Insert: {
@@ -225,6 +227,8 @@ export type Database = {
           growth_pathway?: string | null
           id?: string
           person_id?: string | null
+          shibari_experience?: string | null
+          shibari_goals?: string | null
           strengths?: string | null
         }
         Update: {
@@ -234,6 +238,8 @@ export type Database = {
           growth_pathway?: string | null
           id?: string
           person_id?: string | null
+          shibari_experience?: string | null
+          shibari_goals?: string | null
           strengths?: string | null
         }
         Relationships: [

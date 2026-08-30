@@ -254,6 +254,10 @@ export interface StudentProfile {
   dificulties: string | null; // matches PRD typo intentionally
   growth_pathway: string | null;
   financial_status: string | null;
+  /** Self-reported Shibari experience (filled on public registration form). */
+  shibari_experience: string | null;
+  /** Self-reported goals in Shibari (filled on public registration form). */
+  shibari_goals: string | null;
   created_at: string;
 }
 

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
+import { DEFAULT_TRACK_THEME, type TrackTheme } from '../utils/trackThemes';
 
 interface MinutesEditorProps {
   classId: string;
   initialValue: string | null;
   saving: boolean;
+  trackTheme?: TrackTheme;
   onSave: (classId: string, text: string) => Promise<boolean>;
 }
 
-export function MinutesEditor({ classId, initialValue, saving, onSave }: MinutesEditorProps) {
+export function MinutesEditor({ classId, initialValue, saving, trackTheme = DEFAULT_TRACK_THEME, onSave }: MinutesEditorProps) {
   const [text, setText] = useState(initialValue ?? '');
   const [saved, setSaved] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -51,6 +53,11 @@ export function MinutesEditor({ classId, initialValue, saving, onSave }: Minutes
         <button
           id="save-minutes-btn"
           className="btn btn-primary btn-sm"
+          style={{
+            backgroundColor: trackTheme.primary,
+            borderColor: trackTheme.primary,
+            color: '#ffffff',
+          }}
           onClick={handleSave}
           disabled={saving || !isDirty}
         >

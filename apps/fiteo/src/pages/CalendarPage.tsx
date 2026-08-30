@@ -8,6 +8,7 @@ import {
   type UpdateSchedulePayload,
 } from '../hooks/useSchedules';
 import { ClassRow } from '../components/ClassRow';
+import { getTrackTheme } from '../utils/trackThemes';
 
 export interface ScheduleModalProps {
   courses: CourseTrack[];
@@ -512,17 +513,29 @@ export function CalendarPage({
           >
             Todas
           </button>
-          {courses.map((course) => (
-            <button
-              key={course.id}
-              className={`course-tab ${
-                activeCourseId === course.id ? 'active' : ''
-              }`}
-              onClick={() => setActiveCourseId(course.id)}
-            >
-              {course.title}
-            </button>
-          ))}
+          {courses.map((course) => {
+            const isActive = activeCourseId === course.id;
+            const theme = getTrackTheme(course.title);
+            return (
+              <button
+                key={course.id}
+                className={`course-tab ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveCourseId(course.id)}
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: theme.activeTabBg,
+                        borderColor: theme.activeTabBorder,
+                        color: theme.activeTabText,
+                        boxShadow: `0 0 10px ${theme.glow}`,
+                      }
+                    : undefined
+                }
+              >
+                {course.title}
+              </button>
+            );
+          })}
         </div>
 
         <div style={{ display: 'flex', gap: 'var(--fi-space-2)', width: '100%', maxWidth: '560px', flexWrap: 'wrap' }}>

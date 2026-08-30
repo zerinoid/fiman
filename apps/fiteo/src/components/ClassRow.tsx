@@ -1,5 +1,6 @@
 import type { ClassSchedule } from '@fi/types';
 import { PlanningBadge } from './PlanningBadge';
+import { getTrackTheme } from '../utils/trackThemes';
 
 const MONTH_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -7,27 +8,6 @@ interface ClassRowProps {
   schedule: ClassSchedule;
   onClick: () => void;
 }
-
-const COURSE_THEMES: Record<string, { border: string; bg: string; badgeBg: string; text: string }> = {
-  'Sobre Nós': {
-    border: '#a855f7',
-    bg: 'rgba(168, 85, 247, 0.06)',
-    badgeBg: 'rgba(168, 85, 247, 0.2)',
-    text: '#d8b4fe',
-  },
-  'Teoria das Cordas': {
-    border: '#06b6d4',
-    bg: 'rgba(6, 182, 212, 0.06)',
-    badgeBg: 'rgba(6, 182, 212, 0.2)',
-    text: '#67e8f9',
-  },
-};
-const DEFAULT_THEME = {
-  border: '#64748b',
-  bg: 'rgba(100, 116, 139, 0.06)',
-  badgeBg: 'rgba(100, 116, 139, 0.2)',
-  text: '#cbd5e1',
-};
 
 export function ClassRow({ schedule, onClick }: ClassRowProps) {
   const date = new Date(schedule.class_date);
@@ -37,7 +17,7 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
   const isPlannedEffective = schedule.is_planned || isPast;
 
   const trackTitle = schedule.course?.title ?? '';
-  const trackTheme = COURSE_THEMES[trackTitle] ?? DEFAULT_THEME;
+  const trackTheme = getTrackTheme(trackTitle);
 
   const getCardStyle = (): React.CSSProperties => {
     if (schedule.is_cancelled) {
@@ -85,11 +65,11 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
       style={getCardStyle()}
     >
       <div className="class-row-date">
-        <div className="class-row-day">{day}</div>
-        <div className="class-row-month">{month}</div>
+        <div className="class-row-day" style={{ color: trackTheme.dateDay }}>{day}</div>
+        <div className="class-row-month" style={{ color: trackTheme.dateMonth }}>{month}</div>
       </div>
 
-      <div className="class-row-divider" />
+      <div className="class-row-divider" style={{ background: trackTheme.borderSubtle }} />
 
       <div className="class-row-body">
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--fi-space-2)', flexWrap: 'wrap' }}>

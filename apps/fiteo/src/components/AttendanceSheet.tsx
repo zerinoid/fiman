@@ -1,5 +1,6 @@
 import type { AttendanceWithPerson } from '../hooks/useAttendance';
 import type { EnrolledStudent } from '../hooks/useEnrolledStudents';
+import { DEFAULT_TRACK_THEME, type TrackTheme } from '../utils/trackThemes';
 
 const MODALITY_LABELS: Record<string, string> = {
   quarterly_group: 'Plano Trimestral',
@@ -18,6 +19,8 @@ interface AttendanceSheetProps {
   saving: boolean;
   /** Whether the attendance sheet is read-only for this user role. */
   readOnly?: boolean;
+  /** Track theme for styling student avatars and details with track colors. */
+  trackTheme?: TrackTheme;
   /** Called when the user toggles a student's presence. */
   onToggle: (personId: string, enrollmentId: string | null, currentValue: boolean) => void;
 }
@@ -27,6 +30,7 @@ export function AttendanceSheet({
   attendance,
   saving,
   readOnly = false,
+  trackTheme = DEFAULT_TRACK_THEME,
   onToggle,
 }: AttendanceSheetProps) {
   if (enrolledStudents.length === 0) {
@@ -57,10 +61,19 @@ export function AttendanceSheet({
         return (
           <div key={enrollment.id} className={`attendance-row ${isPresent ? 'present' : 'absent'}`}>
             <div className="attendance-person">
-              <div className="attendance-avatar">{initial}</div>
+              <div
+                className="attendance-avatar"
+                style={{
+                  backgroundColor: trackTheme.avatarBg,
+                  color: trackTheme.avatarText,
+                  border: `1px solid ${trackTheme.avatarBorder}`,
+                }}
+              >
+                {initial}
+              </div>
               <div>
                 <div className="attendance-name">{name}</div>
-                <div className="attendance-modality">{modalityLabel}</div>
+                <div className="attendance-modality" style={{ color: trackTheme.textMuted }}>{modalityLabel}</div>
               </div>
             </div>
 

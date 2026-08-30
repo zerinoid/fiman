@@ -14,6 +14,7 @@ import { PlanningBadge } from '../components/PlanningBadge';
 import { AttendanceSheet } from '../components/AttendanceSheet';
 import { MinutesEditor } from '../components/MinutesEditor';
 import { ScheduleModal } from './CalendarPage';
+import { getTrackTheme } from '../utils/trackThemes';
 
 const WEEKDAY_LABELS: Record<string, string> = {
   Monday: 'Segunda-feira',
@@ -163,6 +164,8 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
   const presentCount = attendance.filter((a) => a.present).length;
   const totalEnrolled = students.length;
 
+  const trackTheme = getTrackTheme(schedule?.course?.title);
+
   const isFutureClass = schedule
     ? new Date(schedule.class_date).getTime() > Date.now()
     : false;
@@ -201,7 +204,12 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
       <button
         className="back-btn"
         onClick={() => navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar')}
-        style={{ margin: 0 }}
+        style={{
+          margin: 0,
+          border: `1px solid ${trackTheme.borderSubtle}`,
+          backgroundColor: trackTheme.bg,
+          color: trackTheme.text,
+        }}
       >
         ← Voltar à Agenda
       </button>
@@ -214,7 +222,13 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
             className="btn btn-ghost btn-sm"
             onClick={() => navigate(`class-detail?class_id=${prevClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
             title={`Aula Anterior: ${prevClass.proposed_theme}`}
-            style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+            style={{
+              fontSize: '0.8rem',
+              padding: '4px 10px',
+              border: `1px solid ${trackTheme.borderSubtle}`,
+              color: trackTheme.text,
+              backgroundColor: trackTheme.bg,
+            }}
           >
             ← {formatShortDate(prevClass.class_date)} {prevClass.proposed_theme}
           </button>
@@ -227,7 +241,13 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
             className="btn btn-ghost btn-sm"
             onClick={() => navigate(`class-detail?class_id=${nextClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
             title={`Próxima Aula: ${nextClass.proposed_theme}`}
-            style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+            style={{
+              fontSize: '0.8rem',
+              padding: '4px 10px',
+              border: `1px solid ${trackTheme.borderSubtle}`,
+              color: trackTheme.text,
+              backgroundColor: trackTheme.bg,
+            }}
           >
             {nextClass.proposed_theme} ({formatShortDate(nextClass.class_date)}) →
           </button>
@@ -241,7 +261,15 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
       {renderPaginationNav()}
 
       {/* ---- Class header ---- */}
-      <div className="card" style={{ marginBottom: 'var(--fi-space-6)' }}>
+      <div
+        className="card"
+        style={{
+          marginBottom: 'var(--fi-space-6)',
+          borderLeft: `5px solid ${trackTheme.border}`,
+          backgroundColor: trackTheme.bg,
+          borderColor: trackTheme.borderSubtle,
+        }}
+      >
         <div
           style={{
             display: 'flex',
@@ -262,12 +290,27 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                   flexWrap: 'wrap',
                 }}
               >
-                <span className="badge badge-primary">{schedule.course.title}</span>
-                <span className="badge badge-ghost">
+                <span
+                  className="badge"
+                  style={{
+                    backgroundColor: trackTheme.badgeBg,
+                    color: trackTheme.badgeText,
+                    border: `1px solid ${trackTheme.borderSubtle}`,
+                  }}
+                >
+                  {schedule.course.title}
+                </span>
+                <span
+                  className="badge badge-ghost"
+                  style={{ borderColor: trackTheme.borderSubtle }}
+                >
                   {WEEKDAY_LABELS[schedule.course.schedule_day] ??
                     schedule.course.schedule_day}
                 </span>
-                <span className="badge badge-ghost">
+                <span
+                  className="badge badge-ghost"
+                  style={{ borderColor: trackTheme.borderSubtle }}
+                >
                   {LEVEL_LABELS[schedule.course.skill_level] ??
                     schedule.course.skill_level}
                 </span>
@@ -338,9 +381,10 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                       fontSize: '0.78rem',
                       padding: '2px 10px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                      color: 'var(--fi-color-text)',
-                      border: '1px solid var(--fi-color-border-subtle)',
+                      backgroundColor: trackTheme.badgeBg,
+                      color: trackTheme.text,
+                      border: `1px solid ${trackTheme.borderSubtle}`,
+                      fontWeight: 500,
                     }}
                   >
                     #{tag}
@@ -349,7 +393,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
               </div>
             )}
 
-            <p className="text-muted" style={{ fontSize: '0.8rem' }}>
+            <p style={{ fontSize: '0.8rem', color: trackTheme.textMuted }}>
               📅 {formatDateTime(schedule.class_date)}
             </p>
           </div>
@@ -398,6 +442,11 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                   className="btn btn-ghost btn-sm"
                   onClick={handleTogglePlanned}
                   disabled={planningUpdating}
+                  style={{
+                    borderColor: trackTheme.buttonBorder,
+                    color: trackTheme.buttonText,
+                    backgroundColor: trackTheme.buttonBg,
+                  }}
                 >
                   {planningUpdating ? (
                     <>
@@ -414,6 +463,11 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                   id="edit-class-btn"
                   className="btn btn-ghost btn-sm"
                   onClick={() => setShowEditModal(true)}
+                  style={{
+                    borderColor: trackTheme.buttonBorder,
+                    color: trackTheme.buttonText,
+                    backgroundColor: trackTheme.buttonBg,
+                  }}
                 >
                   ✏️ Editar
                 </button>
@@ -449,7 +503,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
             style={{
               marginTop: 'var(--fi-space-5)',
               paddingTop: 'var(--fi-space-4)',
-              borderTop: '1px solid var(--fi-color-border-subtle)',
+              borderTop: `1px solid ${trackTheme.borderSubtle}`,
               display: 'flex',
               gap: 'var(--fi-space-6)',
               flexWrap: 'wrap',
@@ -465,7 +519,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
               >
                 {presentCount}
               </div>
-              <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+              <div style={{ fontSize: '0.75rem', color: trackTheme.textMuted }}>
                 presentes
               </div>
             </div>
@@ -474,12 +528,12 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                 style={{
                   fontSize: '1.5rem',
                   fontWeight: 700,
-                  color: 'var(--fi-color-text)',
+                  color: trackTheme.text,
                 }}
               >
                 {totalEnrolled}
               </div>
-              <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+              <div style={{ fontSize: '0.75rem', color: trackTheme.textMuted }}>
                 matriculados
               </div>
             </div>
@@ -489,12 +543,12 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
                   style={{
                     fontSize: '1.5rem',
                     fontWeight: 700,
-                    color: 'var(--fi-color-accent)',
+                    color: trackTheme.primary,
                   }}
                 >
                   {Math.round((presentCount / totalEnrolled) * 100)}%
                 </div>
-                <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+                <div style={{ fontSize: '0.75rem', color: trackTheme.textMuted }}>
                   frequência
                 </div>
               </div>
@@ -511,22 +565,52 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
           marginBottom: 'var(--fi-space-6)',
         }}
       >
-        {(['attendance', 'minutes'] as const).map((tab) => (
-          <button
-            key={tab}
-            id={`tab-${tab}`}
-            className={`course-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === 'attendance' ? '👥 Presença' : '📝 Ata da Aula'}
-          </button>
-        ))}
+        {(['attendance', 'minutes'] as const).map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <button
+              key={tab}
+              id={`tab-${tab}`}
+              className={`course-tab ${isActive ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab)}
+              style={
+                isActive
+                  ? {
+                      backgroundColor: trackTheme.activeTabBg,
+                      borderColor: trackTheme.activeTabBorder,
+                      color: trackTheme.activeTabText,
+                      boxShadow: `0 0 10px ${trackTheme.glow}`,
+                    }
+                  : {
+                      borderColor: trackTheme.borderSubtle,
+                      color: 'var(--fi-color-text-muted)',
+                    }
+              }
+            >
+              {tab === 'attendance' ? '👥 Presença' : '📝 Ata da Aula'}
+            </button>
+          );
+        })}
       </div>
 
       {/* ---- Tab content ---- */}
       {activeTab === 'attendance' && (
-        <div className="card">
-          <p className="section-label" style={{ marginBottom: 'var(--fi-space-4)' }}>
+        <div
+          className="card"
+          style={{
+            borderLeft: `4px solid ${trackTheme.border}`,
+            borderColor: trackTheme.borderSubtle,
+            backgroundColor: trackTheme.bg,
+          }}
+        >
+          <p
+            className="section-label"
+            style={{
+              marginBottom: 'var(--fi-space-4)',
+              color: trackTheme.text,
+              fontWeight: 600,
+            }}
+          >
             Lista de Presença
           </p>
 
@@ -550,6 +634,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
               attendance={attendance}
               saving={attendanceSaving}
               readOnly={!isAdmin}
+              trackTheme={trackTheme}
               onToggle={togglePresence}
             />
           )}
@@ -557,14 +642,29 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
       )}
 
       {activeTab === 'minutes' && (
-        <div className="card">
-          <p className="section-label" style={{ marginBottom: 'var(--fi-space-4)' }}>
+        <div
+          className="card"
+          style={{
+            borderLeft: `4px solid ${trackTheme.border}`,
+            borderColor: trackTheme.borderSubtle,
+            backgroundColor: trackTheme.bg,
+          }}
+        >
+          <p
+            className="section-label"
+            style={{
+              marginBottom: 'var(--fi-space-4)',
+              color: trackTheme.text,
+              fontWeight: 600,
+            }}
+          >
             Ata da Aula
           </p>
           <MinutesEditor
             classId={classId}
             initialValue={schedule.minutes_and_notes}
             saving={attendanceSaving}
+            trackTheme={trackTheme}
             onSave={saveMinutes}
           />
         </div>

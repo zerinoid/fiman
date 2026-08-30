@@ -1,5 +1,6 @@
 import type { CourseTrack } from '@fi/types';
 import { useEnrolledStudents, scheduleDayToWeekday } from '../hooks/useEnrolledStudents';
+import { getTrackTheme } from '../utils/trackThemes';
 
 const WEEKDAY_LABELS: Record<string, string> = {
   Monday: 'Segunda-feira',
@@ -22,28 +23,6 @@ const COURSE_ICONS: Record<string, string> = {
   'Sobre Nós': '🌿',
 };
 
-const COURSE_THEMES: Record<string, { border: string; bg: string; badgeBg: string; text: string }> = {
-  'Sobre Nós': {
-    border: '#a855f7',
-    bg: 'rgba(168, 85, 247, 0.06)',
-    badgeBg: 'rgba(168, 85, 247, 0.2)',
-    text: '#d8b4fe',
-  },
-  'Teoria das Cordas': {
-    border: '#06b6d4',
-    bg: 'rgba(6, 182, 212, 0.06)',
-    badgeBg: 'rgba(6, 182, 212, 0.2)',
-    text: '#67e8f9',
-  },
-};
-
-const DEFAULT_THEME = {
-  border: '#64748b',
-  bg: 'rgba(100, 116, 139, 0.06)',
-  badgeBg: 'rgba(100, 116, 139, 0.2)',
-  text: '#cbd5e1',
-};
-
 interface CourseCardProps {
   course: CourseTrack;
   pastCount: number;
@@ -59,7 +38,7 @@ export function CourseCard({ course, pastCount, futureCount, onClick }: CourseCa
   const weekday = scheduleDayToWeekday(course.schedule_day);
   const { students, loading } = useEnrolledStudents(weekday);
 
-  const trackTheme = COURSE_THEMES[course.title] ?? DEFAULT_THEME;
+  const trackTheme = getTrackTheme(course.title);
 
   return (
     <div
@@ -118,9 +97,10 @@ export function CourseCard({ course, pastCount, futureCount, onClick }: CourseCa
                     fontSize: '0.75rem',
                     padding: '2px 8px',
                     borderRadius: '12px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid var(--fi-color-border-subtle)',
-                    color: 'var(--fi-color-text)',
+                    backgroundColor: trackTheme.avatarBg,
+                    border: `1px solid ${trackTheme.borderSubtle}`,
+                    color: trackTheme.text,
+                    fontWeight: 500,
                   }}
                 >
                   {name}

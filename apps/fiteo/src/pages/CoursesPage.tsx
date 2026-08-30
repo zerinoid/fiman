@@ -2,6 +2,7 @@ import { useCourses } from '../hooks/useCourses';
 import { useSchedules } from '../hooks/useSchedules';
 import type { Navigate } from '../App';
 import { CourseCard } from '../components/CourseCard';
+import { isClassPast } from '../utils/classTime';
 
 interface CoursesPageProps {
   navigate: Navigate;
@@ -14,8 +15,8 @@ export function CoursesPage({ navigate }: CoursesPageProps) {
   const getCountsForCourse = (courseId: string) => {
     const courseSchedules = schedules.filter((s) => s.course_id === courseId);
     const now = Date.now();
-    const pastCount = courseSchedules.filter((s) => new Date(s.class_date).getTime() < now).length;
-    const futureCount = courseSchedules.filter((s) => new Date(s.class_date).getTime() >= now).length;
+    const pastCount = courseSchedules.filter((s) => isClassPast(s.class_date, now)).length;
+    const futureCount = courseSchedules.filter((s) => !isClassPast(s.class_date, now)).length;
     return { pastCount, futureCount };
   };
 

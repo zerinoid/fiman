@@ -15,6 +15,7 @@ import { AttendanceSheet } from '../components/AttendanceSheet';
 import { MinutesEditor } from '../components/MinutesEditor';
 import { ScheduleModal } from './CalendarPage';
 import { getTrackTheme } from '../utils/trackThemes';
+import { isClassPast } from '../utils/classTime';
 
 const WEEKDAY_LABELS: Record<string, string> = {
   Monday: 'Segunda-feira',
@@ -166,9 +167,8 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
 
   const trackTheme = getTrackTheme(schedule?.course?.title);
 
-  const isFutureClass = schedule
-    ? new Date(schedule.class_date).getTime() > Date.now()
-    : false;
+  const isPast = schedule ? isClassPast(schedule.class_date) : false;
+  const isFutureClass = !isPast;
 
   if (loadingSchedule) {
     return (
@@ -396,7 +396,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
 
           {/* Action buttons column */}
           <div className="detail-header-actions">
-            <PlanningBadge isPlanned={schedule.is_planned || !isFutureClass} isPast={!isFutureClass} isCancelled={schedule.is_cancelled ?? undefined} />
+            <PlanningBadge isPlanned={schedule.is_planned || isPast} isPast={isPast} isCancelled={schedule.is_cancelled ?? undefined} />
 
             <button
               id="toggle-highlight-btn"

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ClassSchedule } from '@fi/types';
 import { supabase } from '../lib/supabase';
+import { isClassPast } from '../utils/classTime';
 
 export interface CreateSchedulePayload {
   course_id: string;
@@ -43,7 +44,7 @@ export interface UseSchedulesReturn {
  * Helper to auto-mark past classes as planned
  */
 function normalizeClassSchedule(item: any): ClassSchedule {
-  const isPast = new Date(item.class_date).getTime() < Date.now();
+  const isPast = isClassPast(item.class_date);
   return {
     ...item,
     is_planned: isPast || Boolean(item.is_planned),
@@ -98,7 +99,7 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
     setSaving(true);
     setError(null);
 
-    const isPast = new Date(payload.class_date).getTime() < Date.now();
+    const isPast = isClassPast(payload.class_date);
     const finalIsPlanned = isPast || Boolean(payload.is_planned);
 
     try {
@@ -148,7 +149,7 @@ export function useSchedules(courseId?: string | null): UseSchedulesReturn {
       if (payload.is_cancelled !== undefined) updateData.is_cancelled = payload.is_cancelled;
 
       if (payload.class_date !== undefined) {
-        const isPast = new Date(payload.class_date).getTime() < Date.now();
+        const isPast = isClassPast(payload.class_date);
         if (isPast) {
           updateData.is_planned = true;
         } else if (payload.is_planned !== undefined) {

@@ -1,6 +1,7 @@
 import type { ClassSchedule } from '@fi/types';
 import { PlanningBadge } from './PlanningBadge';
 import { getTrackTheme } from '../utils/trackThemes';
+import { isClassPast } from '../utils/classTime';
 
 const MONTH_SHORT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 const WEEKDAYS_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -23,7 +24,7 @@ export function ClassRow({ schedule, onClick }: ClassRowProps) {
       ? 'Quarta'
       : schedule.course?.schedule_day ?? WEEKDAYS_LONG[date.getDay()];
 
-  const isPast = date.getTime() < Date.now();
+  const isPast = isClassPast(schedule.class_date);
   const isPlannedEffective = schedule.is_planned || isPast;
 
   const trackTitle = schedule.course?.title ?? '';

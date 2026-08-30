@@ -60,6 +60,16 @@ export function EnrollModal({
   const todayStr = toLocalDateString();
   const isRetroactive = calculatedEndDate < todayStr;
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Load existing transactions when editing
   useEffect(() => {
     if (!enrollmentToEdit) {
@@ -244,10 +254,7 @@ export function EnrollModal({
     <div
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        inset: 0,
         background: 'rgba(0, 0, 0, 0.7)',
         display: 'flex',
         alignItems: 'center',
@@ -255,15 +262,20 @@ export function EnrollModal({
         zIndex: 200,
         padding: '1rem',
         backdropFilter: 'blur(4px)',
+        overflowY: 'auto',
       }}
+      onClick={onClose}
     >
       <div
         className="card"
+        onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '540px',
           width: '100%',
-          maxHeight: '90vh',
+          maxHeight: 'min(90dvh, calc(100vh - 2rem))',
           overflowY: 'auto',
+          margin: 'auto',
+          overscrollBehavior: 'contain',
         }}
       >
         <div className="flex-between mb-6">
@@ -448,7 +460,7 @@ export function EnrollModal({
                         onClick={() => setReceivedBy('foraisso')}
                         style={{ flex: 1 }}
                       >
-                        Foraisso (Eu recebi)
+                        Foraisso
                       </button>
                       <button
                         type="button"
@@ -456,7 +468,7 @@ export function EnrollModal({
                         onClick={() => setReceivedBy('shibarihouse')}
                         style={{ flex: 1 }}
                       >
-                        Shibari House (Eles receberam)
+                        Shibari House
                       </button>
                     </div>
                   </div>
@@ -606,7 +618,7 @@ export function EnrollModal({
               Cancelar
             </button>
             <button id="enroll-submit-btn" type="submit" className="btn btn-primary" disabled={saving || loadingTxns}>
-              {saving ? <><span className="spinner" /> Salvando…</> : loadingTxns ? 'Carregando…' : isEditing ? '✓ Atualizar Matrícula' : '✓ Confirmar Matrícula'}
+              {saving ? <><span className="spinner" /> Salvando…</> : loadingTxns ? 'Carregando…' : isEditing ? '✓ Atualizar' : '✓ Confirmar'}
             </button>
           </div>
         </form>

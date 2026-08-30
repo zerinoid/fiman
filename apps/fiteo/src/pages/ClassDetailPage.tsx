@@ -190,71 +190,67 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
     );
   }
 
-  const renderPaginationNav = () => (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 'var(--fi-space-4)',
-        gap: 'var(--fi-space-2)',
-        flexWrap: 'wrap',
-      }}
-    >
-      <button
-        className="back-btn"
-        onClick={() => navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar')}
-        style={{
-          margin: 0,
-          border: `1px solid ${trackTheme.borderSubtle}`,
-          backgroundColor: trackTheme.bg,
-          color: trackTheme.text,
-        }}
-      >
-        ← Voltar à Agenda
-      </button>
+  const renderPaginationNav = () => {
+    const prevTrackTheme = prevClass ? getTrackTheme(prevClass.course?.title) : null;
+    const nextTrackTheme = nextClass ? getTrackTheme(nextClass.course?.title) : null;
 
-      <div style={{ display: 'flex', gap: 'var(--fi-space-2)', alignItems: 'center' }}>
-        {prevClass && (
-          <button
-            id="prev-class-btn"
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`class-detail?class_id=${prevClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
-            title={`Aula Anterior: ${prevClass.proposed_theme}`}
-            style={{
-              fontSize: '0.8rem',
-              padding: '4px 10px',
-              border: `1px solid ${trackTheme.borderSubtle}`,
-              color: trackTheme.text,
-              backgroundColor: trackTheme.bg,
-            }}
-          >
-            ← {formatShortDate(prevClass.class_date)} {prevClass.proposed_theme}
-          </button>
-        )}
+    return (
+      <div className="detail-nav-bar">
+        <button
+          className="back-btn"
+          onClick={() => navigate(activeCourseId && activeCourseId !== 'all' ? `calendar?course_id=${activeCourseId}` : 'calendar')}
+          style={{
+            margin: 0,
+            border: `1px solid ${trackTheme.borderSubtle}`,
+            backgroundColor: trackTheme.bg,
+            color: trackTheme.text,
+          }}
+        >
+          ← Voltar à Agenda
+        </button>
 
-        {nextClass && (
-          <button
-            id="next-class-btn"
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => navigate(`class-detail?class_id=${nextClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
-            title={`Próxima Aula: ${nextClass.proposed_theme}`}
-            style={{
-              fontSize: '0.8rem',
-              padding: '4px 10px',
-              border: `1px solid ${trackTheme.borderSubtle}`,
-              color: trackTheme.text,
-              backgroundColor: trackTheme.bg,
-            }}
-          >
-            {nextClass.proposed_theme} ({formatShortDate(nextClass.class_date)}) →
-          </button>
+        {(prevClass || nextClass) && (
+          <div className={`detail-nav-classes ${!prevClass || !nextClass ? 'single-item' : ''}`}>
+            {prevClass && prevTrackTheme && (
+              <button
+                id="prev-class-btn"
+                type="button"
+                className="nav-class-btn"
+                onClick={() => navigate(`class-detail?class_id=${prevClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
+                title={`Aula Anterior: ${prevClass.proposed_theme}${prevClass.course ? ` (${prevClass.course.title})` : ''}`}
+                style={{
+                  border: `1px solid ${prevTrackTheme.borderSubtle}`,
+                  color: prevTrackTheme.text,
+                  backgroundColor: prevTrackTheme.bg,
+                }}
+              >
+                <span style={{ flexShrink: 0, fontWeight: 700 }}>← {formatShortDate(prevClass.class_date)}</span>
+                <span className="nav-class-btn-text">{prevClass.proposed_theme}</span>
+              </button>
+            )}
+
+            {nextClass && nextTrackTheme && (
+              <button
+                id="next-class-btn"
+                type="button"
+                className="nav-class-btn"
+                onClick={() => navigate(`class-detail?class_id=${nextClass.id}${activeCourseId ? `&course_id=${activeCourseId}` : ''}`)}
+                title={`Próxima Aula: ${nextClass.proposed_theme}${nextClass.course ? ` (${nextClass.course.title})` : ''}`}
+                style={{
+                  border: `1px solid ${nextTrackTheme.borderSubtle}`,
+                  color: nextTrackTheme.text,
+                  backgroundColor: nextTrackTheme.bg,
+                }}
+              >
+                <span className="nav-class-btn-text">{nextClass.proposed_theme}</span>
+                <span style={{ flexShrink: 0, fontWeight: 700 }}>({formatShortDate(nextClass.class_date)}) →</span>
+              </button>
+            )}
+          </div>
         )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -399,14 +395,7 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
           </div>
 
           {/* Action buttons column */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 'var(--fi-space-2)',
-            }}
-          >
+          <div className="detail-header-actions">
             <PlanningBadge isPlanned={schedule.is_planned || !isFutureClass} isPast={!isFutureClass} isCancelled={schedule.is_cancelled ?? undefined} />
 
             <button

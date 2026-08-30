@@ -539,7 +539,7 @@ export function CalendarPage({
         </div>
 
         <div style={{ display: 'flex', gap: 'var(--fi-space-2)', width: '100%', maxWidth: '560px', flexWrap: 'wrap' }}>
-          <div style={{ flex: '1', minWidth: '240px' }}>
+          <div style={{ flex: '1', minWidth: '180px' }}>
             <input
               id="search-classes-input"
               type="text"

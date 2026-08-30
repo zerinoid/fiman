@@ -210,37 +210,46 @@ export type Database = {
       }
       fialn_student_profiles: {
         Row: {
+          course_preference_id: string | null
           created_at: string | null
           dificulties: string | null
           financial_status: string | null
+          group_preference_id: string | null
           growth_pathway: string | null
           id: string
           person_id: string | null
           shibari_experience: string | null
           shibari_goals: string | null
           strengths: string | null
+          weekday_preference: number | null
         }
         Insert: {
+          course_preference_id?: string | null
           created_at?: string | null
           dificulties?: string | null
           financial_status?: string | null
+          group_preference_id?: string | null
           growth_pathway?: string | null
           id?: string
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
           strengths?: string | null
+          weekday_preference?: number | null
         }
         Update: {
+          course_preference_id?: string | null
           created_at?: string | null
           dificulties?: string | null
           financial_status?: string | null
+          group_preference_id?: string | null
           growth_pathway?: string | null
           id?: string
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
           strengths?: string | null
+          weekday_preference?: number | null
         }
         Relationships: [
           {
@@ -248,6 +257,20 @@ export type Database = {
             columns: ["person_id"]
             isOneToOne: true
             referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_profiles_group_preference_id_fkey"
+            columns: ["group_preference_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_profiles_course_preference_id_fkey"
+            columns: ["course_preference_id"]
+            isOneToOne: false
+            referencedRelation: "fiteo_courses"
             referencedColumns: ["id"]
           },
         ]
@@ -745,6 +768,33 @@ export type Database = {
           },
         ]
       }
+      fiteo_courses: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          schedule_day: string
+          skill_level: string
+          title: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          schedule_day: string
+          skill_level: string
+          title: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          schedule_day?: string
+          skill_level?: string
+          title?: string
+        }
+        Relationships: []
+      }
       fiteo_class_schedules: {
         Row: {
           class_date: string
@@ -834,6 +884,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      register_student_public: {
+        Args: {
+          p_course_preference_id?: string | null
+          p_email: string
+          p_full_name: string
+          p_phone: string
+          p_shibari_experience?: string | null
+          p_shibari_goals?: string | null
+        }
+        Returns: Json
+      }
       fiorc_settle_fialn_repasses: {
         Args: {
           p_transaction_ids?: string[] | null

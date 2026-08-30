@@ -258,6 +258,9 @@ export interface StudentProfile {
   shibari_experience: string | null;
   /** Self-reported goals in Shibari (filled on public registration form). */
   shibari_goals: string | null;
+  course_preference_id?: string | null;
+  group_preference_id?: string | null;
+  weekday_preference?: number | null;
   created_at: string;
 }
 

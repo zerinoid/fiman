@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -7,9 +7,72 @@ import { supabase } from '../lib/supabase';
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'error';
 
+interface CourseOption {
+  id: string;
+  title: string;
+  schedule_day: string;
+  skill_level: string;
+  active: boolean;
+}
+
 // ---------------------------------------------------------------------------
-// Consent term text — kept as a constant to make future edits easy
+// Helpers
 // ---------------------------------------------------------------------------
+
+function formatWeekday(scheduleDay: string): string {
+  const day = scheduleDay.trim().toLowerCase();
+  switch (day) {
+    case 'monday':
+    case 'segunda':
+    case 'segunda-feira':
+      return 'Segunda-feira';
+    case 'tuesday':
+    case 'terça':
+    case 'terca':
+    case 'terça-feira':
+      return 'Terça-feira';
+    case 'wednesday':
+    case 'quarta':
+    case 'quarta-feira':
+      return 'Quarta-feira';
+    case 'thursday':
+    case 'quinta':
+    case 'quinta-feira':
+      return 'Quinta-feira';
+    case 'friday':
+    case 'sexta':
+    case 'sexta-feira':
+      return 'Sexta-feira';
+    case 'saturday':
+    case 'sábado':
+    case 'sabado':
+      return 'Sábado';
+    case 'sunday':
+    case 'domingo':
+      return 'Domingo';
+    default:
+      return scheduleDay;
+  }
+}
+
+function formatLevel(level: string): string {
+  const lvl = level.trim().toLowerCase();
+  switch (lvl) {
+    case 'beginner':
+    case 'iniciante':
+      return 'Iniciante';
+    case 'intermediate':
+    case 'intermediário':
+    case 'intermediario':
+      return 'Intermediário';
+    case 'advanced':
+    case 'avançado':
+    case 'avancado':
+      return 'Avançado';
+    default:
+      return level;
+  }
+}
 
 const CONSENT_PARAGRAPHS = [
   'Afirmo que todas as informações prestadas neste formulário são verdadeiras e completas.',
@@ -27,9 +90,17 @@ export function PublicRegistrationPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [coursePreferenceId, setCoursePreferenceId] = useState('');
   const [shibariExperience, setShibariExperience] = useState('');
   const [shibariGoals, setShibariGoals] = useState('');
   const [consentAccepted, setConsentAccepted] = useState(false);
+
+  // Honeypot anti-bot field
+  const [botTrap, setBotTrap] = useState('');
+
+  // Course list loaded from fiteo_courses
+  const [courses, setCourses] = useState<CourseOption[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
 
   // --- Submission state ---
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
@@ -38,60 +109,103 @@ export function PublicRegistrationPage() {
 
   const isSubmitting = submitState === 'submitting';
 
+  // --- Fetch active courses from fiteo_courses ---
+  useEffect(() => {
+    async function loadCourses() {
+      try {
+        const { data, error } = await supabase
+          .from('fiteo_courses')
+          .select('id, title, schedule_day, skill_level, active')
+          .eq('active', true)
+          .order('title', { ascending: true });
+
+        if (!error && data) {
+          setCourses(data as CourseOption[]);
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar os cursos:', err);
+      } finally {
+        setLoadingCourses(false);
+      }
+    }
+
+    loadCourses();
+  }, []);
+
+  // --- Client-side validation ---
+  const validateForm = (): string | null => {
+    const cleanName = fullName.trim();
+    if (!cleanName || cleanName.length < 3) {
+      return 'Nome completo é obrigatório (mínimo de 3 caracteres).';
+    }
+
+    const cleanDigits = phone.replace(/\D/g, '');
+    if (!cleanDigits || cleanDigits.length < 10) {
+      return 'WhatsApp é obrigatório com DDD (mínimo de 10 dígitos).';
+    }
+
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      return 'Informe um e-mail válido (ex: seu@email.com).';
+    }
+
+    if (!consentAccepted) {
+      return 'Você precisa aceitar os termos de participação para concluir o cadastro.';
+    }
+
+    return null;
+  };
+
   // --- Submit handler ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
     setErrorMessage(null);
 
-    if (!fullName.trim()) {
-      setValidationError('O nome completo é obrigatório.');
+    // Bot trap check
+    if (botTrap) {
+      // Silently fake success for bots
+      setSubmitState('success');
       return;
     }
-    if (!consentAccepted) {
-      setValidationError('Você precisa aceitar o termo de participação para prosseguir.');
+
+    const error = validateForm();
+    if (error) {
+      setValidationError(error);
       return;
     }
 
     setSubmitState('submitting');
 
     try {
-      // 1. Insert into people (anon policy enforces is_student=true, is_client=false, notes=null)
-      const { data: person, error: personError } = await supabase
-        .from('people')
-        .insert({
-          full_name: fullName.trim(),
-          phone: phone.trim() || null,
-          email: email.trim() || null,
-          notes: null, // admin-only — never set here
-          is_student: true,
-          is_client: false,
-        })
-        .select()
-        .single();
+      // Call SECURITY DEFINER RPC to safely insert data without table-level RLS restrictions
+      const { data, error: rpcError } = await supabase.rpc('register_student_public', {
+        p_full_name: fullName.trim(),
+        p_phone: phone.trim(),
+        p_email: email.trim().toLowerCase(),
+        p_course_preference_id: coursePreferenceId ? coursePreferenceId : null,
+        p_shibari_experience: shibariExperience.trim() || null,
+        p_shibari_goals: shibariGoals.trim() || null,
+      });
 
-      if (personError) throw personError;
+      if (rpcError) {
+        throw rpcError;
+      }
 
-      // 2. Insert student profile with new self-report fields
-      const { error: profileError } = await supabase
-        .from('fialn_student_profiles')
-        .insert({
-          person_id: person.id,
-          financial_status: 'em_dia', // admin default — anon policy enforces this
-          shibari_experience: shibariExperience.trim() || null,
-          shibari_goals: shibariGoals.trim() || null,
-        });
-
-      if (profileError) throw profileError;
+      const res = data as { success?: boolean; person_id?: string } | null;
+      if (res && res.success === false) {
+        throw new Error('Não foi possível registrar o cadastro.');
+      }
 
       setSubmitState('success');
     } catch (err) {
       console.error('[PublicRegistrationPage] submit error:', err);
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : 'Ocorreu um erro ao enviar seu cadastro. Tente novamente ou entre em contato.',
-      );
+      let userMsg = 'Ocorreu um erro ao enviar seu cadastro. Tente novamente ou entre em contato.';
+      if (err instanceof Error) {
+        userMsg = err.message;
+      }
+      setErrorMessage(userMsg);
       setSubmitState('error');
     }
   };
@@ -106,10 +220,10 @@ export function PublicRegistrationPage() {
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎋</div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-              Cadastro recebido!
+              Cadastro recebido com sucesso!
             </h2>
-            <p style={{ color: 'var(--fi-color-text-muted)', lineHeight: 1.7, maxWidth: '340px', margin: '0 auto' }}>
-              Obrigado pelo seu interesse. Em breve entraremos em contato para alinhar os próximos passos.
+            <p style={{ color: 'var(--fi-color-text-muted)', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto' }}>
+              Obrigado pelo seu interesse. Suas informações foram enviadas e em breve entraremos em contato pelo WhatsApp para alinhar os detalhes da sua participação.
             </p>
           </div>
         </div>
@@ -126,11 +240,25 @@ export function PublicRegistrationPage() {
       <div style={styles.header}>
         <div style={styles.logoIcon}>🎋</div>
         <h1 style={styles.logoTitle}>Cadastro de Aluno</h1>
-        <p style={styles.logoSub}>Preencha os dados abaixo para se inscrever</p>
+        <p style={styles.logoSub}>Preencha seus dados para inscrição nos cursos e acompanhamento</p>
       </div>
 
       <div style={styles.card}>
         <form onSubmit={handleSubmit} className="stack-4">
+
+          {/* Honeypot field (hidden from human users) */}
+          <div style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }} aria-hidden="true">
+            <label htmlFor="website-trap">Deixe este campo em branco</label>
+            <input
+              id="website-trap"
+              type="text"
+              name="website_trap"
+              tabIndex={-1}
+              value={botTrap}
+              onChange={(e) => setBotTrap(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
 
           {/* ---- 1. Dados Pessoais ---- */}
           <SectionHeader icon="👤" title="Dados Pessoais" />
@@ -154,7 +282,7 @@ export function PublicRegistrationPage() {
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label" htmlFor="reg-phone">
-                Telefone / WhatsApp
+                WhatsApp <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
               </label>
               <input
                 id="reg-phone"
@@ -163,13 +291,14 @@ export function PublicRegistrationPage() {
                 placeholder="(11) 99999-9999"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                required
                 disabled={isSubmitting}
               />
             </div>
 
             <div className="form-group">
               <label className="form-label" htmlFor="reg-email">
-                E-mail
+                E-mail <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
               </label>
               <input
                 id="reg-email"
@@ -178,18 +307,43 @@ export function PublicRegistrationPage() {
                 placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
                 disabled={isSubmitting}
               />
             </div>
           </div>
 
-          {/* ---- 2. Experiência em Shibari ---- */}
+          {/* ---- 2. Preferência de Turma / Curso (fiteo_courses) ---- */}
+          <SectionHeader icon="📅" title="Curso & Dia de Preferência" />
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="reg-course-pref">
+              Qual curso / dia da semana você tem interesse em frequentar?
+            </label>
+            <select
+              id="reg-course-pref"
+              className="form-input"
+              value={coursePreferenceId}
+              onChange={(e) => setCoursePreferenceId(e.target.value)}
+              disabled={isSubmitting || loadingCourses}
+            >
+              <option value="">Selecione uma opção (opcional)</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.title} — {formatWeekday(course.schedule_day)} (Nível {formatLevel(course.skill_level)})
+                </option>
+              ))}
+              <option value="">Ainda não sei / Outro horário / Aulas particulares</option>
+            </select>
+          </div>
+
+          {/* ---- 3. Experiência em Shibari ---- */}
           <SectionHeader icon="🪢" title="Experiência em Shibari" />
 
           <p style={styles.sectionHint}>
-            Conte um pouco sobre sua trajetória. Considere incluir: tempo total de prática,
-            oficinas e workshops que frequentou, aulas que já fez, figuras ou técnicas que
-            domina, e como você se considera (iniciante, intermediário, avançado).
+            Conte um pouco sobre sua trajetória com Shibari: tempo total de prática,
+            oficinas/workshops que frequentou, aulas que já fez, figuras ou técnicas que
+            domina e como você se considera (iniciante, intermediário, avançado).
           </p>
 
           <div className="form-group">
@@ -199,21 +353,21 @@ export function PublicRegistrationPage() {
             <textarea
               id="reg-experience"
               className="form-input"
-              rows={6}
-              placeholder="Ex: Pratico Shibari há 2 anos de forma autodidata. Fiz um workshop de 8 horas com [facilitador] em 2024. Domino o takate kote básico e alguns harnesses simples de quadril. Considero meu nível intermediário."
+              rows={5}
+              placeholder="Ex: Pratico Shibari há 1 ano de forma autodidata. Participei de um workshop introdutório. Domino takate kote e algumas amarrações básicas de pernas e quadril. Me considero iniciante."
               value={shibariExperience}
               onChange={(e) => setShibariExperience(e.target.value)}
               style={{ resize: 'vertical' }}
               disabled={isSubmitting}
+              maxLength={5000}
             />
           </div>
 
-          {/* ---- 3. Objetivos ---- */}
+          {/* ---- 4. Objetivos ---- */}
           <SectionHeader icon="🎯" title="Objetivos no Shibari" />
 
           <p style={styles.sectionHint}>
-            O que você deseja alcançar? Onde quer chegar? Quais são as suas expectativas
-            com as aulas?
+            O que você deseja obter com as aulas e onde quer chegar na sua prática?
           </p>
 
           <div className="form-group">
@@ -224,20 +378,21 @@ export function PublicRegistrationPage() {
               id="reg-goals"
               className="form-input"
               rows={4}
-              placeholder="Ex: Quero aprender suspensões parciais com segurança, desenvolver uma linguagem estética própria e compreender melhor os aspectos de conexão e comunicação em cena."
+              placeholder="Ex: Desenvolver fluência nas amarrações no chão, aprofundar em anatomia e segurança para suspensões, e explorar conexão e dinâmicas de improvisação."
               value={shibariGoals}
               onChange={(e) => setShibariGoals(e.target.value)}
               style={{ resize: 'vertical' }}
               disabled={isSubmitting}
+              maxLength={5000}
             />
           </div>
 
-          {/* ---- 4. Termo de Consentimento ---- */}
+          {/* ---- 5. Termo de Consentimento ---- */}
           <SectionHeader icon="📋" title="Termo de Participação" />
 
           <div style={styles.consentBox}>
             <p style={styles.consentIntro}>
-              Ao marcar a caixa abaixo, você confirma que leu e concorda com os seguintes pontos:
+              Ao marcar a caixa de confirmação abaixo, você declara e concorda com:
             </p>
             <ul style={styles.consentList}>
               {CONSENT_PARAGRAPHS.map((paragraph, index) => (
@@ -257,17 +412,21 @@ export function PublicRegistrationPage() {
                 style={styles.consentCheckbox}
               />
               <span style={{ fontWeight: 600 }}>
-                Li e concordo com todos os pontos do termo de participação acima.
+                Li, compreendo e concordo com todos os pontos do termo de participação acima. <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
               </span>
             </label>
           </div>
 
           {/* ---- Errors ---- */}
           {validationError && (
-            <p className="form-error">⚠ {validationError}</p>
+            <div className="alert alert-error" style={{ fontSize: '0.875rem' }}>
+              ⚠ {validationError}
+            </div>
           )}
           {errorMessage && (
-            <div className="alert alert-error">✗ {errorMessage}</div>
+            <div className="alert alert-error" style={{ fontSize: '0.875rem' }}>
+              ✗ {errorMessage}
+            </div>
           )}
 
           {/* ---- Actions ---- */}
@@ -291,9 +450,9 @@ export function PublicRegistrationPage() {
       </div>
 
       <p style={styles.footer}>
-        Já é aluno?{' '}
+        Já é aluno matriculado?{' '}
         <a href="/" style={{ color: 'var(--fi-color-primary)' }}>
-          Acesse o portal
+          Acesse o painel
         </a>
       </p>
     </div>
@@ -314,8 +473,7 @@ function SectionHeader({ icon, title }: { icon: string; title: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Inline styles (avoids coupling with admin-specific CSS classes)
-// Uses the same CSS custom properties as the rest of the app
+// Inline styles
 // ---------------------------------------------------------------------------
 
 const styles = {
@@ -345,6 +503,8 @@ const styles = {
   logoSub: {
     fontSize: '0.9rem',
     color: 'var(--fi-color-text-muted)',
+    maxWidth: '420px',
+    lineHeight: 1.5,
   },
   card: {
     background: 'var(--fi-color-surface)',
@@ -352,7 +512,7 @@ const styles = {
     borderRadius: 'var(--fi-radius-lg)',
     padding: '2rem',
     width: '100%',
-    maxWidth: '600px',
+    maxWidth: '620px',
     boxShadow: 'var(--fi-shadow-md)',
   },
   sectionHeader: {

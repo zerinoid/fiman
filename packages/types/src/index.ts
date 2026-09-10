@@ -82,6 +82,31 @@ export function formatPersonName(person?: {
   return person.full_name?.trim() ?? '';
 }
 
+/**
+ * Masks an IP address for privacy compliance while preserving network context.
+ * IPv4: 177.136.240.12 -> 177.136.***.***
+ * IPv6: 2804:14d:5c83:... -> 2804:14d:****:****
+ */
+export function maskIp(ip?: string | null): string {
+  if (!ip) return '';
+  const trimmed = ip.trim();
+  // IPv4
+  if (trimmed.includes('.')) {
+    const parts = trimmed.split('.');
+    if (parts.length === 4) {
+      return `${parts[0]}.${parts[1]}.***.***`;
+    }
+  }
+  // IPv6
+  if (trimmed.includes(':')) {
+    const parts = trimmed.split(':');
+    if (parts.length > 2) {
+      return `${parts.slice(0, 2).join(':')}:****:****`;
+    }
+  }
+  return '***.***.***.***';
+}
+
 // ----------------------------------------------------------
 // FIORC — Personal Budget & Cash Flow
 // ----------------------------------------------------------

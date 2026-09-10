@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Person, StudentEnrollment } from '@fi/types';
-import { formatPersonName } from '@fi/types';
+import { formatPersonName, maskIp } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useStudents } from '../hooks/useStudents';
@@ -56,6 +56,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showFullIp, setShowFullIp] = useState(false);
 
   const [enrollmentToEdit, setEnrollmentToEdit] = useState<StudentEnrollment | null>(null);
 
@@ -666,8 +667,30 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                 </div>
                 <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>✓ Termos Assinados</span>
               </div>
-              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--fi-color-border-subtle)', fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-                {profile.terms_client_ip && <span>IP de Conexão: <code style={{ color: 'var(--fi-color-primary)' }}>{profile.terms_client_ip}</code></span>}
+              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--fi-color-border-subtle)', fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
+                {profile.terms_client_ip && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    IP de Conexão:{' '}
+                    <code style={{ color: 'var(--fi-color-primary)' }}>
+                      {showFullIp ? profile.terms_client_ip : maskIp(profile.terms_client_ip)}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => setShowFullIp(!showFullIp)}
+                      title={showFullIp ? 'Ocultar IP' : 'Revelar IP completo'}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '0 2px',
+                        fontSize: '0.85rem',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {showFullIp ? '🙈' : '👁️'}
+                    </button>
+                  </span>
+                )}
                 {profile.terms_ip_hash && <span title={profile.terms_ip_hash}>Assinatura SHA-256: <code>{profile.terms_ip_hash.slice(0, 16)}…</code></span>}
                 {profile.terms_user_agent && <span>Dispositivo: {profile.terms_user_agent.slice(0, 60)}…</span>}
               </div>

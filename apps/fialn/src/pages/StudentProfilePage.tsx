@@ -775,31 +775,33 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                 <span className="section-title">Histórico de Grupos</span>
                 <span className="badge badge-neutral">{sortedAttendance.filter((a) => a.present).length} presenças</span>
               </div>
-              <table className="fi-table">
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Trilha</th>
-                    <th>Tema</th>
-                    <th>Presença</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedAttendance.map((att) => (
-                    <tr key={att.id}>
-                      <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
-                      <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{att.course_title ?? '—'}</td>
-                      <td>{att.proposed_theme ?? '—'}</td>
-                      <td>
-                        {att.present
-                          ? <span className="badge badge-success">✓ Presente</span>
-                          : <span className="badge badge-danger">✗ Ausente</span>
-                        }
-                      </td>
+              <div className="table-wrapper table-wrapper-nested">
+                <table className="fi-table">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Trilha</th>
+                      <th>Tema</th>
+                      <th>Presença</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sortedAttendance.map((att) => (
+                      <tr key={att.id}>
+                        <td className="text-mono text-xs">{formatDate(att.class_date)}</td>
+                        <td style={{ fontSize: '0.85rem', fontWeight: 600 }}>{att.course_title ?? '—'}</td>
+                        <td>{att.proposed_theme ?? '—'}</td>
+                        <td>
+                          {att.present
+                            ? <span className="badge badge-success">✓ Presente</span>
+                            : <span className="badge badge-danger">✗ Ausente</span>
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -870,52 +872,54 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                     <span className="section-title">Transações</span>
                     <span className="badge badge-neutral">{studentTransactions.length} registro{studentTransactions.length !== 1 ? 's' : ''}</span>
                   </div>
-                  <table className="fi-table">
-                    <thead>
-                      <tr>
-                        <th>Data</th>
-                        <th>Descrição</th>
-                        <th>Recebedor</th>
-                        <th>Valor</th>
-                        <th>Pagamento</th>
-                        <th>Vencimento</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {studentTransactions.map((tx) => (
-                        <tr key={tx.id}>
-                          <td className="text-mono text-xs">{formatDate(tx.transaction_date)}</td>
-                          <td style={{ fontSize: '0.85rem' }}>
-                            {tx.description}
-                            {tx.total_installments > 1 && (
-                              <span className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '0.25rem' }}>
-                                ({tx.installment_index}/{tx.total_installments})
-                              </span>
-                            )}
-                          </td>
-                          <td>
-                            {tx.received_by === 'shibarihouse' ? (
-                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>🏛️ Shibari House</span>
-                            ) : (
-                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>👤 Foraisso</span>
-                            )}
-                          </td>
-                          <td className="text-mono" style={{ fontWeight: 600 }}>
-                            {formatCurrency(tx.amount)}
-                          </td>
-                          <td>
-                            <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`}
-                                  style={{ fontSize: '0.75rem' }}>
-                              {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
-                            </span>
-                          </td>
-                          <td className="text-mono text-xs">
-                            {tx.due_date ? formatDate(tx.due_date) : '—'}
-                          </td>
+                  <div className="table-wrapper table-wrapper-nested">
+                    <table className="fi-table">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Descrição</th>
+                          <th>Recebedor</th>
+                          <th>Valor</th>
+                          <th>Pagamento</th>
+                          <th>Vencimento</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {studentTransactions.map((tx) => (
+                          <tr key={tx.id}>
+                            <td className="text-mono text-xs">{formatDate(tx.transaction_date)}</td>
+                            <td style={{ fontSize: '0.85rem' }}>
+                              {tx.description}
+                              {tx.total_installments > 1 && (
+                                <span className="text-muted" style={{ fontSize: '0.75rem', marginLeft: '0.25rem' }}>
+                                  ({tx.installment_index}/{tx.total_installments})
+                                </span>
+                              )}
+                            </td>
+                            <td>
+                              {tx.received_by === 'shibarihouse' ? (
+                                <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>🏛️ Shibari House</span>
+                              ) : (
+                                <span className="badge badge-neutral" style={{ fontSize: '0.75rem' }}>👤 Foraisso</span>
+                              )}
+                            </td>
+                            <td className="text-mono" style={{ fontWeight: 600 }}>
+                              {formatCurrency(tx.amount)}
+                            </td>
+                            <td>
+                              <span className={`badge ${tx.payment_method === 'pix' ? 'badge-primary' : 'badge-secondary'}`}
+                                    style={{ fontSize: '0.75rem' }}>
+                                {tx.payment_method === 'pix' ? '⚡ PIX' : '💳 Crédito'}
+                              </span>
+                            </td>
+                            <td className="text-mono text-xs">
+                              {tx.due_date ? formatDate(tx.due_date) : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               ) : (
                 <div className="empty-state">

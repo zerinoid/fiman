@@ -67,9 +67,11 @@ function useStudentEnrollmentsData(personIds: string[]): {
     const { data } = await supabase
       .from('fialn_enrollments')
       .select(`
+        id,
         person_id,
         modality,
         group:fialn_groups(name),
+        start_date,
         end_date
       `)
       .in('person_id', personIds)
@@ -102,12 +104,25 @@ function useStudentEnrollmentsData(personIds: string[]): {
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
 
-    for (const row of data) {
+    type EnrollmentRow = {
+      id: string;
+      person_id: string;
+      modality: string;
+      group: { name: string } | null;
+      start_date: string | null;
+      end_date: string | null;
+    };
+    const activeByPerson: { [pid: string]: EnrollmentRow[] } = {};
+
+    for (const row of data as unknown as EnrollmentRow[]) {
       const pid = row.person_id;
       if (!pid) continue;
 
       // Skip active enrollments that have expired
       if (row.end_date && row.end_date < todayStr) continue;
+
+      if (!activeByPerson[pid]) activeByPerson[pid] = [];
+      activeByPerson[pid].push(row);
 
       const groupObj = row.group as unknown as { name: string } | null;
       const name = groupObj?.name ?? (row.modality === 'private_bundle' ? 'Pacote Particular' : null);
@@ -115,15 +130,33 @@ function useStudentEnrollmentsData(personIds: string[]): {
         if (!gMap[pid]) gMap[pid] = [];
         if (!gMap[pid].includes(name)) gMap[pid].push(name);
       }
+    }
 
-      // Check if expiring soon (within 7 days)
-      if (row.end_date && row.end_date >= todayStr && row.end_date <= maxWarningStr) {
-        const endDate = new Date(row.end_date + 'T00:00:00');
-        const diffTime = endDate.getTime() - todayDate.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (eSoonDaysMap[pid] === undefined || diffDays < eSoonDaysMap[pid]) {
-          eSoonDaysMap[pid] = diffDays;
+    // Check if expiring soon (only when there is no other more recent active enrollment)
+    for (const [pid, enrollments] of Object.entries(activeByPerson)) {
+      for (const en of enrollments) {
+        if (en.end_date && en.end_date >= todayStr && en.end_date <= maxWarningStr) {
+          const enEndDate = en.end_date;
+          const hasMoreRecentActive = enrollments.some((other) => {
+            if (other.id === en.id) return false;
+            // Indefinite enrollment (never expires)
+            if (!other.end_date) return true;
+            // Another enrollment ending after this one
+            if (other.end_date > enEndDate) return true;
+            // Another enrollment starting after this one (e.g. renewal starting later)
+            if (other.start_date && en.start_date && other.start_date > en.start_date) return true;
+            return false;
+          });
+
+          if (!hasMoreRecentActive) {
+            const endDate = new Date(en.end_date + 'T00:00:00');
+            const diffTime = endDate.getTime() - todayDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (eSoonDaysMap[pid] === undefined || diffDays < eSoonDaysMap[pid]) {
+              eSoonDaysMap[pid] = diffDays;
+            }
+          }
         }
       }
     }

@@ -164,7 +164,31 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             ←
           </button>
           <div>
-            <h1 className="page-title">{formatPersonName(person)}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <h1 className="page-title" style={{ margin: 0 }}>{formatPersonName(person)}</h1>
+              {profile?.status === 'pendente' || (Boolean(profile) && !profile?.email_verified_at && lessons.length === 0 && activeEnrollments.length === 0) ? (
+                <span
+                  className="badge badge-warning"
+                  style={{
+                    fontSize: '0.72rem',
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    color: '#f59e0b',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                  }}
+                  title="Aguardando confirmação do e-mail pelo aluno"
+                >
+                  ✉️ E-mail Pendente
+                </span>
+              ) : profile?.email_verified_at ? (
+                <span
+                  className="badge badge-success"
+                  style={{ fontSize: '0.72rem' }}
+                  title={`E-mail verificado em ${new Date(profile.email_verified_at).toLocaleString('pt-BR')}`}
+                >
+                  ✓ E-mail Confirmado
+                </span>
+              ) : null}
+            </div>
             <p className="page-subtitle">
               {lessons.length} aula{lessons.length !== 1 ? 's' : ''} registrada{lessons.length !== 1 ? 's' : ''}
               {person.email && ` · ${person.email}`}
@@ -207,6 +231,36 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           </button>
         </div>
       </div>
+
+      {/* Pending Email Alert Banner */}
+      {(profile?.status === 'pendente' || (Boolean(profile) && !profile?.email_verified_at && lessons.length === 0 && activeEnrollments.length === 0)) && (
+        <div
+          style={{
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            borderRadius: 'var(--fi-radius-md)',
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.3rem' }}>✉️</span>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f59e0b' }}>
+                Confirmação de Pré-Matrícula Pendente
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)', marginTop: '2px' }}>
+                Este aluno realizou o cadastro pelo site, mas ainda não clicou no link de confirmação enviado para {person.email || 'o e-mail'}.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Banners: Active Enrollments & Bundles */}
       {(activeEnrollments.length > 0 || activeBundlesList.length > 0) && (

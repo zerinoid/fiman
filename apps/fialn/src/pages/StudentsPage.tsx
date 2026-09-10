@@ -207,10 +207,19 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     return 0; // Both not expiring, keep alphabetical (students is loaded pre-sorted by full_name)
   });
 
+  const pendingStudents = filtered.filter((s) => {
+    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
+    const hasLessons = Boolean(lastLessonMap[s.id]);
+    if (hasEnrollments || hasLessons) return false;
+    return s.profile?.status === 'pendente' || (Boolean(s.profile) && !s.profile?.email_verified_at);
+  });
+
   const inactiveStudents = filtered.filter((s) => {
     const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
     const hasLessons = Boolean(lastLessonMap[s.id]);
-    return !hasEnrollments && !hasLessons;
+    if (hasEnrollments || hasLessons) return false;
+    const isPending = s.profile?.status === 'pendente' || (Boolean(s.profile) && !s.profile?.email_verified_at);
+    return !isPending;
   });
 
   const openProfile = (personId: string) => {
@@ -281,18 +290,73 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
 
       {!loading && !error && filtered.length > 0 && (
         <div className="stack-6">
+          {pendingStudents.length > 0 && (
+            <div className="stack-4">
+              <div
+                style={{
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  color: '#f59e0b',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
+                  marginBottom: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <span>✉️ Pré-Matrículas Pendentes ({pendingStudents.length})</span>
+                <span style={{ fontSize: '0.72rem', fontWeight: 400, color: 'var(--fi-color-text-muted)' }}>
+                  — Cadastrados via site aguardando confirmação de e-mail
+                </span>
+              </div>
+              <div className="stack-4">
+                {pendingStudents.map((student) => (
+                  <StudentCard
+                    key={student.id}
+                    student={student}
+                    lastLessonDate={lastLessonMap[student.id] ?? null}
+                    activeGroupNames={groupsMap[student.id]}
+                    daysToExpire={expiringSoonDaysMap[student.id]}
+                    onClick={() => openProfile(student.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeStudents.length > 0 && (
             <div className="stack-4">
-              {activeStudents.map((student) => (
-                <StudentCard
-                  key={student.id}
-                  student={student}
-                  lastLessonDate={lastLessonMap[student.id] ?? null}
-                  activeGroupNames={groupsMap[student.id]}
-                  daysToExpire={expiringSoonDaysMap[student.id]}
-                  onClick={() => openProfile(student.id)}
-                />
-              ))}
+              {pendingStudents.length > 0 && (
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: 'var(--fi-color-text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid var(--fi-color-border)',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  Alunos Ativos ({activeStudents.length})
+                </div>
+              )}
+              <div className="stack-4">
+                {activeStudents.map((student) => (
+                  <StudentCard
+                    key={student.id}
+                    student={student}
+                    lastLessonDate={lastLessonMap[student.id] ?? null}
+                    activeGroupNames={groupsMap[student.id]}
+                    daysToExpire={expiringSoonDaysMap[student.id]}
+                    onClick={() => openProfile(student.id)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

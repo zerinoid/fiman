@@ -312,6 +312,8 @@ export interface StudentProfile {
   dificulties: string | null; // matches PRD typo intentionally
   growth_pathway: string | null;
   financial_status: string | null;
+  /** Status do aluno na plataforma: 'pendente' (aguardando confirmação de e-mail), 'confirmado', 'ativo', 'inativo' */
+  status?: 'pendente' | 'confirmado' | 'ativo' | 'inativo' | string | null;
   /** Self-reported Shibari experience (filled on public registration form). */
   shibari_experience: string | null;
   /** Self-reported goals in Shibari (filled on public registration form). */
@@ -319,6 +321,10 @@ export interface StudentProfile {
   course_preference_id?: string | null;
   group_preference_id?: string | null;
   weekday_preference?: number | null;
+  /** Email confirmation by token */
+  confirmation_token?: string | null;
+  confirmation_token_expires_at?: string | null;
+  email_verified_at?: string | null;
   /** Legal acceptance audit trail */
   terms_accepted_at?: string | null;
   terms_version?: string | null;

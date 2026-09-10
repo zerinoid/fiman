@@ -35,13 +35,16 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
   const relDate = formatRelativeDate(lastLessonDate);
   const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
   const hasLessons = Boolean(lastLessonDate);
+  const isPending =
+    student.profile?.status === 'pendente' ||
+    (Boolean(student.profile) && !student.profile?.email_verified_at && !hasActiveEnrollments && !hasLessons);
   const isActive = hasActiveEnrollments || hasLessons;
   const isExpiringSoon = daysToExpire !== undefined;
 
   return (
     <div
       id={`student-card-${student.id}`}
-      className={`card card-hover student-card ${!isActive ? 'student-card-inactive' : ''} ${isExpiringSoon ? 'card-warning-highlight' : ''}`}
+      className={`card card-hover student-card ${isPending ? 'student-card-pending' : !isActive ? 'student-card-inactive' : ''} ${isExpiringSoon ? 'card-warning-highlight' : ''}`}
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -52,7 +55,9 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
 
       <div className="student-info">
         <div className="student-name">{displayName}</div>
-        <div className="student-meta">{relDate}</div>
+        <div className="student-meta">
+          {isPending ? 'Pré-matrícula · Aguardando confirmação de e-mail' : relDate}
+        </div>
         {hasActiveEnrollments ? (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
             {activeGroupNames!.map((g) => (
@@ -63,19 +68,30 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
           </div>
         ) : (
           <div style={{ marginTop: '4px', fontSize: '0.72rem', color: 'var(--fi-color-text-muted)', fontStyle: 'italic' }}>
-            Sem matrículas ativas
+            {isPending ? 'Interesse registrado via site' : 'Sem matrículas ativas'}
           </div>
         )}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', flexShrink: 0 }}>
-        <span
-          className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}
-          style={{ fontSize: '0.68rem', opacity: isActive ? 1 : 0.7 }}
-        >
-          {isActive ? 'Ativo' : 'Inativo'}
-        </span>
-        {student.profile?.financial_status && (
+        {isPending ? (
+          <span
+            className="badge badge-warning"
+            style={{ fontSize: '0.68rem', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}
+            title="Cadastro realizado no site — aguardando confirmação do e-mail pelo aluno"
+          >
+            ✉️ Pendente
+          </span>
+        ) : (
+          <span
+            className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}
+            style={{ fontSize: '0.68rem', opacity: isActive ? 1 : 0.7 }}
+          >
+            {isActive ? 'Ativo' : 'Inativo'}
+          </span>
+        )}
+
+        {!isPending && student.profile?.financial_status && (
           isExpiringSoon && student.profile.financial_status === 'em_dia' ? (
             <span className="badge badge-warning">
               ⚠️ {daysToExpire === 0 ? 'VENCE HOJE' : daysToExpire === 1 ? 'VENCE EM 1 DIA' : `VENCE EM ${daysToExpire} DIAS`}

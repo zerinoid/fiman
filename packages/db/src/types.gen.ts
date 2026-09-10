@@ -210,9 +210,12 @@ export type Database = {
       }
       fialn_student_profiles: {
         Row: {
+          confirmation_token: string | null
+          confirmation_token_expires_at: string | null
           course_preference_id: string | null
           created_at: string | null
           dificulties: string | null
+          email_verified_at: string | null
           financial_status: string | null
           group_preference_id: string | null
           growth_pathway: string | null
@@ -220,6 +223,7 @@ export type Database = {
           person_id: string | null
           shibari_experience: string | null
           shibari_goals: string | null
+          status: string
           strengths: string | null
           terms_accepted_at: string | null
           terms_client_ip: string | null
@@ -229,9 +233,12 @@ export type Database = {
           weekday_preference: number | null
         }
         Insert: {
+          confirmation_token?: string | null
+          confirmation_token_expires_at?: string | null
           course_preference_id?: string | null
           created_at?: string | null
           dificulties?: string | null
+          email_verified_at?: string | null
           financial_status?: string | null
           group_preference_id?: string | null
           growth_pathway?: string | null
@@ -239,6 +246,7 @@ export type Database = {
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
+          status?: string
           strengths?: string | null
           terms_accepted_at?: string | null
           terms_client_ip?: string | null
@@ -248,9 +256,12 @@ export type Database = {
           weekday_preference?: number | null
         }
         Update: {
+          confirmation_token?: string | null
+          confirmation_token_expires_at?: string | null
           course_preference_id?: string | null
           created_at?: string | null
           dificulties?: string | null
+          email_verified_at?: string | null
           financial_status?: string | null
           group_preference_id?: string | null
           growth_pathway?: string | null
@@ -258,6 +269,7 @@ export type Database = {
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
+          status?: string
           strengths?: string | null
           terms_accepted_at?: string | null
           terms_client_ip?: string | null

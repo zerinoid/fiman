@@ -238,7 +238,7 @@ a:hover { text-decoration: underline; }
 .page-wrapper {
   max-width: 960px;
   margin: 0 auto;
-  padding: var(--fi-space-8) 0;
+  padding: var(--fi-space-8) var(--fi-space-4);
 }
 
 .page-header {

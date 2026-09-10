@@ -112,6 +112,17 @@ export function PublicRegistrationPage() {
   const [courses, setCourses] = useState<CourseOption[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(true);
 
+  // Legal terms dynamically loaded from legal_terms (fallback to static CONSENT_PARAGRAPHS)
+  const [legalTerms, setLegalTerms] = useState<{
+    version: string;
+    title: string;
+    paragraphs: string[];
+  }>({
+    version: 'v1.0',
+    title: 'Termo de Participação',
+    paragraphs: CONSENT_PARAGRAPHS,
+  });
+
   // --- Submission state ---
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -139,7 +150,31 @@ export function PublicRegistrationPage() {
       }
     }
 
+    async function loadLegalTerms() {
+      try {
+        const { data, error } = await supabase
+          .from('legal_terms')
+          .select('version, title, paragraphs, is_active')
+          .eq('term_type', 'fialn_student_registration')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!error && data && Array.isArray(data.paragraphs) && data.paragraphs.length > 0) {
+          setLegalTerms({
+            version: data.version,
+            title: data.title,
+            paragraphs: data.paragraphs as string[],
+          });
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar os termos do servidor:', err);
+      }
+    }
+
     loadCourses();
+    loadLegalTerms();
   }, []);
 
   // --- Client-side validation ---
@@ -449,20 +484,24 @@ export function PublicRegistrationPage() {
           </div>
 
           {/* ---- 5. Termo de Consentimento ---- */}
-          <SectionHeader icon="📋" title="Termo de Participação" />
+          <SectionHeader icon="📋" title={legalTerms.title || 'Termo de Participação'} />
 
           <div style={styles.consentBox}>
             <p style={styles.consentIntro}>
               Ao marcar a caixa de confirmação abaixo, você declara e concorda com:
             </p>
             <ul style={styles.consentList}>
-              {CONSENT_PARAGRAPHS.map((paragraph, index) => (
+              {legalTerms.paragraphs.map((paragraph, index) => (
                 <li key={index} style={styles.consentItem}>
                   <span style={styles.consentBullet}>•</span>
                   <span>{paragraph}</span>
                 </li>
               ))}
             </ul>
+
+            <div style={{ fontSize: '0.72rem', color: 'var(--fi-color-text-muted)', marginBottom: '0.85rem' }}>
+              Documento de adesão: <strong>{legalTerms.title} ({legalTerms.version})</strong>
+            </div>
 
             <label style={styles.consentCheckboxLabel}>
               <input
@@ -473,7 +512,7 @@ export function PublicRegistrationPage() {
                 style={styles.consentCheckbox}
               />
               <span style={{ fontWeight: 600 }}>
-                Li, compreendo e concordo com todos os pontos do termo de participação acima. <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
+                Li, compreendo e concordo com todos os pontos do termo de participação acima ({legalTerms.version}). <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
               </span>
             </label>
           </div>

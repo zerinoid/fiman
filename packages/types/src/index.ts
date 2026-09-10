@@ -267,6 +267,18 @@ export interface StudentTransaction {
   updated_at: string;
 }
 
+/** Legal terms and conditions versioned document. */
+export interface LegalTerm {
+  id: string;
+  term_type: string;
+  version: string;
+  title: string;
+  paragraphs: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 /** Extended profile for a person who is a student (Shibari). */
 export interface StudentProfile {
   id: string;
@@ -282,6 +294,12 @@ export interface StudentProfile {
   course_preference_id?: string | null;
   group_preference_id?: string | null;
   weekday_preference?: number | null;
+  /** Legal acceptance audit trail */
+  terms_accepted_at?: string | null;
+  terms_version?: string | null;
+  terms_client_ip?: string | null;
+  terms_ip_hash?: string | null;
+  terms_user_agent?: string | null;
   created_at: string;
 }
 

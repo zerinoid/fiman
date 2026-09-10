@@ -221,6 +221,11 @@ export type Database = {
           shibari_experience: string | null
           shibari_goals: string | null
           strengths: string | null
+          terms_accepted_at: string | null
+          terms_client_ip: string | null
+          terms_ip_hash: string | null
+          terms_user_agent: string | null
+          terms_version: string | null
           weekday_preference: number | null
         }
         Insert: {
@@ -235,6 +240,11 @@ export type Database = {
           shibari_experience?: string | null
           shibari_goals?: string | null
           strengths?: string | null
+          terms_accepted_at?: string | null
+          terms_client_ip?: string | null
+          terms_ip_hash?: string | null
+          terms_user_agent?: string | null
+          terms_version?: string | null
           weekday_preference?: number | null
         }
         Update: {
@@ -249,6 +259,11 @@ export type Database = {
           shibari_experience?: string | null
           shibari_goals?: string | null
           strengths?: string | null
+          terms_accepted_at?: string | null
+          terms_client_ip?: string | null
+          terms_ip_hash?: string | null
+          terms_user_agent?: string | null
+          terms_version?: string | null
           weekday_preference?: number | null
         }
         Relationships: [
@@ -819,6 +834,39 @@ export type Database = {
           is_planned?: boolean | null
           minutes_and_notes?: string | null
           proposed_theme?: string
+        }
+        Relationships: []
+      }
+      legal_terms: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          paragraphs: Json
+          term_type: string
+          title: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          paragraphs?: Json
+          term_type: string
+          title: string
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          paragraphs?: Json
+          term_type?: string
+          title?: string
+          updated_at?: string
+          version?: string
         }
         Relationships: []
       }

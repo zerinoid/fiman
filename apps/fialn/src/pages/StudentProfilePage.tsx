@@ -650,6 +650,29 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
               })}
             </div>
           )}
+
+          {/* Legal Compliance Audit Card */}
+          {profile?.terms_accepted_at && (
+            <div className="card card-sm mt-6" style={{ background: 'var(--fi-color-surface-2)', border: '1px solid var(--fi-color-border)' }}>
+              <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>📜</span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Conformidade Legal & Aceite de Termos</div>
+                    <div className="text-xs text-muted" style={{ marginTop: '2px' }}>
+                      Versão: <strong>{profile.terms_version || 'v1.0'}</strong> · Aceito em {new Date(profile.terms_accepted_at).toLocaleString('pt-BR')}
+                    </div>
+                  </div>
+                </div>
+                <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>✓ Termos Assinados</span>
+              </div>
+              <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--fi-color-border-subtle)', fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                {profile.terms_client_ip && <span>IP de Conexão: <code style={{ color: 'var(--fi-color-primary)' }}>{profile.terms_client_ip}</code></span>}
+                {profile.terms_ip_hash && <span title={profile.terms_ip_hash}>Assinatura SHA-256: <code>{profile.terms_ip_hash.slice(0, 16)}…</code></span>}
+                {profile.terms_user_agent && <span>Dispositivo: {profile.terms_user_agent.slice(0, 60)}…</span>}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

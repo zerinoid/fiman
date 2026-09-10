@@ -955,6 +955,18 @@ export type Database = {
         }
         Returns: Json
       }
+      get_student_registration_by_token: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
+      confirm_student_registration: {
+        Args: {
+          p_token: string
+        }
+        Returns: Json
+      }
       fiorc_settle_fialn_repasses: {
         Args: {
           p_transaction_ids?: string[] | null

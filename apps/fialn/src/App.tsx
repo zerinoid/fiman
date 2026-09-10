@@ -6,16 +6,17 @@ import { StudentProfilePage } from './pages/StudentProfilePage';
 import { QuickLogPage } from './pages/QuickLogPage';
 import { ValoresPage } from './pages/ValoresPage';
 import { PublicRegistrationPage } from './pages/PublicRegistrationPage';
+import { ConfirmRegistrationPage } from './pages/ConfirmRegistrationPage';
 import { AppShell } from './components/Layout/AppShell';
 import './index.css';
 
 
 // ---- Types ----
 
-export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password' | 'valores' | 'cadastro';
+export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password' | 'valores' | 'cadastro' | 'confirmar-cadastro';
 export type Navigate = (to: Route, params?: Record<string, string>) => void;
 
-const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password', 'valores', 'cadastro'];
+const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password', 'valores', 'cadastro', 'confirmar-cadastro'];
 
 // ---- Hash-based routing ----
 
@@ -87,6 +88,11 @@ export function App() {
   // --- Public registration route — no auth required ---
   if (route === 'cadastro') {
     return <PublicRegistrationPage />;
+  }
+
+  // --- Public email confirmation route — no auth required ---
+  if (route === 'confirmar-cadastro') {
+    return <ConfirmRegistrationPage />;
   }
 
   // --- Login gate ---

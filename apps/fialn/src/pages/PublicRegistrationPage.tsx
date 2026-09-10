@@ -254,9 +254,32 @@ export function PublicRegistrationPage() {
         throw rpcError;
       }
 
-      const res = data as { success?: boolean; person_id?: string } | null;
+      const res = data as { success?: boolean; person_id?: string; confirmation_token?: string } | null;
       if (res && res.success === false) {
         throw new Error('Não foi possível registrar o cadastro.');
+      }
+
+      // Invoke Edge Function to send email via Resend with responses and confirmation link
+      if (res?.confirmation_token) {
+        const selectedCourse = courses.find((c) => c.id === coursePreferenceId);
+        try {
+          await supabase.functions.invoke('send-student-confirmation', {
+            body: {
+              email: email.trim().toLowerCase(),
+              first_name: firstName.trim(),
+              full_name: fullName,
+              phone: phone.trim(),
+              course_title: selectedCourse ? selectedCourse.title : null,
+              schedule_day: selectedCourse ? formatWeekday(selectedCourse.schedule_day) : null,
+              shibari_experience: shibariExperience.trim() || null,
+              shibari_goals: shibariGoals.trim() || null,
+              confirmation_token: res.confirmation_token,
+              app_url: window.location.origin,
+            },
+          });
+        } catch (fnErr) {
+          console.warn('[PublicRegistrationPage] Failed to trigger confirmation email:', fnErr);
+        }
       }
 
       setSubmitState('success');
@@ -279,12 +302,37 @@ export function PublicRegistrationPage() {
       <div style={styles.pageWrapper}>
         <div style={styles.card}>
           <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎋</div>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✉️</div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.75rem' }}>
-              Cadastro recebido com sucesso!
+              Cadastro recebido! Falta só um passo.
             </h2>
-            <p style={{ color: 'var(--fi-color-text-muted)', lineHeight: 1.7, maxWidth: '380px', margin: '0 auto' }}>
-              Obrigado pelo seu interesse. Suas informações foram enviadas e em breve entraremos em contato pelo WhatsApp para alinhar os detalhes da sua participação.
+            <p style={{ color: 'var(--fi-color-text-muted)', lineHeight: 1.7, maxWidth: '440px', margin: '0 auto 1.5rem' }}>
+              Enviamos um e-mail para <strong style={{ color: 'var(--fi-color-text)' }}>{email}</strong> com o resumo das suas respostas.
+            </p>
+            <div style={{
+              background: 'var(--fi-color-surface-2)',
+              border: '1px solid var(--fi-color-border)',
+              borderRadius: 'var(--fi-radius-md)',
+              padding: '1.25rem',
+              maxWidth: '440px',
+              margin: '0 auto 1.5rem',
+              textAlign: 'left',
+              fontSize: '0.875rem',
+              lineHeight: 1.6,
+              color: 'var(--fi-color-text)'
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: '0.5rem', color: 'var(--fi-color-primary)' }}>
+                📩 O que fazer agora:
+              </div>
+              1. Abra seu e-mail e localize a mensagem do <strong>foraisso</strong>.<br/>
+              2. Revise as informações enviadas.<br/>
+              3. Clique no botão do e-mail para validar sua pré-matrícula.<br/>
+              <span style={{ fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'block', marginTop: '0.65rem' }}>
+                *Caso não encontre na caixa de entrada, verifique também sua pasta de <em>Spam / Lixo Eletrônico</em>.
+              </span>
+            </div>
+            <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.85rem' }}>
+              Depois de confirmar, entraremos em contato pelo WhatsApp para combinar sua participação!
             </p>
           </div>
         </div>

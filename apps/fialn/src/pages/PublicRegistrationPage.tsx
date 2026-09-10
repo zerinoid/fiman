@@ -632,7 +632,7 @@ const styles = {
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    padding: '2rem 1rem 4rem',
+    padding: '2rem 0.5rem 4rem',
   },
   header: {
     textAlign: 'center' as const,
@@ -658,7 +658,7 @@ const styles = {
     background: 'var(--fi-color-surface)',
     border: '1px solid var(--fi-color-border)',
     borderRadius: 'var(--fi-radius-lg)',
-    padding: '2rem',
+    padding: '2rem 1rem',
     width: '100%',
     maxWidth: '620px',
     boxShadow: 'var(--fi-shadow-md)',

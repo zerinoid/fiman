@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { StudentTransaction } from '@fi/types';
+import { formatPersonName } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
 /** A FIALN transaction mapped to FIORC display format. */
@@ -49,7 +50,7 @@ export function useFialnProjections(year: number, month: number): UseFialnProjec
         .from('fialn_student_transactions')
         .select(`
           *,
-          person:people(full_name)
+          person:people(id, first_name, last_name, full_name)
         `)
         .eq('fiorc_status', 'pending')
         .gte('fiorc_projection_due_date', firstDay)
@@ -59,10 +60,10 @@ export function useFialnProjections(year: number, month: number): UseFialnProjec
       if (fetchError) throw fetchError;
 
       const mapped: FialnProjection[] = (data ?? []).map((row) => {
-        const person = (row as unknown as { person: { full_name: string } | null }).person;
+        const person = (row as unknown as { person: { first_name?: string | null; last_name?: string | null; full_name?: string | null } | null }).person;
         return {
           ...(row as unknown as StudentTransaction),
-          person_name: person?.full_name ?? null,
+          person_name: formatPersonName(person) || null,
           display_type: row.split_type === 'receivable' ? 'income' : 'expense',
         } as FialnProjection;
       });

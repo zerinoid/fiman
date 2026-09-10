@@ -85,9 +85,19 @@ const CONSENT_PARAGRAPHS = [
 // Component
 // ---------------------------------------------------------------------------
 
+function formatCpf(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+}
+
 export function PublicRegistrationPage() {
   // --- Form state ---
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [cpf, setCpf] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [coursePreferenceId, setCoursePreferenceId] = useState('');
@@ -134,9 +144,19 @@ export function PublicRegistrationPage() {
 
   // --- Client-side validation ---
   const validateForm = (): string | null => {
-    const cleanName = fullName.trim();
-    if (!cleanName || cleanName.length < 3) {
-      return 'Nome completo é obrigatório (mínimo de 3 caracteres).';
+    const cleanFirst = firstName.trim();
+    if (!cleanFirst || cleanFirst.length < 2) {
+      return 'Nome é obrigatório (mínimo de 2 caracteres).';
+    }
+
+    const cleanLast = lastName.trim();
+    if (!cleanLast || cleanLast.length < 2) {
+      return 'Sobrenome é obrigatório (mínimo de 2 caracteres).';
+    }
+
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (!cleanCpf || cleanCpf.length !== 11) {
+      return 'Documento (CPF) é obrigatório e deve conter 11 dígitos numéricos.';
     }
 
     const cleanDigits = phone.replace(/\D/g, '');
@@ -179,14 +199,20 @@ export function PublicRegistrationPage() {
     setSubmitState('submitting');
 
     try {
+      const cleanDigitsCpf = cpf.replace(/\D/g, '');
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
       // Call SECURITY DEFINER RPC to safely insert data without table-level RLS restrictions
       const { data, error: rpcError } = await supabase.rpc('register_student_public', {
-        p_full_name: fullName.trim(),
+        p_first_name: firstName.trim(),
+        p_last_name: lastName.trim(),
+        p_cpf: cleanDigitsCpf,
         p_phone: phone.trim(),
         p_email: email.trim().toLowerCase(),
         p_course_preference_id: coursePreferenceId ? coursePreferenceId : null,
         p_shibari_experience: shibariExperience.trim() || null,
         p_shibari_goals: shibariGoals.trim() || null,
+        p_full_name: fullName,
       });
 
       if (rpcError) {
@@ -263,23 +289,58 @@ export function PublicRegistrationPage() {
           {/* ---- 1. Dados Pessoais ---- */}
           <SectionHeader icon="👤" title="Dados Pessoais" />
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="reg-full-name">
-              Nome Completo <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
-            </label>
-            <input
-              id="reg-full-name"
-              type="text"
-              className="form-input"
-              placeholder="Ex: Maria Silva"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              disabled={isSubmitting}
-            />
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-first-name">
+                Nome <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
+              </label>
+              <input
+                id="reg-first-name"
+                type="text"
+                className="form-input"
+                placeholder="Ex: Maria"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-last-name">
+                Sobrenome <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
+              </label>
+              <input
+                id="reg-last-name"
+                type="text"
+                className="form-input"
+                placeholder="Ex: Silva"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
 
           <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label" htmlFor="reg-cpf">
+                Documento (CPF) <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
+              </label>
+              <input
+                id="reg-cpf"
+                type="text"
+                className="form-input"
+                placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(e) => setCpf(formatCpf(e.target.value))}
+                required
+                disabled={isSubmitting}
+                maxLength={14}
+              />
+            </div>
+
             <div className="form-group">
               <label className="form-label" htmlFor="reg-phone">
                 WhatsApp <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
@@ -295,22 +356,22 @@ export function PublicRegistrationPage() {
                 disabled={isSubmitting}
               />
             </div>
+          </div>
 
-            <div className="form-group">
-              <label className="form-label" htmlFor="reg-email">
-                E-mail <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
-              </label>
-              <input
-                id="reg-email"
-                type="email"
-                className="form-input"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isSubmitting}
-              />
-            </div>
+          <div className="form-group">
+            <label className="form-label" htmlFor="reg-email">
+              E-mail <span style={{ color: 'var(--fi-color-danger)' }}>*</span>
+            </label>
+            <input
+              id="reg-email"
+              type="email"
+              className="form-input"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isSubmitting}
+            />
           </div>
 
           {/* ---- 2. Preferência de Turma / Curso (fiteo_courses) ---- */}

@@ -7,7 +7,10 @@ export interface StudentWithProfile extends Person {
 }
 
 export interface CreateStudentPayload {
-  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  cpf?: string | null;
+  full_name?: string;
   phone?: string | null;
   email?: string | null;
   notes?: string | null;
@@ -15,7 +18,10 @@ export interface CreateStudentPayload {
 }
 
 export interface UpdateStudentPayload {
-  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  cpf?: string | null;
+  full_name?: string;
   phone?: string | null;
   email?: string | null;
   notes?: string | null;
@@ -92,10 +98,18 @@ export function useStudents(): UseStudentsReturn {
       setError(null);
 
       try {
+        const firstName = payload.first_name?.trim() || null;
+        const lastName = payload.last_name?.trim() || null;
+        const computedFullName =
+          [firstName, lastName].filter(Boolean).join(' ') || payload.full_name?.trim() || '';
+
         const { data: person, error: personError } = await supabase
           .from('people')
           .insert({
-            full_name: payload.full_name.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            full_name: computedFullName,
+            cpf: payload.cpf?.trim() || null,
             phone: payload.phone?.trim() || null,
             email: payload.email?.trim() || null,
             notes: payload.notes?.trim() || null,
@@ -135,15 +149,37 @@ export function useStudents(): UseStudentsReturn {
 
       try {
         // 1. Update people record
+        const firstName = payload.first_name !== undefined ? (payload.first_name?.trim() || null) : undefined;
+        const lastName = payload.last_name !== undefined ? (payload.last_name?.trim() || null) : undefined;
+        let computedFullName = payload.full_name?.trim();
+        if (firstName !== undefined || lastName !== undefined) {
+          computedFullName = [firstName, lastName].filter(Boolean).join(' ');
+        }
+
+        const updateData: {
+          first_name?: string | null;
+          last_name?: string | null;
+          full_name?: string;
+          cpf?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          notes?: string | null;
+          updated_at: string;
+        } = {
+          phone: payload.phone?.trim() || null,
+          email: payload.email?.trim() || null,
+          notes: payload.notes?.trim() || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (firstName !== undefined) updateData.first_name = firstName;
+        if (lastName !== undefined) updateData.last_name = lastName;
+        if (computedFullName) updateData.full_name = computedFullName;
+        if (payload.cpf !== undefined) updateData.cpf = payload.cpf?.trim() || null;
+
         const { error: personError } = await supabase
           .from('people')
-          .update({
-            full_name: payload.full_name.trim(),
-            phone: payload.phone?.trim() || null,
-            email: payload.email?.trim() || null,
-            notes: payload.notes?.trim() || null,
-            updated_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('id', personId);
 
         if (personError) throw personError;

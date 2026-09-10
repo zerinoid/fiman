@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase';
 export interface EnrolledStudent extends StudentEnrollment {
   person: {
     id: string;
+    first_name?: string | null;
+    last_name?: string | null;
     full_name: string;
   } | null;
 }
@@ -49,7 +51,7 @@ export function useEnrolledStudents(
         .select(`
           *,
           group:fialn_groups(*),
-          person:people(id, full_name)
+          person:people(id, first_name, last_name, full_name)
         `)
         .not('group_id', 'is', null)
         .order('created_at', { ascending: false });

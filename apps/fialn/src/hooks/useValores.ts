@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { StudentTransaction } from '@fi/types';
+import { formatPersonName } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
 export interface ValoresSummary {
@@ -54,17 +55,17 @@ export function useValores(): UseValoresReturn {
       // 1. Pending transactions
       const { data: pendingData, error: pendingErr } = await supabase
         .from('fialn_student_transactions')
-        .select(`*, person:people(full_name)`)
+        .select(`*, person:people(id, first_name, last_name, full_name)`)
         .eq('fiorc_status', 'pending')
         .order('transaction_date', { ascending: false });
 
       if (pendingErr) throw pendingErr;
 
       const mappedPending = (pendingData ?? []).map((row) => {
-        const person = (row as unknown as { person: { full_name: string } | null }).person;
+        const person = (row as unknown as { person: { first_name?: string | null; last_name?: string | null; full_name?: string | null } | null }).person;
         return {
           ...(row as unknown as StudentTransaction),
-          person_name: person?.full_name ?? null,
+          person_name: formatPersonName(person) || null,
         };
       });
 
@@ -73,17 +74,17 @@ export function useValores(): UseValoresReturn {
       // 2. Settled transactions (completed quittances history)
       const { data: settledData, error: settledErr } = await supabase
         .from('fialn_student_transactions')
-        .select(`*, person:people(full_name)`)
+        .select(`*, person:people(id, first_name, last_name, full_name)`)
         .eq('fiorc_status', 'settled')
         .order('updated_at', { ascending: false });
 
       if (settledErr) throw settledErr;
 
       const mappedSettled = (settledData ?? []).map((row) => {
-        const person = (row as unknown as { person: { full_name: string } | null }).person;
+        const person = (row as unknown as { person: { first_name?: string | null; last_name?: string | null; full_name?: string | null } | null }).person;
         return {
           ...(row as unknown as StudentTransaction),
-          person_name: person?.full_name ?? null,
+          person_name: formatPersonName(person) || null,
         };
       });
 

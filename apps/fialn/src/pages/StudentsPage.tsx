@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStudents } from '../hooks/useStudents';
 import { StudentCard } from '../components/StudentCard';
 import { AddStudentModal } from '../components/AddStudentModal';
+import { formatPersonName } from '@fi/types';
 
 // We need last lesson dates for all students. We build this in a sub-component
 // to avoid a single massive hook doing N fetches.
@@ -148,7 +149,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
   const { groupsMap, expiringSoonDaysMap } = useStudentEnrollmentsData(personIds);
 
   const filtered = students.filter((s) =>
-    s.full_name.toLowerCase().includes(query.toLowerCase()),
+    formatPersonName(s).toLowerCase().includes(query.toLowerCase()),
   );
 
   const activeStudents = filtered.filter((s) => {

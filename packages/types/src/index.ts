@@ -51,6 +51,9 @@ export interface Profile {
  */
 export interface Person {
   id: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  cpf?: string | null;
   full_name: string;
   phone: string | null;
   email: string | null;
@@ -59,6 +62,24 @@ export interface Person {
   is_client: boolean;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * Formats a person's full name by concatenating first_name and last_name,
+ * with fallback to full_name.
+ */
+export function formatPersonName(person?: {
+  first_name?: string | null;
+  last_name?: string | null;
+  full_name?: string | null;
+} | null): string {
+  if (!person) return '';
+  const first = person.first_name?.trim();
+  const last = person.last_name?.trim();
+  if (first || last) {
+    return [first, last].filter(Boolean).join(' ');
+  }
+  return person.full_name?.trim() ?? '';
 }
 
 // ----------------------------------------------------------

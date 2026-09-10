@@ -14,7 +14,7 @@ export function usePeople(): UsePeopleReturn {
   useEffect(() => {
     supabase
       .from('people')
-      .select('id, full_name, is_student, is_client')
+      .select('id, first_name, last_name, full_name, is_student, is_client')
       .order('full_name')
       .then(({ data }) => {
         setPeople((data ?? []) as Person[]);

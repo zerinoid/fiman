@@ -1,6 +1,7 @@
 import type { AttendanceWithPerson } from '../hooks/useAttendance';
 import type { EnrolledStudent } from '../hooks/useEnrolledStudents';
 import { DEFAULT_TRACK_THEME, type TrackTheme } from '../utils/trackThemes';
+import { formatPersonName } from '@fi/types';
 
 const MODALITY_LABELS: Record<string, string> = {
   quarterly_group: 'Plano Trimestral',
@@ -49,7 +50,7 @@ export function AttendanceSheet({
     <div className="attendance-grid">
       {enrolledStudents.map((enrollment) => {
         const personId = enrollment.person?.id ?? enrollment.person_id;
-        const name = enrollment.person?.full_name ?? '—';
+        const name = formatPersonName(enrollment.person) || '—';
         const initial = name.charAt(0).toUpperCase();
         const modalityLabel = MODALITY_LABELS[enrollment.modality] ?? enrollment.modality;
 

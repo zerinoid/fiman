@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Person } from '@fi/types';
+import { formatPersonName } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useLessons } from '../hooks/useLessons';
 import { useLessonBundles } from '../hooks/useLessonBundles';
@@ -44,7 +45,7 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
   useEffect(() => {
     supabase
       .from('people')
-      .select('id, full_name')
+      .select('id, first_name, last_name, full_name')
       .eq('is_student', true)
       .order('full_name')
       .then(({ data }) => {
@@ -155,7 +156,7 @@ export function QuickLogPage({ prefilledPersonId, navigate }: QuickLogPageProps)
               {studentsLoading ? 'Carregando alunos…' : 'Selecione um aluno…'}
             </option>
             {students.map((s) => (
-              <option key={s.id} value={s.id}>{s.full_name}</option>
+              <option key={s.id} value={s.id}>{formatPersonName(s)}</option>
             ))}
           </select>
         </div>

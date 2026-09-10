@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Person, StudentEnrollment } from '@fi/types';
+import { formatPersonName } from '@fi/types';
 import { supabase } from '../lib/supabase';
 import { useStudentProfile } from '../hooks/useStudentProfile';
 import { useStudents } from '../hooks/useStudents';
@@ -162,10 +163,11 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             ←
           </button>
           <div>
-            <h1 className="page-title">{person.full_name}</h1>
+            <h1 className="page-title">{formatPersonName(person)}</h1>
             <p className="page-subtitle">
               {lessons.length} aula{lessons.length !== 1 ? 's' : ''} registrada{lessons.length !== 1 ? 's' : ''}
               {person.email && ` · ${person.email}`}
+              {person.cpf && ` · CPF: ${person.cpf}`}
             </p>
           </div>
         </div>
@@ -365,7 +367,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
       {showEnrollModal && (
         <EnrollModal
           personId={personId}
-          studentName={person.full_name}
+          studentName={formatPersonName(person)}
           groups={groups}
           saving={enrollmentSaving}
           enrollmentToEdit={enrollmentToEdit}
@@ -394,7 +396,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
       {showBundleModal && (
         <AddBundleModal
           personId={personId}
-          studentName={person.full_name}
+          studentName={formatPersonName(person)}
           saving={bundleSaving}
           onClose={() => setShowBundleModal(false)}
           onSubmit={async (payload) => {
@@ -413,6 +415,9 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         <EditStudentModal
           student={{
             id: person.id,
+            first_name: person.first_name,
+            last_name: person.last_name,
+            cpf: person.cpf,
             full_name: person.full_name,
             phone: person.phone,
             email: person.email,

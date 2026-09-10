@@ -1,4 +1,5 @@
 import type { CourseTrack } from '@fi/types';
+import { formatPersonName } from '@fi/types';
 import { useEnrolledStudents, scheduleDayToWeekday } from '../hooks/useEnrolledStudents';
 import { getTrackTheme } from '../utils/trackThemes';
 
@@ -89,7 +90,7 @@ export function CourseCard({ course, pastCount, futureCount, onClick }: CourseCa
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
             {students.map((student) => {
-              const name = student.person?.full_name ?? '—';
+              const name = formatPersonName(student.person) || '—';
               return (
                 <span
                   key={student.id}

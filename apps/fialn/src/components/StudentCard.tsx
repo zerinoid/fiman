@@ -1,4 +1,5 @@
 import type { StudentWithProfile } from '../hooks/useStudents';
+import { formatPersonName } from '@fi/types';
 
 interface StudentCardProps {
   student: StudentWithProfile;
@@ -29,7 +30,8 @@ function formatRelativeDate(isoDate: string | null): string {
 }
 
 export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToExpire, onClick }: StudentCardProps) {
-  const initials = getInitials(student.full_name);
+  const displayName = formatPersonName(student);
+  const initials = getInitials(displayName);
   const relDate = formatRelativeDate(lastLessonDate);
   const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
   const hasLessons = Boolean(lastLessonDate);
@@ -44,12 +46,12 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
       role="button"
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
-      aria-label={`Abrir perfil de ${student.full_name}`}
+      aria-label={`Abrir perfil de ${displayName}`}
     >
       <div className="student-avatar">{initials}</div>
 
       <div className="student-info">
-        <div className="student-name">{student.full_name}</div>
+        <div className="student-name">{displayName}</div>
         <div className="student-meta">{relDate}</div>
         {hasActiveEnrollments ? (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>

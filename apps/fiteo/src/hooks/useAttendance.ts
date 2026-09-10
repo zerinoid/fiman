@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabase';
 export interface AttendanceWithPerson extends Attendance {
   person: {
     id: string;
+    first_name?: string | null;
+    last_name?: string | null;
     full_name: string;
   } | null;
 }
@@ -40,7 +42,7 @@ export function useAttendance(classId: string | null): UseAttendanceReturn {
     try {
       const { data, error: fetchError } = await supabase
         .from('fiteo_attendance')
-        .select('*, person:people(id, full_name)')
+        .select('*, person:people(id, first_name, last_name, full_name)')
         .eq('class_id', classId);
 
       if (fetchError) throw fetchError;

@@ -824,34 +824,43 @@ export type Database = {
       }
       people: {
         Row: {
+          cpf: string | null
           created_at: string | null
           email: string | null
+          first_name: string | null
           full_name: string
           id: string
           is_client: boolean | null
           is_student: boolean | null
+          last_name: string | null
           notes: string | null
           phone: string | null
           updated_at: string | null
         }
         Insert: {
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
-          full_name: string
+          first_name?: string | null
+          full_name?: string
           id?: string
           is_client?: boolean | null
           is_student?: boolean | null
+          last_name?: string | null
           notes?: string | null
           phone?: string | null
           updated_at?: string | null
         }
         Update: {
+          cpf?: string | null
           created_at?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string
           id?: string
           is_client?: boolean | null
           is_student?: boolean | null
+          last_name?: string | null
           notes?: string | null
           phone?: string | null
           updated_at?: string | null
@@ -887,8 +896,11 @@ export type Database = {
       register_student_public: {
         Args: {
           p_course_preference_id?: string | null
+          p_cpf?: string | null
           p_email: string
-          p_full_name: string
+          p_first_name?: string | null
+          p_full_name?: string | null
+          p_last_name?: string | null
           p_phone: string
           p_shibari_experience?: string | null
           p_shibari_goals?: string | null

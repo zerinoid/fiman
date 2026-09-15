@@ -1,14 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useStudents } from '../hooks/useStudents';
 import { StudentCard } from '../components/StudentCard';
+import { StudentTable } from '../components/StudentTable';
 import { AddStudentModal } from '../components/AddStudentModal';
 import { formatPersonName } from '@fi/types';
-
-// We need last lesson dates for all students. We build this in a sub-component
-// to avoid a single massive hook doing N fetches.
-// Instead we do a single query for all lessons and derive the last-lesson per student.
-
-import { useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Navigate } from '../App';
 
@@ -18,6 +13,32 @@ interface LastLessonMap {
 
 interface GroupsMap {
   [personId: string]: string[];
+}
+
+function useCoursesMap(): { [courseId: string]: string } {
+  const [map, setMap] = useState<{ [courseId: string]: string }>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data } = await supabase
+        .from('fiteo_courses')
+        .select('id, title');
+      if (!cancelled && data) {
+        const cMap: { [id: string]: string } = {};
+        for (const item of data) {
+          cMap[item.id] = item.title;
+        }
+        setMap(cMap);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return map;
 }
 
 function useLastLessonDates(personIds: string[]): LastLessonMap {
@@ -52,15 +73,17 @@ function useLastLessonDates(personIds: string[]): LastLessonMap {
 function useStudentEnrollmentsData(personIds: string[]): {
   groupsMap: GroupsMap;
   expiringSoonDaysMap: { [personId: string]: number };
+  latestEnrollmentCourseMap: { [personId: string]: string };
 } {
-  const [map, setMap] = useState<{
+  const [state, setState] = useState<{
     groupsMap: GroupsMap;
     expiringSoonDaysMap: { [personId: string]: number };
-  }>({ groupsMap: {}, expiringSoonDaysMap: {} });
+    latestEnrollmentCourseMap: { [personId: string]: string };
+  }>({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {} });
 
   const fetch = useCallback(async () => {
     if (personIds.length === 0) {
-      setMap({ groupsMap: {}, expiringSoonDaysMap: {} });
+      setState({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {} });
       return;
     }
 
@@ -70,12 +93,13 @@ function useStudentEnrollmentsData(personIds: string[]): {
         id,
         person_id,
         modality,
+        status,
         group:fialn_groups(name),
         start_date,
         end_date
       `)
       .in('person_id', personIds)
-      .eq('status', 'active');
+      .order('start_date', { ascending: false });
 
     if (!data) return;
 
@@ -100,6 +124,7 @@ function useStudentEnrollmentsData(personIds: string[]): {
 
     const gMap: GroupsMap = {};
     const eSoonDaysMap: { [personId: string]: number } = {};
+    const latestCourseMap: { [personId: string]: string } = {};
 
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
@@ -108,6 +133,7 @@ function useStudentEnrollmentsData(personIds: string[]): {
       id: string;
       person_id: string;
       modality: string;
+      status: string;
       group: { name: string } | null;
       start_date: string | null;
       end_date: string | null;
@@ -118,17 +144,29 @@ function useStudentEnrollmentsData(personIds: string[]): {
       const pid = row.person_id;
       if (!pid) continue;
 
-      // Skip active enrollments that have expired
+      const groupObj = row.group as unknown as { name: string } | null;
+      const courseName =
+        groupObj?.name ??
+        (row.modality === 'private_bundle'
+          ? 'Pacote Particular'
+          : row.modality === 'single_private'
+          ? 'Particular Avulsa'
+          : null);
+
+      if (courseName && !latestCourseMap[pid]) {
+        latestCourseMap[pid] = courseName;
+      }
+
+      // Skip non-active or expired enrollments for active group badges and expiration calculation
+      if (row.status !== 'active') continue;
       if (row.end_date && row.end_date < todayStr) continue;
 
       if (!activeByPerson[pid]) activeByPerson[pid] = [];
       activeByPerson[pid].push(row);
 
-      const groupObj = row.group as unknown as { name: string } | null;
-      const name = groupObj?.name ?? (row.modality === 'private_bundle' ? 'Pacote Particular' : null);
-      if (name) {
+      if (courseName) {
         if (!gMap[pid]) gMap[pid] = [];
-        if (!gMap[pid].includes(name)) gMap[pid].push(name);
+        if (!gMap[pid].includes(courseName)) gMap[pid].push(courseName);
       }
     }
 
@@ -160,26 +198,38 @@ function useStudentEnrollmentsData(personIds: string[]): {
         }
       }
     }
-    setMap({ groupsMap: gMap, expiringSoonDaysMap: eSoonDaysMap });
+    setState({ groupsMap: gMap, expiringSoonDaysMap: eSoonDaysMap, latestEnrollmentCourseMap: latestCourseMap });
   }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  return map;
+  return state;
 }
 
 interface StudentsPageProps {
   navigate: Navigate;
 }
 
+type ViewMode = 'cards' | 'table';
+
 export function StudentsPage({ navigate }: StudentsPageProps) {
   const { students, loading, saving, error, refresh, createStudent } = useStudents();
   const [query, setQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const saved = localStorage.getItem('fialn_students_view_mode');
+    return saved === 'table' ? 'table' : 'cards';
+  });
 
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem('fialn_students_view_mode', mode);
+  };
+
+  const coursesMap = useCoursesMap();
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
-  const { groupsMap, expiringSoonDaysMap } = useStudentEnrollmentsData(personIds);
+  const { groupsMap, expiringSoonDaysMap, latestEnrollmentCourseMap } = useStudentEnrollmentsData(personIds);
 
   const filtered = students.filter((s) =>
     formatPersonName(s).toLowerCase().includes(query.toLowerCase()),
@@ -244,17 +294,63 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="search-wrapper mb-6">
-        <span className="search-icon">🔍</span>
-        <input
-          id="student-search"
-          type="text"
-          className="search-input"
-          placeholder="Buscar aluno…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      {/* Search & View Mode Toggle */}
+      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+        <div className="search-wrapper" style={{ flex: '1 1 280px', marginBottom: 0 }}>
+          <span className="search-icon">🔍</span>
+          <input
+            id="student-search"
+            type="text"
+            className="search-input"
+            placeholder="Buscar aluno…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+
+        <div
+          role="group"
+          aria-label="Modo de visualização"
+          style={{
+            display: 'inline-flex',
+            background: 'var(--fi-color-surface-2)',
+            padding: '3px',
+            borderRadius: 'var(--fi-radius-md)',
+            border: '1px solid var(--fi-color-border)',
+            gap: '3px',
+          }}
+        >
+          <button
+            id="view-toggle-cards"
+            type="button"
+            className={`btn btn-sm ${viewMode === 'cards' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8rem',
+              height: 'auto',
+              borderRadius: 'var(--fi-radius-sm)',
+            }}
+            onClick={() => handleViewModeChange('cards')}
+            title="Visualização em Cards"
+          >
+            📇 Cards
+          </button>
+          <button
+            id="view-toggle-table"
+            type="button"
+            className={`btn btn-sm ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
+            style={{
+              padding: '0.35rem 0.75rem',
+              fontSize: '0.8rem',
+              height: 'auto',
+              borderRadius: 'var(--fi-radius-sm)',
+            }}
+            onClick={() => handleViewModeChange('table')}
+            title="Visualização em Tabela"
+          >
+            📋 Tabela
+          </button>
+        </div>
       </div>
 
       {/* States */}
@@ -289,7 +385,17 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
       )}
 
       {!loading && !error && filtered.length > 0 && (
-        <div className="stack-6">
+        viewMode === 'table' ? (
+          <StudentTable
+            students={filtered}
+            coursesMap={coursesMap}
+            latestEnrollmentCourseMap={latestEnrollmentCourseMap}
+            groupsMap={groupsMap}
+            lastLessonMap={lastLessonMap}
+            onSelectStudent={openProfile}
+          />
+        ) : (
+          <div className="stack-6">
           {pendingStudents.length > 0 && (
             <div className="stack-4">
               <div
@@ -391,7 +497,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {isAddModalOpen && (
         <AddStudentModal

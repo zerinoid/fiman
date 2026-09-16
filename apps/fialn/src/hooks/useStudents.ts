@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Person, StudentProfile } from '@fi/types';
+import type { Person, StudentProfile, StudentViewRecord } from '@fi/types';
 import { supabase } from '../lib/supabase';
 
 export interface StudentWithProfile extends Person {
@@ -49,40 +49,57 @@ export function useStudents(): UseStudentsReturn {
     setError(null);
 
     try {
-      // Fetch all people who are students
-      const { data: people, error: peopleError } = await supabase
-        .from('people')
+      const { data: rows, error: viewError } = await supabase
+        .from('fialn_students_view')
         .select('*')
-        .eq('is_student', true)
         .order('full_name');
 
-      if (peopleError) throw peopleError;
+      if (viewError) throw viewError;
 
-      if (!people || people.length === 0) {
+      if (!rows || rows.length === 0) {
         setStudents([]);
         return;
       }
 
-      // Fetch all student profiles for those people
-      const personIds = people.map((p) => p.id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from('fialn_student_profiles')
-        .select('*')
-        .in('person_id', personIds);
-
-      if (profilesError) throw profilesError;
-
-      // Join in memory
-      const profileMap = new Map<string, StudentProfile>(
-        (profiles ?? [])
-          .filter((p): p is typeof p & { person_id: string } => p.person_id !== null)
-          .map((p) => [p.person_id, p as StudentProfile]),
-      );
-
       setStudents(
-        (people as Person[]).map((person) => ({
-          ...person,
-          profile: profileMap.get(person.id) ?? null,
+        (rows as StudentViewRecord[]).map((r) => ({
+          id: r.id,
+          first_name: r.first_name,
+          last_name: r.last_name,
+          full_name: r.full_name,
+          cpf: r.cpf,
+          phone: r.phone,
+          email: r.email,
+          notes: r.notes,
+          is_student: r.is_student,
+          is_client: r.is_client,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+          profile: r.profile_id
+            ? {
+                id: r.profile_id,
+                person_id: r.id,
+                strengths: r.strengths,
+                dificulties: r.dificulties,
+                growth_pathway: r.growth_pathway,
+                financial_status: r.financial_status,
+                status: r.status,
+                shibari_experience: r.shibari_experience,
+                shibari_goals: r.shibari_goals,
+                course_preference_id: r.course_preference_id,
+                group_preference_id: r.group_preference_id,
+                weekday_preference: r.weekday_preference,
+                terms_accepted_at: r.terms_accepted_at,
+                terms_version: r.terms_version,
+                terms_client_ip: r.terms_client_ip,
+                terms_ip_hash: r.terms_ip_hash,
+                terms_user_agent: r.terms_user_agent,
+                confirmation_token: r.confirmation_token,
+                confirmation_token_expires_at: r.confirmation_token_expires_at,
+                email_verified_at: r.email_verified_at,
+                created_at: r.profile_created_at ?? r.created_at,
+              }
+            : null,
         })),
       );
     } catch (err) {

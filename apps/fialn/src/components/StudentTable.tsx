@@ -45,16 +45,10 @@ function formatDateTime(isoString?: string | null): string {
   }
 }
 
-function getStudentStatus(
-  student: StudentWithProfile,
-  hasActiveEnrollments: boolean,
-  hasLessons: boolean,
-) {
-  const isPending =
-    student.profile?.status === 'pendente' ||
-    (Boolean(student.profile) && !student.profile?.email_verified_at && !hasActiveEnrollments && !hasLessons);
+function getStudentStatus(student: StudentWithProfile) {
+  const status = student.profile?.status;
 
-  if (isPending) {
+  if (status === 'pendente') {
     return {
       label: '✉️ Pendente',
       badgeClass: 'badge-warning',
@@ -63,8 +57,7 @@ function getStudentStatus(
     };
   }
 
-  const isActive = hasActiveEnrollments || hasLessons;
-  if (isActive) {
+  if (status === 'ativo') {
     return {
       label: 'Ativo',
       badgeClass: 'badge-success',
@@ -125,8 +118,8 @@ export function StudentTable({
         else if (cA && !cB) cmp = -1;
         else cmp = cA.localeCompare(cB, 'pt-BR', { sensitivity: 'base' });
       } else if (sortColumn === 'status') {
-        const statusA = getStudentStatus(a, Boolean(groupsMap[a.id]?.length), Boolean(lastLessonMap[a.id])).label;
-        const statusB = getStudentStatus(b, Boolean(groupsMap[b.id]?.length), Boolean(lastLessonMap[b.id])).label;
+        const statusA = getStudentStatus(a).label;
+        const statusB = getStudentStatus(b).label;
         cmp = statusA.localeCompare(statusB, 'pt-BR');
       } else if (sortColumn === 'terms_version') {
         const verA = a.profile?.terms_version ?? '';
@@ -206,9 +199,7 @@ export function StudentTable({
             const displayName = formatPersonName(student);
             const initials = getInitials(displayName);
 
-            const hasActiveEnrollments = Boolean(groupsMap[student.id] && groupsMap[student.id].length > 0);
-            const hasLessons = Boolean(lastLessonMap[student.id]);
-            const statusInfo = getStudentStatus(student, hasActiveEnrollments, hasLessons);
+            const statusInfo = getStudentStatus(student);
 
             const coursePrefTitle = student.profile?.course_preference_id
               ? coursesMap[student.profile.course_preference_id] ?? 'Não encontrado'

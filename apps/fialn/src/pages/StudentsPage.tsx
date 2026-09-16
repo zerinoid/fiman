@@ -235,11 +235,7 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     formatPersonName(s).toLowerCase().includes(query.toLowerCase()),
   );
 
-  const activeStudents = filtered.filter((s) => {
-    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
-    const hasLessons = Boolean(lastLessonMap[s.id]);
-    return hasEnrollments || hasLessons;
-  });
+  const activeStudents = filtered.filter((s) => s.profile?.status === 'ativo');
 
   // Sort activeStudents: expiring soon first (ascending by remaining days), then alphabetical
   activeStudents.sort((a, b) => {
@@ -257,20 +253,11 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     return 0; // Both not expiring, keep alphabetical (students is loaded pre-sorted by full_name)
   });
 
-  const pendingStudents = filtered.filter((s) => {
-    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
-    const hasLessons = Boolean(lastLessonMap[s.id]);
-    if (hasEnrollments || hasLessons) return false;
-    return s.profile?.status === 'pendente' || (Boolean(s.profile) && !s.profile?.email_verified_at);
-  });
+  const pendingStudents = filtered.filter((s) => s.profile?.status === 'pendente');
 
-  const inactiveStudents = filtered.filter((s) => {
-    const hasEnrollments = Boolean(groupsMap[s.id] && groupsMap[s.id].length > 0);
-    const hasLessons = Boolean(lastLessonMap[s.id]);
-    if (hasEnrollments || hasLessons) return false;
-    const isPending = s.profile?.status === 'pendente' || (Boolean(s.profile) && !s.profile?.email_verified_at);
-    return !isPending;
-  });
+  const inactiveStudents = filtered.filter(
+    (s) => s.profile?.status === 'inativo' || (!s.profile?.status && s.profile?.status !== 'ativo' && s.profile?.status !== 'pendente'),
+  );
 
   const openProfile = (personId: string) => {
     navigate('profile', { person_id: personId });

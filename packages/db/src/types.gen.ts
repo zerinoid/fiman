@@ -223,7 +223,6 @@ export type Database = {
           person_id: string | null
           shibari_experience: string | null
           shibari_goals: string | null
-          status: string
           strengths: string | null
           terms_accepted_at: string | null
           terms_client_ip: string | null
@@ -246,7 +245,6 @@ export type Database = {
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
-          status?: string
           strengths?: string | null
           terms_accepted_at?: string | null
           terms_client_ip?: string | null
@@ -269,7 +267,6 @@ export type Database = {
           person_id?: string | null
           shibari_experience?: string | null
           shibari_goals?: string | null
-          status?: string
           strengths?: string | null
           terms_accepted_at?: string | null
           terms_client_ip?: string | null
@@ -950,7 +947,43 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fialn_students_view: {
+        Row: {
+          confirmation_token: string | null
+          confirmation_token_expires_at: string | null
+          course_preference_id: string | null
+          cpf: string | null
+          created_at: string
+          dificulties: string | null
+          email: string | null
+          email_verified_at: string | null
+          financial_status: string | null
+          first_name: string | null
+          full_name: string
+          group_preference_id: string | null
+          growth_pathway: string | null
+          id: string
+          is_client: boolean
+          is_student: boolean
+          last_name: string | null
+          notes: string | null
+          phone: string | null
+          profile_created_at: string | null
+          profile_id: string | null
+          shibari_experience: string | null
+          shibari_goals: string | null
+          status: string
+          strengths: string | null
+          terms_accepted_at: string | null
+          terms_client_ip: string | null
+          terms_ip_hash: string | null
+          terms_user_agent: string | null
+          terms_version: string | null
+          updated_at: string
+          weekday_preference: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       register_student_public: {

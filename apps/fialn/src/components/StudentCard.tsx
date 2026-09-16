@@ -34,11 +34,8 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
   const initials = getInitials(displayName);
   const relDate = formatRelativeDate(lastLessonDate);
   const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
-  const hasLessons = Boolean(lastLessonDate);
-  const isPending =
-    student.profile?.status === 'pendente' ||
-    (Boolean(student.profile) && !student.profile?.email_verified_at && !hasActiveEnrollments && !hasLessons);
-  const isActive = hasActiveEnrollments || hasLessons;
+  const isPending = student.profile?.status === 'pendente';
+  const isActive = student.profile?.status === 'ativo';
   const isExpiringSoon = daysToExpire !== undefined;
 
   return (

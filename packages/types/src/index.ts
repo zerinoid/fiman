@@ -304,6 +304,8 @@ export interface LegalTerm {
   updated_at: string;
 }
 
+export type StudentStatus = 'ativo' | 'inativo' | 'pendente';
+
 /** Extended profile for a person who is a student (Shibari). */
 export interface StudentProfile {
   id: string;
@@ -312,8 +314,8 @@ export interface StudentProfile {
   dificulties: string | null; // matches PRD typo intentionally
   growth_pathway: string | null;
   financial_status: string | null;
-  /** Status do aluno na plataforma: 'pendente' (aguardando confirmação de e-mail), 'confirmado', 'ativo', 'inativo' */
-  status?: 'pendente' | 'confirmado' | 'ativo' | 'inativo' | string | null;
+  /** Status do aluno na plataforma (calculado dinamicamente pela view fialn_students_view): 'ativo', 'inativo', 'pendente' */
+  status?: StudentStatus | null;
   /** Self-reported Shibari experience (filled on public registration form). */
   shibari_experience: string | null;
   /** Self-reported goals in Shibari (filled on public registration form). */
@@ -332,6 +334,42 @@ export interface StudentProfile {
   terms_ip_hash?: string | null;
   terms_user_agent?: string | null;
   created_at: string;
+}
+
+/** Record returned by public.fialn_students_view */
+export interface StudentViewRecord {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string;
+  cpf: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  is_student: boolean;
+  is_client: boolean;
+  created_at: string;
+  updated_at: string;
+  profile_id: string | null;
+  financial_status: string | null;
+  shibari_experience: string | null;
+  shibari_goals: string | null;
+  course_preference_id: string | null;
+  group_preference_id: string | null;
+  weekday_preference: number | null;
+  terms_accepted_at: string | null;
+  terms_version: string | null;
+  terms_client_ip: string | null;
+  terms_ip_hash: string | null;
+  terms_user_agent: string | null;
+  confirmation_token: string | null;
+  confirmation_token_expires_at: string | null;
+  email_verified_at: string | null;
+  strengths: string | null;
+  dificulties: string | null;
+  growth_pathway: string | null;
+  profile_created_at: string | null;
+  status: StudentStatus;
 }
 
 /** A single private lesson record for a student. */

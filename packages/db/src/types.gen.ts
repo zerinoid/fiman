@@ -21,12 +21,12 @@ export type Database = {
           group_id: string | null
           id: string
           is_partner: boolean | null
-          partner_details: string | null
-          received_by: string | null
-          payment_method: string | null
           modality: Database["public"]["Enums"]["fialn_modality_type"]
           notes: string | null
+          partner_details: string | null
+          payment_method: string | null
           person_id: string
+          received_by: string | null
           start_date: string
           status: string
           updated_at: string | null
@@ -37,12 +37,12 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_partner?: boolean | null
-          partner_details?: string | null
-          received_by?: string | null
-          payment_method?: string | null
           modality: Database["public"]["Enums"]["fialn_modality_type"]
           notes?: string | null
+          partner_details?: string | null
+          payment_method?: string | null
           person_id: string
+          received_by?: string | null
           start_date?: string
           status?: string
           updated_at?: string | null
@@ -53,12 +53,12 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_partner?: boolean | null
-          partner_details?: string | null
-          received_by?: string | null
-          payment_method?: string | null
           modality?: Database["public"]["Enums"]["fialn_modality_type"]
           notes?: string | null
+          partner_details?: string | null
+          payment_method?: string | null
           person_id?: string
+          received_by?: string | null
           start_date?: string
           status?: string
           updated_at?: string | null
@@ -69,6 +69,13 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "fialn_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_enrollments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_students_view"
             referencedColumns: ["id"]
           },
           {
@@ -149,6 +156,13 @@ export type Database = {
             foreignKeyName: "fialn_lesson_bundles_person_id_fkey"
             columns: ["person_id"]
             isOneToOne: false
+            referencedRelation: "fialn_students_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_lesson_bundles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
             referencedRelation: "people"
             referencedColumns: ["id"]
           },
@@ -197,6 +211,13 @@ export type Database = {
             columns: ["bundle_id"]
             isOneToOne: false
             referencedRelation: "fialn_lesson_bundles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_lessons_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_students_view"
             referencedColumns: ["id"]
           },
           {
@@ -277,10 +298,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fialn_student_profiles_person_id_fkey"
-            columns: ["person_id"]
-            isOneToOne: true
-            referencedRelation: "people"
+            foreignKeyName: "fialn_student_profiles_course_preference_id_fkey"
+            columns: ["course_preference_id"]
+            isOneToOne: false
+            referencedRelation: "fiteo_courses"
             referencedColumns: ["id"]
           },
           {
@@ -291,10 +312,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fialn_student_profiles_course_preference_id_fkey"
-            columns: ["course_preference_id"]
-            isOneToOne: false
-            referencedRelation: "fiteo_courses"
+            foreignKeyName: "fialn_student_profiles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "fialn_students_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_profiles_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "people"
             referencedColumns: ["id"]
           },
         ]
@@ -380,10 +408,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fialn_student_transactions_person_id_fkey"
-            columns: ["person_id"]
+            foreignKeyName: "fialn_student_transactions_bundle_id_fkey"
+            columns: ["bundle_id"]
             isOneToOne: false
-            referencedRelation: "people"
+            referencedRelation: "fialn_lesson_bundles"
             referencedColumns: ["id"]
           },
           {
@@ -391,6 +419,20 @@ export type Database = {
             columns: ["enrollment_id"]
             isOneToOne: false
             referencedRelation: "fialn_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_students_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
             referencedColumns: ["id"]
           },
         ]
@@ -424,6 +466,13 @@ export type Database = {
           physiological_notes?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fiatt_client_records_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: true
+            referencedRelation: "fialn_students_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fiatt_client_records_person_id_fkey"
             columns: ["person_id"]
@@ -462,6 +511,13 @@ export type Database = {
           transaction_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fiatt_sessions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_students_view"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fiatt_sessions_person_id_fkey"
             columns: ["person_id"]
@@ -601,7 +657,7 @@ export type Database = {
           created_at?: string | null
           credit_card_total?: number
           id?: string
-          month_year?: string
+          month_year: string
           notes?: string | null
           total_target?: number
         }
@@ -634,7 +690,7 @@ export type Database = {
           created_at?: string | null
           file_path?: string | null
           id?: string
-          month_year?: string
+          month_year: string
           raw_ocr_json?: Json | null
           rent_amount: number
           total_payable?: number | null
@@ -715,10 +771,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fiorc_transactions_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fiorc_transactions_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "fiorc_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiorc_transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_students_view"
             referencedColumns: ["id"]
           },
           {
@@ -770,10 +840,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fiteo_attendance_enrollment_id_fkey"
-            columns: ["enrollment_id"]
+            foreignKeyName: "fiteo_attendance_person_id_fkey"
+            columns: ["person_id"]
             isOneToOne: false
-            referencedRelation: "fialn_enrollments"
+            referencedRelation: "fialn_students_view"
             referencedColumns: ["id"]
           },
           {
@@ -788,6 +858,62 @@ export type Database = {
             columns: ["transaction_id"]
             isOneToOne: false
             referencedRelation: "fiorc_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiteo_class_schedules: {
+        Row: {
+          class_date: string
+          course_id: string | null
+          created_at: string | null
+          has_photo_content: boolean | null
+          has_video_content: boolean | null
+          id: string
+          is_cancelled: boolean | null
+          is_highlighted: boolean | null
+          is_planned: boolean | null
+          minutes_and_notes: string | null
+          proposed_theme: string
+          techniques: string[] | null
+          theme_description: string | null
+        }
+        Insert: {
+          class_date: string
+          course_id?: string | null
+          created_at?: string | null
+          has_photo_content?: boolean | null
+          has_video_content?: boolean | null
+          id?: string
+          is_cancelled?: boolean | null
+          is_highlighted?: boolean | null
+          is_planned?: boolean | null
+          minutes_and_notes?: string | null
+          proposed_theme: string
+          techniques?: string[] | null
+          theme_description?: string | null
+        }
+        Update: {
+          class_date?: string
+          course_id?: string | null
+          created_at?: string | null
+          has_photo_content?: boolean | null
+          has_video_content?: boolean | null
+          id?: string
+          is_cancelled?: boolean | null
+          is_highlighted?: boolean | null
+          is_planned?: boolean | null
+          minutes_and_notes?: string | null
+          proposed_theme?: string
+          techniques?: string[] | null
+          theme_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiteo_class_schedules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "fiteo_courses"
             referencedColumns: ["id"]
           },
         ]
@@ -816,33 +942,6 @@ export type Database = {
           schedule_day?: string
           skill_level?: string
           title?: string
-        }
-        Relationships: []
-      }
-      fiteo_class_schedules: {
-        Row: {
-          class_date: string
-          created_at: string | null
-          id: string
-          is_planned: boolean | null
-          minutes_and_notes: string | null
-          proposed_theme: string
-        }
-        Insert: {
-          class_date: string
-          created_at?: string | null
-          id?: string
-          is_planned?: boolean | null
-          minutes_and_notes?: string | null
-          proposed_theme: string
-        }
-        Update: {
-          class_date?: string
-          created_at?: string | null
-          id?: string
-          is_planned?: boolean | null
-          minutes_and_notes?: string | null
-          proposed_theme?: string
         }
         Relationships: []
       }
@@ -899,7 +998,7 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           first_name?: string | null
-          full_name?: string
+          full_name: string
           id?: string
           is_client?: boolean | null
           is_student?: boolean | null
@@ -953,18 +1052,18 @@ export type Database = {
           confirmation_token_expires_at: string | null
           course_preference_id: string | null
           cpf: string | null
-          created_at: string
+          created_at: string | null
           dificulties: string | null
           email: string | null
           email_verified_at: string | null
           financial_status: string | null
           first_name: string | null
-          full_name: string
+          full_name: string | null
           group_preference_id: string | null
           growth_pathway: string | null
-          id: string
-          is_client: boolean
-          is_student: boolean
+          id: string | null
+          is_client: boolean | null
+          is_student: boolean | null
           last_name: string | null
           notes: string | null
           phone: string | null
@@ -972,77 +1071,36 @@ export type Database = {
           profile_id: string | null
           shibari_experience: string | null
           shibari_goals: string | null
-          status: string
+          status: string | null
           strengths: string | null
           terms_accepted_at: string | null
           terms_client_ip: string | null
           terms_ip_hash: string | null
           terms_user_agent: string | null
           terms_version: string | null
-          updated_at: string
+          updated_at: string | null
           weekday_preference: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fialn_student_profiles_course_preference_id_fkey"
+            columns: ["course_preference_id"]
+            isOneToOne: false
+            referencedRelation: "fiteo_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fialn_student_profiles_group_preference_id_fkey"
+            columns: ["group_preference_id"]
+            isOneToOne: false
+            referencedRelation: "fialn_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
-      register_student_public: {
-        Args: {
-          p_course_preference_id?: string | null
-          p_cpf?: string | null
-          p_email: string
-          p_first_name?: string | null
-          p_full_name?: string | null
-          p_last_name?: string | null
-          p_phone: string
-          p_shibari_experience?: string | null
-          p_shibari_goals?: string | null
-        }
-        Returns: Json
-      }
-      get_student_registration_by_token: {
-        Args: {
-          p_token: string
-        }
-        Returns: Json
-      }
-      confirm_student_registration: {
-        Args: {
-          p_token: string
-        }
-        Returns: Json
-      }
-      fiorc_settle_fialn_repasses: {
-        Args: {
-          p_transaction_ids?: string[] | null
-        }
-        Returns: Json
-      }
-      fiorc_confirm_shibari_projection: {
-        Args: {
-          p_transaction_id: string
-        }
-        Returns: {
-          amount: number
-          category: Database["public"]["Enums"]["transaction_category"]
-          created_at: string | null
-          description: string | null
-          due_date: string
-          enrollment_id: string | null
-          id: string
-          installment_index: number | null
-          is_credit_card: boolean | null
-          is_projection: boolean | null
-          paid_at: string | null
-          parent_id: string | null
-          person_id: string | null
-          received_by: string | null
-          tags: string[] | null
-          total_installments: number | null
-          transaction_datetime: string | null
-          type: Database["public"]["Enums"]["transaction_type"]
-        }
-      }
+      confirm_student_registration: { Args: { p_token: string }; Returns: Json }
       fialn_create_enrollment_financials: {
         Args: {
           p_amount_per_installment: number
@@ -1076,6 +1134,12 @@ export type Database = {
           transaction_datetime: string | null
           type: Database["public"]["Enums"]["transaction_type"]
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "fiorc_transactions"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       fialn_create_plan_installments: {
         Args: {
@@ -1092,6 +1156,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string
+          enrollment_id: string | null
           id: string
           installment_index: number | null
           is_credit_card: boolean | null
@@ -1099,6 +1164,7 @@ export type Database = {
           paid_at: string | null
           parent_id: string | null
           person_id: string | null
+          received_by: string | null
           tags: string[] | null
           total_installments: number | null
           transaction_datetime: string | null
@@ -1111,16 +1177,90 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fiorc_confirm_shibari_projection: {
+        Args: { p_transaction_id: string }
+        Returns: {
+          amount: number
+          category: Database["public"]["Enums"]["transaction_category"]
+          created_at: string | null
+          description: string | null
+          due_date: string
+          enrollment_id: string | null
+          id: string
+          installment_index: number | null
+          is_credit_card: boolean | null
+          is_projection: boolean | null
+          paid_at: string | null
+          parent_id: string | null
+          person_id: string | null
+          received_by: string | null
+          tags: string[] | null
+          total_installments: number | null
+          transaction_datetime: string | null
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "fiorc_transactions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fiorc_get_distinct_tags: { Args: never; Returns: string[] }
+      fiorc_settle_fialn_repasses: {
+        Args: { p_transaction_ids?: string[] }
+        Returns: Json
+      }
+      generate_student_regularization_token: {
+        Args: { p_person_id: string }
+        Returns: Json
+      }
+      get_student_registration_by_token: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      get_student_regularization_data: {
+        Args: { p_token: string }
+        Returns: Json
+      }
+      register_student_public: {
+        Args: {
+          p_course_preference_id?: string
+          p_cpf?: string
+          p_email?: string
+          p_first_name?: string
+          p_full_name?: string
+          p_last_name?: string
+          p_phone?: string
+          p_shibari_experience?: string
+          p_shibari_goals?: string
+        }
+        Returns: Json
+      }
+      submit_student_regularization: {
+        Args: {
+          p_cpf?: string
+          p_email?: string
+          p_first_name?: string
+          p_full_name?: string
+          p_last_name?: string
+          p_phone?: string
+          p_shibari_experience?: string
+          p_shibari_goals?: string
+          p_token: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       commitment_type: "fixed" | "optional" | "occasional"
-      fi_role_type: "admin" | "associate" | "clerk"
+      fi_role_type: "admin" | "collaborator" | "associate" | "clerk"
       fialn_modality_type:
-        | "monthly_group"
         | "quarterly_group"
         | "private_bundle"
         | "single_group"
         | "single_private"
+        | "monthly_group"
       split_rule_type:
         | "none"
         | "equal_roommates"
@@ -1161,12 +1301,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1190,11 +1330,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1215,11 +1355,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1240,11 +1380,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1257,11 +1397,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1274,13 +1414,13 @@ export const Constants = {
   public: {
     Enums: {
       commitment_type: ["fixed", "optional", "occasional"],
-      fi_role_type: ["admin", "associate", "clerk"],
+      fi_role_type: ["admin", "collaborator", "associate", "clerk"],
       fialn_modality_type: [
-        "monthly_group",
         "quarterly_group",
         "private_bundle",
         "single_group",
         "single_private",
+        "monthly_group",
       ],
       split_rule_type: [
         "none",

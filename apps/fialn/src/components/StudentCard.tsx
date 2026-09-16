@@ -53,7 +53,7 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
       <div className="student-info">
         <div className="student-name">{displayName}</div>
         <div className="student-meta">
-          {isPending ? 'Pré-matrícula · Aguardando confirmação de e-mail' : relDate}
+          {isPending ? (hasActiveEnrollments ? `Frequenta · ${relDate} · Termo pendente` : 'Pré-matrícula · Aguardando confirmação de e-mail') : relDate}
         </div>
         {hasActiveEnrollments ? (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
@@ -75,9 +75,9 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
           <span
             className="badge badge-warning"
             style={{ fontSize: '0.68rem', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.3)' }}
-            title="Cadastro realizado no site — aguardando confirmação do e-mail pelo aluno"
+            title={hasActiveEnrollments ? 'Aluno frequenta aulas mas ainda não aceitou o termo/confirmou e-mail' : 'Cadastro realizado no site — aguardando confirmação do e-mail pelo aluno'}
           >
-            ✉️ Pendente
+            {hasActiveEnrollments ? '📜 Termo Pendente' : '✉️ Pré-Matrícula'}
           </span>
         ) : (
           <span

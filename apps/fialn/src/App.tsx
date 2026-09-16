@@ -7,16 +7,17 @@ import { QuickLogPage } from './pages/QuickLogPage';
 import { ValoresPage } from './pages/ValoresPage';
 import { PublicRegistrationPage } from './pages/PublicRegistrationPage';
 import { ConfirmRegistrationPage } from './pages/ConfirmRegistrationPage';
+import { StudentRegularizationPage } from './pages/StudentRegularizationPage';
 import { AppShell } from './components/Layout/AppShell';
 import './index.css';
 
 
 // ---- Types ----
 
-export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password' | 'valores' | 'cadastro' | 'confirmar-cadastro';
+export type Route = 'students' | 'profile' | 'log' | 'login' | 'update-password' | 'valores' | 'cadastro' | 'confirmar-cadastro' | 'termo' | 'regularizar';
 export type Navigate = (to: Route, params?: Record<string, string>) => void;
 
-const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password', 'valores', 'cadastro', 'confirmar-cadastro'];
+const VALID_ROUTES: Route[] = ['students', 'profile', 'log', 'login', 'update-password', 'valores', 'cadastro', 'confirmar-cadastro', 'termo', 'regularizar'];
 
 // ---- Hash-based routing ----
 
@@ -93,6 +94,11 @@ export function App() {
   // --- Public email confirmation route — no auth required ---
   if (route === 'confirmar-cadastro') {
     return <ConfirmRegistrationPage />;
+  }
+
+  // --- Public student terms regularization route — no auth required ---
+  if (route === 'termo' || route === 'regularizar') {
+    return <StudentRegularizationPage />;
   }
 
   // --- Login gate ---

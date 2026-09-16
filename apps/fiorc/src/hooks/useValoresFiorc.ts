@@ -157,7 +157,7 @@ export function useValoresFiorc(): UseValoresFiorcReturn {
     setError(null);
     try {
       const { data, error: rpcError } = await supabase.rpc('fiorc_settle_fialn_repasses', {
-        p_transaction_ids: selectedIds && selectedIds.length > 0 ? selectedIds : null,
+        p_transaction_ids: selectedIds && selectedIds.length > 0 ? selectedIds : undefined,
       });
       if (rpcError) throw rpcError;
 

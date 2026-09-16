@@ -241,12 +241,12 @@ export function PublicRegistrationPage() {
       const { data, error: rpcError } = await supabase.rpc('register_student_public', {
         p_first_name: firstName.trim(),
         p_last_name: lastName.trim(),
-        p_cpf: cleanDigitsCpf,
+        p_cpf: cleanDigitsCpf || undefined,
         p_phone: phone.trim(),
         p_email: email.trim().toLowerCase(),
-        p_course_preference_id: coursePreferenceId ? coursePreferenceId : null,
-        p_shibari_experience: shibariExperience.trim() || null,
-        p_shibari_goals: shibariGoals.trim() || null,
+        p_course_preference_id: coursePreferenceId ? coursePreferenceId : undefined,
+        p_shibari_experience: shibariExperience.trim() || undefined,
+        p_shibari_goals: shibariGoals.trim() || undefined,
         p_full_name: fullName,
       });
 

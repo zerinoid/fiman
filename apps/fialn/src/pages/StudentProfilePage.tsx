@@ -13,6 +13,7 @@ import { TechnicalRadar } from '../components/TechnicalRadar';
 import { EnrollModal } from '../components/EnrollModal';
 import { AddBundleModal } from '../components/AddBundleModal';
 import { EditStudentModal } from '../components/EditStudentModal';
+import { StudentTermsModal } from '../components/StudentTermsModal';
 import type { Navigate } from '../App';
 
 type ProfileTab = 'matriculas' | 'timeline' | 'radar' | 'financeiro';
@@ -56,6 +57,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showBundleModal, setShowBundleModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [showFullIp, setShowFullIp] = useState(false);
 
   const [enrollmentToEdit, setEnrollmentToEdit] = useState<StudentEnrollment | null>(null);
@@ -199,6 +201,14 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
 
         <div className="flex-gap-2 flex-wrap">
           <button
+            id="profile-terms-btn"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setShowTermsModal(true)}
+            title="Gerar link individual para envio de termo via WhatsApp"
+          >
+            📲 Link do Termo
+          </button>
+          <button
             id="profile-edit-btn"
             className="btn btn-ghost btn-sm"
             onClick={() => setShowEditModal(true)}
@@ -232,8 +242,8 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         </div>
       </div>
 
-      {/* Pending Email Alert Banner */}
-      {(profile?.status === 'pendente' || (Boolean(profile) && !profile?.email_verified_at && lessons.length === 0 && activeEnrollments.length === 0)) && (
+      {/* Pending Email or Terms Alert Banner */}
+      {(profile?.status === 'pendente' || !profile?.terms_accepted_at || (Boolean(profile) && !profile?.email_verified_at && lessons.length === 0 && activeEnrollments.length === 0)) && (
         <div
           style={{
             background: 'rgba(245, 158, 11, 0.08)',
@@ -252,13 +262,23 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
             <span style={{ fontSize: '1.3rem' }}>✉️</span>
             <div>
               <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#f59e0b' }}>
-                Confirmação de Pré-Matrícula Pendente
+                {!profile?.terms_accepted_at ? 'Termo de Participação & E-mail Pendentes' : 'Confirmação de Pré-Matrícula Pendente'}
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--fi-color-text-muted)', marginTop: '2px' }}>
-                Este aluno realizou o cadastro pelo site, mas ainda não clicou no link de confirmação enviado para {person.email || 'o e-mail'}.
+                {!profile?.terms_accepted_at
+                  ? 'Este aluno ainda não assinou o termo de participação e orientações de segurança.'
+                  : `Aguardando confirmação do e-mail (${person.email || 'e-mail não informado'}).`}
               </div>
             </div>
           </div>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => setShowTermsModal(true)}
+            style={{ flexShrink: 0 }}
+          >
+            📲 Enviar Termo WhatsApp
+          </button>
         </div>
       )}
 
@@ -491,6 +511,19 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
         />
       )}
 
+      {/* Student Terms Regularization Modal */}
+      {showTermsModal && person && (
+        <StudentTermsModal
+          isOpen={showTermsModal}
+          onClose={() => setShowTermsModal(false)}
+          personId={personId}
+          studentName={formatPersonName(person)}
+          studentPhone={person.phone}
+          termsAcceptedAt={profile?.terms_accepted_at}
+          emailVerifiedAt={profile?.email_verified_at}
+        />
+      )}
+
       {/* Tabs */}
       <div className="tabs">
         <button
@@ -707,7 +740,7 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
           )}
 
           {/* Legal Compliance Audit Card */}
-          {profile?.terms_accepted_at && (
+          {profile?.terms_accepted_at ? (
             <div className="card card-sm mt-6" style={{ background: 'var(--fi-color-surface-2)', border: '1px solid var(--fi-color-border)' }}>
               <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -719,7 +752,18 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                     </div>
                   </div>
                 </div>
-                <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>✓ Termos Assinados</span>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>✓ Termos Assinados</span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowTermsModal(true)}
+                    title="Ver link do termo"
+                    style={{ fontSize: '0.75rem' }}
+                  >
+                    📲 Ver Link
+                  </button>
+                </div>
               </div>
               <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--fi-color-border-subtle)', fontSize: '0.75rem', color: 'var(--fi-color-text-muted)', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
                 {profile.terms_client_ip && (
@@ -747,6 +791,27 @@ export function StudentProfilePage({ personId, navigate }: StudentProfilePagePro
                 )}
                 {profile.terms_ip_hash && <span title={profile.terms_ip_hash}>Assinatura SHA-256: <code>{profile.terms_ip_hash.slice(0, 16)}…</code></span>}
                 {profile.terms_user_agent && <span>Dispositivo: {profile.terms_user_agent.slice(0, 60)}…</span>}
+              </div>
+            </div>
+          ) : (
+            <div className="card card-sm mt-6" style={{ background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <div className="flex-between" style={{ flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '1.5rem' }}>📜</span>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#f59e0b' }}>Termo de Participação Pendente</div>
+                    <div className="text-xs text-muted" style={{ marginTop: '2px' }}>
+                      Este aluno ainda não assinou o termo de segurança e consentimento de participação.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setShowTermsModal(true)}
+                >
+                  📲 Gerar Link para WhatsApp
+                </button>
               </div>
             </div>
           )}

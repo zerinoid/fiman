@@ -531,7 +531,31 @@ export function PublicRegistrationPage() {
             />
           </div>
 
-          {/* ---- 5. Termo de Consentimento ---- */}
+          {/* ---- 5. Diretrizes de Segurança ---- */}
+          <SectionHeader icon="🛡️" title="Diretrizes de Segurança & Boas Práticas" />
+
+          <div style={styles.securityBox}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+              <p style={{ margin: 0, fontSize: '0.875rem', lineHeight: 1.6, color: 'var(--fi-color-text)' }}>
+                A segurança física e emocional, o respeito aos limites anatômicos e o consentimento contínuo são princípios fundamentais em todas as práticas e aulas de Shibari.
+              </p>
+              <p style={{ margin: 0, fontSize: '0.83rem', lineHeight: 1.6, color: 'var(--fi-color-text-muted)' }}>
+                Consulte previamente nosso protocolo de segurança, riscos mapeados e recomendações para praticantes:
+              </p>
+            </div>
+            <a
+              href="https://foraisso.com/seguranca"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.securityLink}
+            >
+              <span>🔗</span>
+              <span><strong>foraisso.com/seguranca</strong> — Diretrizes e Protocolos de Segurança</span>
+              <span style={{ marginLeft: 'auto', fontSize: '0.8rem', opacity: 0.8 }}>↗</span>
+            </a>
+          </div>
+
+          {/* ---- 6. Termo de Consentimento ---- */}
           <SectionHeader icon="📋" title={legalTerms.title || 'Termo de Participação'} />
 
           <div style={styles.consentBox}>
@@ -688,6 +712,27 @@ const styles = {
     color: 'var(--fi-color-text-muted)',
     lineHeight: 1.65,
     marginBottom: '0.25rem',
+  },
+  securityBox: {
+    background: 'rgba(59, 130, 246, 0.05)',
+    border: '1px solid rgba(59, 130, 246, 0.22)',
+    borderRadius: 'var(--fi-radius-md)',
+    padding: '1.1rem',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '0.75rem',
+  },
+  securityLink: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.65rem 0.9rem',
+    background: 'var(--fi-color-surface-2)',
+    border: '1px solid var(--fi-color-border)',
+    borderRadius: 'var(--fi-radius-sm)',
+    color: 'var(--fi-color-primary)',
+    textDecoration: 'none',
+    fontSize: '0.875rem',
   },
   consentBox: {
     background: 'var(--fi-color-surface-2)',

@@ -1,22 +1,22 @@
-import { useState, useEffect, useCallback } from 'react';
-import type { StudentEnrollment } from '@fi/types';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useCallback } from 'react'
+import type { StudentEnrollment } from '@fi/types'
+import { supabase } from '../lib/supabase'
 
 /** Enrollment joined with the person entity for display in attendance sheets. */
 export interface EnrolledStudent extends StudentEnrollment {
   person: {
-    id: string;
-    first_name?: string | null;
-    last_name?: string | null;
-    full_name: string;
-  } | null;
+    id: string
+    first_name?: string | null
+    last_name?: string | null
+    full_name: string
+  } | null
 }
 
 export interface UseEnrolledStudentsReturn {
-  students: EnrolledStudent[];
-  loading: boolean;
-  error: string | null;
-  refresh: () => void;
+  students: EnrolledStudent[]
+  loading: boolean
+  error: string | null
+  refresh: () => void
 }
 
 /**
@@ -32,17 +32,20 @@ export interface UseEnrolledStudentsReturn {
  */
 export function useEnrolledStudents(
   groupWeekday: number | null,
-  classDate: string | null = null,
+  classDate: string | null = null
 ): UseEnrolledStudentsReturn {
-  const [students, setStudents] = useState<EnrolledStudent[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [students, setStudents] = useState<EnrolledStudent[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchStudents = useCallback(async () => {
-    if (groupWeekday === null) { setStudents([]); return; }
+    if (groupWeekday === null) {
+      setStudents([])
+      return
+    }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
       // Fetch enrollments for groups matching this weekday (ordered newest first)
@@ -54,59 +57,68 @@ export function useEnrolledStudents(
           person:people(id, first_name, last_name, full_name)
         `)
         .not('group_id', 'is', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
 
-      if (fetchError) throw fetchError;
+      if (fetchError) throw fetchError
 
-      const targetDate = classDate ? classDate.split('T')[0] : new Date().toISOString().split('T')[0];
+      const targetDate = classDate
+        ? classDate.split('T')[0]
+        : new Date().toISOString().split('T')[0]
 
       // Filter client-side to enrollments matching weekday, status and date validity window
       const filtered = (data ?? []).filter((enrollment: any) => {
-        if (enrollment.group?.weekday !== groupWeekday) return false;
+        if (enrollment.group?.weekday !== groupWeekday) return false
 
-        const modality = enrollment.modality;
+        const modality = enrollment.modality
         // Ignore non-group modalities
-        if (modality === 'private_bundle' || modality === 'single_private') return false;
+        if (modality === 'private_bundle' || modality === 'single_private')
+          return false
 
-        const startDate = enrollment.start_date;
-        const endDate = enrollment.end_date;
-        const status = enrollment.status;
+        const startDate = enrollment.start_date
+        const endDate = enrollment.end_date
+        const status = enrollment.status
 
         // Status must be active
-        if (status !== 'active') return false;
+        if (status !== 'active' && status !== 'completed') return false
 
         // For single_group (aula avulsa), student only appears on the exact day of the class
         if (modality === 'single_group') {
-          return startDate === targetDate;
+          return startDate === targetDate
         }
 
         // For monthly_group and quarterly_group (periodic enrollments)
-        if (startDate && startDate > targetDate) return false;
-        if (endDate && endDate < targetDate) return false;
+        if (startDate && startDate > targetDate) return false
+        if (endDate && endDate < targetDate) return false
 
-        return true;
-      });
+        return true
+      })
 
       // Deduplicate by person_id (keep only 1 enrollment per student)
-      const personMap = new Map<string, EnrolledStudent>();
+      const personMap = new Map<string, EnrolledStudent>()
       for (const row of filtered) {
-        const pid = row.person?.id ?? row.person_id;
+        const pid = row.person?.id ?? row.person_id
         if (pid && !personMap.has(pid)) {
-          personMap.set(pid, row as unknown as EnrolledStudent);
+          personMap.set(pid, row as unknown as EnrolledStudent)
         }
       }
 
-      setStudents(Array.from(personMap.values()));
+      setStudents(Array.from(personMap.values()))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar alunos matriculados');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Erro ao carregar alunos matriculados'
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [groupWeekday, classDate]);
+  }, [groupWeekday, classDate])
 
-  useEffect(() => { fetchStudents(); }, [fetchStudents]);
+  useEffect(() => {
+    fetchStudents()
+  }, [fetchStudents])
 
-  return { students, loading, error, refresh: fetchStudents };
+  return { students, loading, error, refresh: fetchStudents }
 }
 
 /**
@@ -121,7 +133,7 @@ export function scheduleDayToWeekday(scheduleDay: string): number | null {
     Thursday: 4,
     Friday: 5,
     Saturday: 6,
-    Sunday: 0,
-  };
-  return map[scheduleDay] ?? null;
+    Sunday: 0
+  }
+  return map[scheduleDay] ?? null
 }

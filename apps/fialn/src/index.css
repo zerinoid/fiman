@@ -670,6 +670,38 @@ a:hover { text-decoration: underline; }
 
 .radar-textarea::placeholder { color: var(--fi-color-text-muted); }
 
+.radar-declared-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--fi-space-4);
+}
+
+@media (min-width: 768px) {
+  .radar-declared-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.radar-readonly-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fi-space-2);
+  background: var(--fi-color-surface-2);
+  border: 1px solid var(--fi-color-border);
+  border-radius: var(--fi-radius-md);
+  padding: var(--fi-space-3) var(--fi-space-4);
+}
+
+.radar-readonly-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--fi-color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
 /* ==========================================
    SEARCH INPUT
    ========================================== */

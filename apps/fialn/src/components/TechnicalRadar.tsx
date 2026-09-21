@@ -56,6 +56,39 @@ export function TechnicalRadar({ profile, saving, error, onSave }: TechnicalRada
         <div className="alert alert-error">✗ {error}</div>
       )}
 
+      {/* Informações Declaradas no Cadastro (somente leitura) */}
+      <div className="radar-declared-grid">
+        <div className="radar-readonly-card">
+          <div className="radar-label">
+            <span className="radar-label-icon">🪢</span>
+            <span>Experiência Declarada</span>
+            <span className="badge badge-neutral text-xs" style={{ marginLeft: 'auto', fontWeight: 400 }}>Cadastro</span>
+          </div>
+          <p className="radar-readonly-text">
+            {profile?.shibari_experience ? (
+              profile.shibari_experience
+            ) : (
+              <span className="text-muted" style={{ fontStyle: 'italic' }}>Não informada</span>
+            )}
+          </p>
+        </div>
+
+        <div className="radar-readonly-card">
+          <div className="radar-label">
+            <span className="radar-label-icon">🎯</span>
+            <span>Objetivos no Shibari</span>
+            <span className="badge badge-neutral text-xs" style={{ marginLeft: 'auto', fontWeight: 400 }}>Cadastro</span>
+          </div>
+          <p className="radar-readonly-text">
+            {profile?.shibari_goals ? (
+              profile.shibari_goals
+            ) : (
+              <span className="text-muted" style={{ fontStyle: 'italic' }}>Não informados</span>
+            )}
+          </p>
+        </div>
+      </div>
+
       <div className="radar-field">
         <label className="radar-label" htmlFor="radar-strengths">
           <span className="radar-label-icon">💪</span>

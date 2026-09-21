@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { ClassSchedule, CourseTrack } from '@fi/types';
 import type { Navigate } from '../App';
 import { useCourses } from '../hooks/useCourses';
@@ -7,6 +7,7 @@ import {
   type CreateSchedulePayload,
   type UpdateSchedulePayload,
 } from '../hooks/useSchedules';
+import { useTechniqueTags } from '../hooks/useTechniqueTags';
 import { ClassRow } from '../components/ClassRow';
 import { getTrackTheme } from '../utils/trackThemes';
 
@@ -15,6 +16,8 @@ export interface ScheduleModalProps {
   saving: boolean;
   /** Existing schedule if editing; null if creating. */
   initialSchedule?: ClassSchedule | null;
+  /** Optional pre-fetched existing tags */
+  existingTags?: string[];
   onSubmit: (payload: CreateSchedulePayload | UpdateSchedulePayload) => Promise<boolean>;
   onClose: () => void;
 }
@@ -23,10 +26,13 @@ export function ScheduleModal({
   courses,
   saving,
   initialSchedule,
+  existingTags: propExistingTags,
   onSubmit,
   onClose,
 }: ScheduleModalProps) {
   const isEditing = !!initialSchedule;
+  const { existingTags: fetchedExistingTags } = useTechniqueTags();
+  const allExistingTags = propExistingTags ?? fetchedExistingTags;
 
   const [courseId, setCourseId] = useState(
     initialSchedule?.course_id ?? courses[0]?.id ?? '',
@@ -55,6 +61,8 @@ export function ScheduleModal({
     initialSchedule?.techniques ?? [],
   );
   const [tagInput, setTagInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [hasPhotoContent, setHasPhotoContent] = useState<boolean>(
     initialSchedule?.has_photo_content ?? false,
   );
@@ -67,11 +75,26 @@ export function ScheduleModal({
 
   const [error, setError] = useState<string | null>(null);
 
-  const handleAddTag = () => {
-    const trimmed = tagInput.trim().replace(/^#/, '');
+  const filteredSuggestions = useMemo(() => {
+    const query = tagInput.trim().toLowerCase().replace(/^#/, '');
+    if (!query) return [];
+    return allExistingTags
+      .filter(
+        (tag) =>
+          tag.toLowerCase().includes(query) &&
+          !techniques.some((t) => t.toLowerCase() === tag.toLowerCase()),
+      )
+      .slice(0, 8);
+  }, [allExistingTags, tagInput, techniques]);
+
+  const handleAddTag = (tagToAdd?: string) => {
+    const raw = tagToAdd ?? tagInput;
+    const trimmed = raw.trim().replace(/^#/, '');
     if (trimmed && !techniques.includes(trimmed)) {
       setTechniques((prev) => [...prev, trimmed]);
       setTagInput('');
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
     }
   };
 
@@ -79,7 +102,40 @@ export function ScheduleModal({
     setTechniques((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
+  const handleSelectSuggestion = (tag: string) => {
+    handleAddTag(tag);
+  };
+
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (showSuggestions && filteredSuggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActiveSuggestionIndex((prev) =>
+          prev < filteredSuggestions.length - 1 ? prev + 1 : 0,
+        );
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActiveSuggestionIndex((prev) =>
+          prev > 0 ? prev - 1 : filteredSuggestions.length - 1,
+        );
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        if (activeSuggestionIndex >= 0 && activeSuggestionIndex < filteredSuggestions.length) {
+          e.preventDefault();
+          handleSelectSuggestion(filteredSuggestions[activeSuggestionIndex]);
+          return;
+        }
+      }
+      if (e.key === 'Escape') {
+        setShowSuggestions(false);
+        setActiveSuggestionIndex(-1);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       handleAddTag();
@@ -213,19 +269,63 @@ export function ScheduleModal({
               Técnicas Abordadas (Tags)
             </label>
             <div style={{ display: 'flex', gap: 'var(--fi-space-2)' }}>
-              <input
-                id="sm-technique-input"
-                type="text"
-                className="form-input"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                placeholder="Digite a técnica e pressione Enter (ex: Futomomo, Takate Kote)"
-              />
+              <div className="tag-input-wrapper">
+                <input
+                  id="sm-technique-input"
+                  type="text"
+                  className="form-input"
+                  value={tagInput}
+                  onChange={(e) => {
+                    setTagInput(e.target.value);
+                    setShowSuggestions(true);
+                    setActiveSuggestionIndex(-1);
+                  }}
+                  onFocus={() => {
+                    if (tagInput.trim()) setShowSuggestions(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setShowSuggestions(false), 200);
+                  }}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Digite a técnica (ex: Futomomo, Takate Kote)"
+                  autoComplete="off"
+                  list="existing-tags-datalist"
+                />
+                <datalist id="existing-tags-datalist">
+                  {allExistingTags.map((tag) => (
+                    <option key={tag} value={tag} />
+                  ))}
+                </datalist>
+
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <ul className="tag-suggestions-menu" role="listbox">
+                    {filteredSuggestions.map((tag, index) => (
+                      <li
+                        key={tag}
+                        role="option"
+                        aria-selected={index === activeSuggestionIndex}
+                        className={`tag-suggestion-item ${
+                          index === activeSuggestionIndex ? 'is-active' : ''
+                        }`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectSuggestion(tag);
+                        }}
+                      >
+                        <span className="tag-suggestion-name">
+                          <span style={{ opacity: 0.6 }}>#</span>
+                          {tag}
+                        </span>
+                        <span className="tag-suggestion-badge">existente</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
               <button
                 type="button"
                 className="btn btn-ghost"
-                onClick={handleAddTag}
+                onClick={() => handleAddTag()}
                 style={{ whiteSpace: 'nowrap' }}
               >
                 + Tag

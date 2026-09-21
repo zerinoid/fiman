@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useStudents } from '../hooks/useStudents';
+import { useStudents, type StudentWithProfile } from '../hooks/useStudents';
 import { StudentCard } from '../components/StudentCard';
 import { StudentTable } from '../components/StudentTable';
 import { AddStudentModal } from '../components/AddStudentModal';
@@ -74,16 +74,18 @@ function useStudentEnrollmentsData(personIds: string[]): {
   groupsMap: GroupsMap;
   expiringSoonDaysMap: { [personId: string]: number };
   latestEnrollmentCourseMap: { [personId: string]: string };
+  activeEnrollmentMap: { [personId: string]: boolean };
 } {
   const [state, setState] = useState<{
     groupsMap: GroupsMap;
     expiringSoonDaysMap: { [personId: string]: number };
     latestEnrollmentCourseMap: { [personId: string]: string };
-  }>({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {} });
+    activeEnrollmentMap: { [personId: string]: boolean };
+  }>({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {}, activeEnrollmentMap: {} });
 
   const fetch = useCallback(async () => {
     if (personIds.length === 0) {
-      setState({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {} });
+      setState({ groupsMap: {}, expiringSoonDaysMap: {}, latestEnrollmentCourseMap: {}, activeEnrollmentMap: {} });
       return;
     }
 
@@ -125,6 +127,7 @@ function useStudentEnrollmentsData(personIds: string[]): {
     const gMap: GroupsMap = {};
     const eSoonDaysMap: { [personId: string]: number } = {};
     const latestCourseMap: { [personId: string]: string } = {};
+    const activeMap: { [personId: string]: boolean } = {};
 
     const todayDate = new Date();
     todayDate.setHours(0, 0, 0, 0);
@@ -161,6 +164,7 @@ function useStudentEnrollmentsData(personIds: string[]): {
       if (row.status !== 'active') continue;
       if (row.end_date && row.end_date < todayStr) continue;
 
+      activeMap[pid] = true;
       if (!activeByPerson[pid]) activeByPerson[pid] = [];
       activeByPerson[pid].push(row);
 
@@ -198,7 +202,12 @@ function useStudentEnrollmentsData(personIds: string[]): {
         }
       }
     }
-    setState({ groupsMap: gMap, expiringSoonDaysMap: eSoonDaysMap, latestEnrollmentCourseMap: latestCourseMap });
+    setState({
+      groupsMap: gMap,
+      expiringSoonDaysMap: eSoonDaysMap,
+      latestEnrollmentCourseMap: latestCourseMap,
+      activeEnrollmentMap: activeMap,
+    });
   }, [personIds.join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetch(); }, [fetch]);
@@ -229,16 +238,28 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
   const coursesMap = useCoursesMap();
   const personIds = students.map((s) => s.id);
   const lastLessonMap = useLastLessonDates(personIds);
-  const { groupsMap, expiringSoonDaysMap, latestEnrollmentCourseMap } = useStudentEnrollmentsData(personIds);
+  const { groupsMap, expiringSoonDaysMap, latestEnrollmentCourseMap, activeEnrollmentMap } = useStudentEnrollmentsData(personIds);
 
   const filtered = students.filter((s) =>
     formatPersonName(s).toLowerCase().includes(query.toLowerCase()),
   );
 
-  const activeStudents = filtered.filter((s) => s.profile?.status === 'ativo');
+  const isStudentActive = (s: StudentWithProfile) =>
+    Boolean(activeEnrollmentMap[s.id] || s.profile?.status === 'ativo');
 
-  // Sort activeStudents: expiring soon first (ascending by remaining days), then alphabetical
+  const isStudentPending = (s: StudentWithProfile) =>
+    s.profile?.status === 'pendente';
+
+  const activeStudents = filtered.filter(isStudentActive);
+
+  // Sort activeStudents: pending first, then expiring soon (ascending by remaining days), then alphabetical
   activeStudents.sort((a, b) => {
+    const aIsPending = isStudentPending(a);
+    const bIsPending = isStudentPending(b);
+
+    if (aIsPending && !bIsPending) return -1;
+    if (!aIsPending && bIsPending) return 1;
+
     const daysA = expiringSoonDaysMap[a.id];
     const daysB = expiringSoonDaysMap[b.id];
     const aIsExpiring = daysA !== undefined;
@@ -250,14 +271,18 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
     if (aIsExpiring) return -1;
     if (bIsExpiring) return 1;
 
-    return 0; // Both not expiring, keep alphabetical (students is loaded pre-sorted by full_name)
+    const nameA = formatPersonName(a);
+    const nameB = formatPersonName(b);
+    return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
   });
 
-  const pendingStudents = filtered.filter((s) => s.profile?.status === 'pendente');
+  const inactiveStudents = filtered.filter((s) => !isStudentActive(s));
 
-  const inactiveStudents = filtered.filter(
-    (s) => s.profile?.status === 'inativo' || (!s.profile?.status && s.profile?.status !== 'ativo' && s.profile?.status !== 'pendente'),
-  );
+  inactiveStudents.sort((a, b) => {
+    const nameA = formatPersonName(a);
+    const nameB = formatPersonName(b);
+    return nameA.localeCompare(nameB, 'pt-BR', { sensitivity: 'base' });
+  });
 
   const openProfile = (personId: string) => {
     navigate('profile', { person_id: personId });
@@ -383,46 +408,8 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
           />
         ) : (
           <div className="stack-6">
-          {pendingStudents.length > 0 && (
-            <div className="stack-4">
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: '#f59e0b',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  paddingBottom: '0.5rem',
-                  borderBottom: '1px solid rgba(245, 158, 11, 0.3)',
-                  marginBottom: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                }}
-              >
-                <span>✉️ Pré-Matrículas Pendentes ({pendingStudents.length})</span>
-                <span style={{ fontSize: '0.72rem', fontWeight: 400, color: 'var(--fi-color-text-muted)' }}>
-                  — Cadastrados via site aguardando confirmação de e-mail
-                </span>
-              </div>
+            {activeStudents.length > 0 && (
               <div className="stack-4">
-                {pendingStudents.map((student) => (
-                  <StudentCard
-                    key={student.id}
-                    student={student}
-                    lastLessonDate={lastLessonMap[student.id] ?? null}
-                    activeGroupNames={groupsMap[student.id]}
-                    daysToExpire={expiringSoonDaysMap[student.id]}
-                    onClick={() => openProfile(student.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {activeStudents.length > 0 && (
-            <div className="stack-4">
-              {pendingStudents.length > 0 && (
                 <div
                   style={{
                     fontSize: '0.8rem',
@@ -437,53 +424,54 @@ export function StudentsPage({ navigate }: StudentsPageProps) {
                 >
                   Alunos Ativos ({activeStudents.length})
                 </div>
-              )}
-              <div className="stack-4">
-                {activeStudents.map((student) => (
-                  <StudentCard
-                    key={student.id}
-                    student={student}
-                    lastLessonDate={lastLessonMap[student.id] ?? null}
-                    activeGroupNames={groupsMap[student.id]}
-                    daysToExpire={expiringSoonDaysMap[student.id]}
-                    onClick={() => openProfile(student.id)}
-                  />
-                ))}
+                <div className="stack-4">
+                  {activeStudents.map((student) => (
+                    <StudentCard
+                      key={student.id}
+                      student={student}
+                      lastLessonDate={lastLessonMap[student.id] ?? null}
+                      activeGroupNames={groupsMap[student.id]}
+                      daysToExpire={expiringSoonDaysMap[student.id]}
+                      hasActiveEnrollment={true}
+                      onClick={() => openProfile(student.id)}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {inactiveStudents.length > 0 && (
-            <div className="stack-4 mt-6">
-              <div
-                style={{
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: 'var(--fi-color-text-muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  paddingBottom: '0.5rem',
-                  borderBottom: '1px solid var(--fi-color-border)',
-                  marginBottom: '0.5rem',
-                }}
-              >
-                Alunos Inativos ({inactiveStudents.length})
+            {inactiveStudents.length > 0 && (
+              <div className={`stack-4 ${activeStudents.length > 0 ? 'mt-6' : ''}`}>
+                <div
+                  style={{
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: 'var(--fi-color-text-muted)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid var(--fi-color-border)',
+                    marginBottom: '0.5rem',
+                  }}
+                >
+                  Alunos Inativos ({inactiveStudents.length})
+                </div>
+                <div className="stack-4">
+                  {inactiveStudents.map((student) => (
+                    <StudentCard
+                      key={student.id}
+                      student={student}
+                      lastLessonDate={lastLessonMap[student.id] ?? null}
+                      activeGroupNames={groupsMap[student.id]}
+                      daysToExpire={expiringSoonDaysMap[student.id]}
+                      hasActiveEnrollment={false}
+                      onClick={() => openProfile(student.id)}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="stack-4">
-                {inactiveStudents.map((student) => (
-                  <StudentCard
-                    key={student.id}
-                    student={student}
-                    lastLessonDate={lastLessonMap[student.id] ?? null}
-                    activeGroupNames={groupsMap[student.id]}
-                    daysToExpire={expiringSoonDaysMap[student.id]}
-                    onClick={() => openProfile(student.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
       ))}
 
       {isAddModalOpen && (

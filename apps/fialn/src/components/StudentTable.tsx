@@ -280,9 +280,13 @@ export function StudentTable({
                         color: '#f59e0b',
                         border: '1px solid rgba(245, 158, 11, 0.3)',
                       }}
-                      title="Pré-matrícula realizada no site — aguardando confirmação do e-mail"
+                      title={
+                        groupsMap[student.id]?.length
+                          ? 'Aluno frequenta aulas mas ainda não aceitou o termo/confirmou e-mail'
+                          : 'Cadastro realizado no site — aguardando confirmação do e-mail pelo aluno'
+                      }
                     >
-                      ✉️ Pendente
+                      {groupsMap[student.id]?.length ? '📜 Termo Pendente' : '✉️ Pré-Matrícula'}
                     </span>
                   ) : (
                     <span

@@ -6,6 +6,7 @@ interface StudentCardProps {
   lastLessonDate: string | null;
   activeGroupNames?: string[];
   daysToExpire?: number;
+  hasActiveEnrollment?: boolean;
   onClick: () => void;
 }
 
@@ -29,13 +30,16 @@ function formatRelativeDate(isoDate: string | null): string {
   return `Última aula: ${date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
 }
 
-export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToExpire, onClick }: StudentCardProps) {
+export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToExpire, hasActiveEnrollment, onClick }: StudentCardProps) {
   const displayName = formatPersonName(student);
   const initials = getInitials(displayName);
   const relDate = formatRelativeDate(lastLessonDate);
-  const hasActiveEnrollments = Boolean(activeGroupNames && activeGroupNames.length > 0);
+  const hasActiveEnrollments =
+    hasActiveEnrollment !== undefined
+      ? hasActiveEnrollment
+      : Boolean(activeGroupNames && activeGroupNames.length > 0);
   const isPending = student.profile?.status === 'pendente';
-  const isActive = student.profile?.status === 'ativo';
+  const isActive = hasActiveEnrollments || student.profile?.status === 'ativo';
   const isExpiringSoon = daysToExpire !== undefined;
 
   return (
@@ -55,9 +59,9 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
         <div className="student-meta">
           {isPending ? (hasActiveEnrollments ? `Frequenta · ${relDate} · Termo pendente` : 'Pré-matrícula · Aguardando confirmação de e-mail') : relDate}
         </div>
-        {hasActiveEnrollments ? (
+        {activeGroupNames && activeGroupNames.length > 0 ? (
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-            {activeGroupNames!.map((g) => (
+            {activeGroupNames.map((g) => (
               <span key={g} className="badge badge-primary" style={{ fontSize: '0.68rem' }}>
                 {g}
               </span>
@@ -65,7 +69,7 @@ export function StudentCard({ student, lastLessonDate, activeGroupNames, daysToE
           </div>
         ) : (
           <div style={{ marginTop: '4px', fontSize: '0.72rem', color: 'var(--fi-color-text-muted)', fontStyle: 'italic' }}>
-            {isPending ? 'Interesse registrado via site' : 'Sem matrículas ativas'}
+            {hasActiveEnrollments ? 'Matrícula ativa' : isPending ? 'Interesse registrado via site' : 'Sem matrículas ativas'}
           </div>
         )}
       </div>

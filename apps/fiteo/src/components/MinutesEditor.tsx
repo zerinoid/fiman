@@ -19,7 +19,14 @@ export function MinutesEditor({ classId, initialValue, saving, trackTheme = DEFA
     setText(initialValue ?? '');
     setIsDirty(false);
     setSaved(false);
-  }, [classId, initialValue]);
+  }, [classId]);
+
+  // Sync if initialValue updates externally and there are no unsaved changes
+  useEffect(() => {
+    if (!isDirty && initialValue !== null && initialValue !== text) {
+      setText(initialValue);
+    }
+  }, [initialValue, isDirty, text]);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);

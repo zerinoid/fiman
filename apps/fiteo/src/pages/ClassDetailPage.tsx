@@ -151,6 +151,14 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
     return ok;
   };
 
+  const handleSaveMinutes = async (scheduleClassId: string, text: string) => {
+    const ok = await saveMinutes(scheduleClassId, text);
+    if (ok) {
+      setSchedule((prev) => (prev ? { ...prev, minutes_and_notes: text } : prev));
+    }
+    return ok;
+  };
+
   const handleDeleteSchedule = async () => {
     if (!schedule) return;
     setDeleteError(null);
@@ -583,81 +591,79 @@ export function ClassDetailPage({ classId, navigate, isAdmin, activeCourseId }: 
       </div>
 
       {/* ---- Tab content ---- */}
-      {activeTab === 'attendance' && (
-        <div
-          className="card"
+      <div
+        className="card"
+        style={{
+          display: activeTab === 'attendance' ? 'block' : 'none',
+          borderLeft: `4px solid ${trackTheme.border}`,
+          borderColor: trackTheme.borderSubtle,
+          backgroundColor: trackTheme.bg,
+        }}
+      >
+        <p
+          className="section-label"
           style={{
-            borderLeft: `4px solid ${trackTheme.border}`,
-            borderColor: trackTheme.borderSubtle,
-            backgroundColor: trackTheme.bg,
+            marginBottom: 'var(--fi-space-4)',
+            color: trackTheme.text,
+            fontWeight: 600,
           }}
         >
-          <p
-            className="section-label"
-            style={{
-              marginBottom: 'var(--fi-space-4)',
-              color: trackTheme.text,
-              fontWeight: 600,
-            }}
+          Lista de Presença
+        </p>
+
+        {attendanceError && (
+          <div
+            className="alert alert-danger"
+            style={{ marginBottom: 'var(--fi-space-4)' }}
           >
-            Lista de Presença
-          </p>
+            {attendanceError}
+          </div>
+        )}
 
-          {attendanceError && (
-            <div
-              className="alert alert-danger"
-              style={{ marginBottom: 'var(--fi-space-4)' }}
-            >
-              {attendanceError}
-            </div>
-          )}
-
-          {attendanceLoading || studentsLoading ? (
-            <div className="loading-center" style={{ minHeight: '120px' }}>
-              <div className="spinner" />
-              <span>Carregando alunos…</span>
-            </div>
-          ) : (
-            <AttendanceSheet
-              enrolledStudents={students}
-              attendance={attendance}
-              saving={attendanceSaving}
-              readOnly={!isAdmin}
-              trackTheme={trackTheme}
-              onToggle={togglePresence}
-            />
-          )}
-        </div>
-      )}
-
-      {activeTab === 'minutes' && (
-        <div
-          className="card"
-          style={{
-            borderLeft: `4px solid ${trackTheme.border}`,
-            borderColor: trackTheme.borderSubtle,
-            backgroundColor: trackTheme.bg,
-          }}
-        >
-          <p
-            className="section-label"
-            style={{
-              marginBottom: 'var(--fi-space-4)',
-              color: trackTheme.text,
-              fontWeight: 600,
-            }}
-          >
-            Ata da Aula
-          </p>
-          <MinutesEditor
-            classId={classId}
-            initialValue={schedule.minutes_and_notes}
+        {attendanceLoading || studentsLoading ? (
+          <div className="loading-center" style={{ minHeight: '120px' }}>
+            <div className="spinner" />
+            <span>Carregando alunos…</span>
+          </div>
+        ) : (
+          <AttendanceSheet
+            enrolledStudents={students}
+            attendance={attendance}
             saving={attendanceSaving}
+            readOnly={!isAdmin}
             trackTheme={trackTheme}
-            onSave={saveMinutes}
+            onToggle={togglePresence}
           />
-        </div>
-      )}
+        )}
+      </div>
+
+      <div
+        className="card"
+        style={{
+          display: activeTab === 'minutes' ? 'block' : 'none',
+          borderLeft: `4px solid ${trackTheme.border}`,
+          borderColor: trackTheme.borderSubtle,
+          backgroundColor: trackTheme.bg,
+        }}
+      >
+        <p
+          className="section-label"
+          style={{
+            marginBottom: 'var(--fi-space-4)',
+            color: trackTheme.text,
+            fontWeight: 600,
+          }}
+        >
+          Ata da Aula
+        </p>
+        <MinutesEditor
+          classId={classId}
+          initialValue={schedule.minutes_and_notes}
+          saving={attendanceSaving}
+          trackTheme={trackTheme}
+          onSave={handleSaveMinutes}
+        />
+      </div>
 
       {/* Bottom pagination */}
       <div style={{ marginTop: 'var(--fi-space-6)' }}>

@@ -18,8 +18,7 @@ jobs:
     permissions:
       contents: write
     env:
-      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DIRECT_STRING: ${{ secrets.SUPABASE_DIRECT_STRING }}
       BACKUP_ENABLED: ${{ vars.BACKUP_ENABLED }} # Repository variable (true or false)
     steps:
       - name: Check if backups are enabled
@@ -45,15 +44,15 @@ jobs:
 
       - name: Backup roles
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f supabase/backups/roles.sql --role-only
+        run: supabase db dump --db-url "$SUPABASE_DIRECT_STRING" -f supabase/backups/roles.sql --role-only
 
       - name: Backup schema
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f supabase/backups/schema.sql
+        run: supabase db dump --db-url "$SUPABASE_DIRECT_STRING" -f supabase/backups/schema.sql
 
       - name: Backup data
         if: env.BACKUP_ENABLED == 'true'
-        run: supabase db dump --db-url "$SUPABASE_DB_URL" -f supabase/backups/data.sql --data-only --use-copy
+        run: supabase db dump --db-url "$SUPABASE_DIRECT_STRING" -f supabase/backups/data.sql --data-only --use-copy
 
       - name: Commit backups
         if: env.BACKUP_ENABLED == 'true'

@@ -27,7 +27,7 @@ jobs:
 
       - name: Run pg_dump (Custom Format)
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DIRECT_STRING }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_POOLER }}
         run: |
           mkdir -p supabase/backups/postgres_dump
 

@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  backup:
+  disaster_recovery_dump:
     name: Backup & Auto-Commit
     runs-on: ubuntu-latest
 

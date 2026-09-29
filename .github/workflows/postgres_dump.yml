@@ -1,0 +1,45 @@
+name: Supabase Disaster Recovery Backup
+
+on:
+  schedule:
+    # Executa diariamente às 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Permite execução manual pelo painel de Actions
+
+permissions:
+  contents: write
+
+jobs:
+  backup:
+    name: Backup & Auto-Commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run pg_dump (Custom Format)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DIRECT_STRING }}
+        run: |
+          mkdir -p supabase/backups/postgres_dump
+
+          pg_dump --dbname="$SUPABASE_DB_URL" \
+            --format=custom \
+            --no-owner \
+            --no-privileges \
+            --exclude-schema='extensions|graphql|graphql_public|net|pgbouncer|pgsodium|pgsodium_masks|realtime|supabase_functions|supabase_migrations|vault' \
+            --file=supabase/backups/postgres_dump/backup.dump
+
+      - name: Commit & Push Backup
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(db): update disaster recovery dump [skip ci]"
+          file_pattern: "supabase/backups/postgres_dump/backup.dump"

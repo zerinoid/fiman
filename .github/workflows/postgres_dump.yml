@@ -3,7 +3,7 @@ name: Supabase Disaster Recovery Backup
 on:
   schedule:
     # Executa diariamente às 03:00 UTC
-    - cron: '0 3 * * *'
+    - cron: '0 15 * * 2,4'
   workflow_dispatch: # Permite execução manual pelo painel de Actions
 
 permissions:

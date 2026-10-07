@@ -3,8 +3,8 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 // Configurações de CORS
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type'
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -12,7 +12,7 @@ const FIELD_LABELS: Record<string, string> = {
   desired_date: 'Data desejada',
   body_modification_planned: 'Pretende modificar o corpo?',
   body_modification_details: 'Detalhes da modificação',
-  identifies_as: 'Identifica-se como (Bottom/Top/Switcher)',
+  identifies_as: 'Identifica-se como',
   session_intensity: 'Intensidade desejada',
   shibari_experience: 'Experiência prévia',
   pain_relation: 'Relação com a dor',
@@ -61,8 +61,8 @@ const FIELD_LABELS: Record<string, string> = {
 function formatResponses(record: Record<string, any>): string {
   let html = ''
   for (const [key, value] of Object.entries(record)) {
-    // Ignorar campos de sistema
-    if (['id', 'person_id', 'created_at', 'pseudonym', 'age', 'pronouns', 'social_media'].includes(key)) continue
+    // Ignorar campos de sistema e campos pessoais base (que não vão no resumo da sessão)
+    if (['id', 'person_id', 'created_at', 'full_name', 'email', 'whatsapp', 'pseudonym', 'age', 'pronouns', 'social_media'].includes(key)) continue
     
     // Ignorar nulos ou strings vazias
     if (value === null || value === undefined || value === '') continue
@@ -125,10 +125,15 @@ function getClientEmailHtml(nome: string, formType: string, respostasHtml: strin
   `.trim()
 }
 
-function getAdminEmailHtml(nome: string, respostasHtml: string): string {
+function getAdminEmailHtml(nome: string, payload: any, respostasHtml: string): string {
   return `
 <div style="font-family:Arial, sans-serif; font-size: 14px; color:#111; line-height:1.45; max-width:600px;">
   <h3>Um novo formulário foi preenchido por ${nome}!</h3>
+  <p><strong>E-mail:</strong> ${payload.email}<br/>
+  <strong>WhatsApp:</strong> ${payload.whatsapp || 'Não informado'}<br/>
+  <strong>Pronomes:</strong> ${payload.pronouns || '-'}<br/>
+  <strong>Idade:</strong> ${payload.age || '-'}</p>
+  <hr/>
   <p>Detalhes abaixo:</p>
   ${respostasHtml}
 </div>
@@ -140,22 +145,23 @@ Deno.serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+
   try {
     const payload = await req.json()
-    // Supabase Webhook payload checking
-    if (payload.type !== 'INSERT' || payload.table !== 'fiatt_client_records') {
-      return new Response(JSON.stringify({ message: 'Ignored, not an INSERT to fiatt_client_records' }), {
-        status: 200,
+
+    if (!payload.email || !payload.full_name) {
+      return new Response(JSON.stringify({ error: 'O email e o full_name são obrigatórios' }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const record = payload.record
-    if (!record || !record.person_id) {
-      throw new Error('Record ou person_id não fornecido no payload')
-    }
-
-    // Inicializar cliente Supabase para buscar dados da tabela people
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
@@ -163,36 +169,79 @@ Deno.serve(async (req: Request) => {
       throw new Error('SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados')
     }
 
+    // Usamos a SERVICE_ROLE_KEY para contornar o RLS
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-    // Buscar dados do cliente (Nome e Email)
-    const { data: person, error: personError } = await supabase
+    const emailNorm = payload.email.toLowerCase().trim()
+    let personId = null
+
+    // 1. Verificar se a pessoa já existe
+    const { data: existingPerson } = await supabase
       .from('people')
-      .select('full_name, email')
-      .eq('id', record.person_id)
+      .select('id')
+      .eq('email', emailNorm)
       .single()
 
-    if (personError || !person) {
-      throw new Error(`Pessoa não encontrada para o id: ${record.person_id}`)
+    if (existingPerson) {
+      personId = existingPerson.id
+      // Opcional: Atualizar dados pessoais da pessoa existente
+      await supabase.from('people').update({
+        full_name: payload.full_name,
+        phone: payload.whatsapp,
+        pseudonym: payload.pseudonym,
+        age: payload.age,
+        pronouns: payload.pronouns,
+        social_media: payload.social_media,
+        is_client: true
+      }).eq('id', personId)
+    } else {
+      // Inserir nova pessoa
+      const { data: newPerson, error: personErr } = await supabase
+        .from('people')
+        .insert({
+          full_name: payload.full_name,
+          email: emailNorm,
+          phone: payload.whatsapp,
+          pseudonym: payload.pseudonym,
+          age: payload.age,
+          pronouns: payload.pronouns,
+          social_media: payload.social_media,
+          is_client: true
+        })
+        .select('id')
+        .single()
+
+      if (personErr) throw new Error(`Erro ao criar pessoa: ${personErr.message}`)
+      personId = newPerson.id
     }
 
-    const emailCliente = person.email
-    const nomeCliente = person.full_name || 'Cliente'
-    const formType = record.form_type || 'privada'
+    // 2. Montar dados para fiatt_client_records omitindo dados pessoais base que já foram pra people
+    const { 
+      full_name, email, whatsapp, // Extraídos
+      ...recordData // Restante vai para a ficha
+    } = payload;
+    
+    recordData.person_id = personId;
 
+    const { error: recordErr } = await supabase
+      .from('fiatt_client_records')
+      .insert(recordData)
+
+    if (recordErr) throw new Error(`Erro ao criar ficha: ${recordErr.message}`)
+
+    // 3. Preparar e Enviar E-mails
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-    if (!RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY não configurada no servidor')
-    }
+    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurada no servidor')
 
     const adminEmail = 'leo.zerino@gmail.com'
     const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'foraisso <noreply@auth.zerino.org>'
+    const formType = payload.form_type || 'privada'
 
-    const respostasHtml = formatResponses(record)
-    const clientHtml = getClientEmailHtml(nomeCliente, formType, respostasHtml)
-    const adminHtml = getAdminEmailHtml(nomeCliente, respostasHtml)
+    const respostasHtml = formatResponses(recordData)
+    const clientHtml = getClientEmailHtml(payload.full_name, formType, respostasHtml)
+    const adminHtml = getAdminEmailHtml(payload.full_name, payload, respostasHtml)
 
-    // Enviar Email para o Admin
+    // Enviar para o Admin
     const resendAdminReq = fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -202,42 +251,38 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: fromEmail,
         to: [adminEmail],
-        subject: `Sessão ${formType}: ${nomeCliente}`,
+        subject: `Sessão ${formType}: ${payload.full_name}`,
         html: adminHtml
       })
     })
 
-    // Enviar Email para o Cliente
-    let resendClientReq = Promise.resolve({ ok: true } as Response)
-    if (emailCliente) {
-      resendClientReq = fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: [emailCliente],
-          subject: 'Sua requisição de sessão foi enviada ao foraisso',
-          html: clientHtml
-        })
+    // Enviar para o Cliente
+    const resendClientReq = fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [emailNorm],
+        subject: 'Sua requisição de sessão foi enviada ao foraisso',
+        html: clientHtml
       })
-    }
+    })
 
     const [adminRes, clientRes] = await Promise.all([resendAdminReq, resendClientReq])
 
     if (!adminRes.ok || !clientRes.ok) {
-      const adminErr = await adminRes.json().catch(() => ({}))
-      const clientErr = await clientRes.json().catch(() => ({}))
-      console.error('[fiatt-session-emails] Resend API error:', { adminErr, clientErr })
-      throw new Error('Falha ao enviar e-mails pelo Resend')
+      console.error('[fiatt-session-emails] Resend error', await adminRes.text(), await clientRes.text())
+      throw new Error('Falha no envio de e-mail')
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Emails enviados com sucesso' }), {
+    return new Response(JSON.stringify({ success: true, message: 'Ficha recebida e emails enviados com sucesso' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[fiatt-session-emails] error:', message)

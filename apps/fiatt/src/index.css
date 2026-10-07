@@ -45,3 +45,75 @@ html, body, #root {
 
 a { color: var(--fi-color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+/* Responsive Badge text toggle */
+.badge-label-full {
+  display: inline;
+}
+.badge-label-short {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .badge-label-full {
+    display: none;
+  }
+  .badge-label-short {
+    display: inline;
+  }
+}
+
+/* Custom scrollbar for horizontal scrolling table */
+.horizontal-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--fi-color-border);
+  border-radius: var(--fi-radius-lg);
+  background: var(--fi-color-surface);
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-track {
+  background: var(--fi-color-surface);
+}
+
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--fi-color-border);
+  border-radius: 4px;
+}
+
+.fiatt-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.fiatt-table th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--fi-color-text-muted);
+  border-bottom: 1px solid var(--fi-color-border);
+  background: var(--fi-color-surface-2);
+}
+
+.fiatt-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--fi-color-border);
+  color: var(--fi-color-text);
+}
+
+.fiatt-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.fiatt-table tbody tr:hover {
+  background-color: var(--fi-color-surface-2);
+}
+

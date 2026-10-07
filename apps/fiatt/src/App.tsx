@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
 import { useFiattRecords, FiattClientRecord } from './hooks/useFiattRecords';
@@ -200,6 +200,22 @@ export function App() {
   // Estado do Dashboard
   const { records, loading: recordsLoading } = useFiattRecords();
   const [selectedRecord, setSelectedRecord] = useState<FiattClientRecord | null>(null);
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+
+  const sortedRecords = useMemo(() => {
+    return [...records].sort((a, b) => {
+      if (sortBy === 'name') {
+        const nameA = a.people?.full_name?.toLowerCase() || '';
+        const nameB = b.people?.full_name?.toLowerCase() || '';
+        return nameA.localeCompare(nameB, 'pt-BR');
+      }
+      // Padrão: data de submissão decrescente (mais recente primeiro)
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA;
+    });
+  }, [records, sortBy]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -249,7 +265,7 @@ export function App() {
         margin: '0 auto',
       }}
     >
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
             width: '40px', height: '40px', borderRadius: '8px',
@@ -271,10 +287,87 @@ export function App() {
         </button>
       </header>
 
+      {/* Toolbar com Alternador de Visualização e Ordenação */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem',
+        padding: '0.75rem 1rem', background: 'var(--fi-color-surface)',
+        border: '1px solid var(--fi-color-border)', borderRadius: 'var(--fi-radius-lg)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--fi-color-text-muted)' }}>
+          <span>Total: <strong>{records.length}</strong> {records.length === 1 ? 'ficha' : 'fichas'}</span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Ordenação */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--fi-color-text-muted)' }}>Ordenar:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'date' | 'name')}
+              style={{
+                background: 'var(--fi-color-surface-2)',
+                color: 'var(--fi-color-text)',
+                border: '1px solid var(--fi-color-border)',
+                borderRadius: 'var(--fi-radius-md)',
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="date">Data de envio (Recentes)</option>
+              <option value="name">Nome (A - Z)</option>
+            </select>
+          </div>
+
+          {/* Toggle de Modo de Exibição */}
+          <div style={{
+            display: 'inline-flex',
+            background: 'var(--fi-color-surface-2)',
+            borderRadius: 'var(--fi-radius-md)',
+            padding: '2px',
+            border: '1px solid var(--fi-color-border)'
+          }}>
+            <button
+              onClick={() => setViewMode('cards')}
+              style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                border: 'none',
+                borderRadius: 'calc(var(--fi-radius-md) - 2px)',
+                cursor: 'pointer',
+                background: viewMode === 'cards' ? 'var(--fi-color-primary)' : 'transparent',
+                color: viewMode === 'cards' ? '#fff' : 'var(--fi-color-text-muted)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              🗂️ Cards
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                padding: '0.4rem 0.8rem',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                border: 'none',
+                borderRadius: 'calc(var(--fi-radius-md) - 2px)',
+                cursor: 'pointer',
+                background: viewMode === 'table' ? 'var(--fi-color-primary)' : 'transparent',
+                color: viewMode === 'table' ? '#fff' : 'var(--fi-color-text-muted)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              📋 Lista
+            </button>
+          </div>
+        </div>
+      </div>
+
       {recordsLoading ? (
-        <div>Carregando fichas...</div>
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--fi-color-text-muted)' }}>Carregando fichas...</div>
       ) : (
-        <RecordList records={records} onSelect={setSelectedRecord} />
+        <RecordList records={sortedRecords} onSelect={setSelectedRecord} viewMode={viewMode} />
       )}
 
       {selectedRecord && (

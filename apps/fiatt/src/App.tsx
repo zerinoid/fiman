@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { supabase } from './lib/supabase';
-
+import { useFiattRecords, FiattClientRecord } from './hooks/useFiattRecords';
+import { RecordList } from './components/RecordList';
+import { RecordDetails } from './components/RecordDetails';
+import { SessionReportForm } from './components/SessionReportForm';
 function UnauthorizedScreen({ onSignOut }: { onSignOut: () => void }) {
   return (
     <main
@@ -194,6 +197,10 @@ export function App() {
     fetchRole();
   }, [fetchRole]);
 
+  // Estado do Dashboard
+  const { records, loading: recordsLoading } = useFiattRecords();
+  const [selectedRecord, setSelectedRecord] = useState<FiattClientRecord | null>(null);
+
   if (authLoading || (session && roleLoading)) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -223,81 +230,68 @@ export function App() {
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 'var(--fi-space-4)',
-        padding: 'var(--fi-space-8)',
+        padding: 'var(--fi-space-6)',
+        maxWidth: '1200px',
+        margin: '0 auto',
       }}
     >
-      <div
-        style={{
-          background: 'var(--fi-color-surface)',
-          border: '1px solid var(--fi-color-border)',
-          borderRadius: 'var(--fi-radius-xl)',
-          padding: 'var(--fi-space-8)',
-          maxWidth: '480px',
-          width: '100%',
-          textAlign: 'center',
-          boxShadow: '0 8px 32px hsl(0 0% 0% / 0.5)',
-        }}
-      >
-        <div
-          style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: 'var(--fi-radius-lg)',
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '8px',
             background: 'hsl(var(--fi-hue-primary), 60%, 68%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.5rem',
-            margin: '0 auto var(--fi-space-6)',
-          }}
-        >
-          🫀
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.2rem'
+          }}>🫀</div>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--fi-color-text)' }}>FIATT Backoffice</h1>
         </div>
-        <h1
-          style={{
-            fontSize: '1.75rem',
-            fontWeight: 700,
-            marginBottom: 'var(--fi-space-2)',
-            color: 'var(--fi-color-text)',
-          }}
-        >
-          FIATT
-        </h1>
-        <p style={{ color: 'var(--fi-color-text-muted)', fontSize: '0.95rem' }}>
-          Sessões de Clientes &amp; Anamnese
-        </p>
-        <div
-          style={{
-            marginTop: 'var(--fi-space-6)',
-            padding: 'var(--fi-space-3) var(--fi-space-4)',
-            background: 'var(--fi-color-surface-2)',
-            borderRadius: 'var(--fi-radius-md)',
-            fontSize: '0.8rem',
-            color: 'var(--fi-color-accent)',
-            fontFamily: 'var(--fi-font-mono)',
-          }}
-        >
-          PRD 00 ✓ — Aguardando PRD 04 (FIATT)
-        </div>
-
         <button
           onClick={signOut}
           style={{
-            marginTop: '1.5rem',
-            padding: '0.5rem 1rem',
-            background: 'transparent',
-            border: '1px solid var(--fi-color-border)',
-            borderRadius: 'var(--fi-radius-md)',
-            color: 'var(--fi-color-text-muted)',
-            cursor: 'pointer',
+            padding: '0.5rem 1rem', background: 'transparent',
+            border: '1px solid var(--fi-color-border)', borderRadius: 'var(--fi-radius-md)',
+            color: 'var(--fi-color-text-muted)', cursor: 'pointer',
           }}
         >
-          Sair ({session.user.email})
+          Sair
         </button>
-      </div>
+      </header>
+
+      {recordsLoading ? (
+        <div>Carregando fichas...</div>
+      ) : (
+        <RecordList records={records} onSelect={setSelectedRecord} />
+      )}
+
+      {selectedRecord && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end'
+        }}>
+          <div style={{
+            width: '100%', maxWidth: '600px', background: 'var(--fi-color-surface)',
+            height: '100%', overflowY: 'auto', padding: '2rem',
+            boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
+            borderLeft: '1px solid var(--fi-color-border)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0 }}>{selectedRecord.people?.full_name}</h2>
+              <button 
+                onClick={() => setSelectedRecord(null)}
+                style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}
+              >×</button>
+            </div>
+            
+            <div style={{ marginBottom: '2rem' }}>
+              <RecordDetails record={selectedRecord} />
+            </div>
+
+            <hr style={{ borderColor: 'var(--fi-color-border)', margin: '2rem 0' }} />
+            
+            <SessionReportForm record={selectedRecord} />
+          </div>
+        </div>
+      )}
     </main>
   );
 }

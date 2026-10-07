@@ -201,6 +201,20 @@ export function App() {
   const { records, loading: recordsLoading } = useFiattRecords();
   const [selectedRecord, setSelectedRecord] = useState<FiattClientRecord | null>(null);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedRecord(null);
+      }
+    };
+    if (selectedRecord) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedRecord]);
+
   if (authLoading || (session && roleLoading)) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -264,16 +278,24 @@ export function App() {
       )}
 
       {selectedRecord && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end'
-        }}>
-          <div style={{
-            width: '100%', maxWidth: '600px', background: 'var(--fi-color-surface)',
-            height: '100%', overflowY: 'auto', padding: '2rem',
-            boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
-            borderLeft: '1px solid var(--fi-color-border)'
-          }}>
+        <div
+          onClick={() => setSelectedRecord(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', justifyContent: 'flex-end',
+            cursor: 'pointer'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '600px', background: 'var(--fi-color-surface)',
+              height: '100%', overflowY: 'auto', padding: '2rem',
+              boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
+              borderLeft: '1px solid var(--fi-color-border)',
+              cursor: 'default'
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h2 style={{ margin: 0 }}>{selectedRecord.people?.full_name}</h2>
               <button 

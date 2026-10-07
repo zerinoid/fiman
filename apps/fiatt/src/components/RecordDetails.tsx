@@ -26,12 +26,12 @@ export function RecordDetails({ record }: { record: FiattClientRecord }) {
     <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '1rem' }}>
       <Block title="Dados Pessoais">
         <Field label="Nome Completo" value={p?.full_name} />
-        <Field label="Pseudônimo" value={p?.pseudonym} />
-        <Field label="Idade" value={p?.age ? String(p.age) : null} />
-        <Field label="Pronomes" value={p?.pronouns} />
+        <Field label="Pseudônimo" value={record.pseudonym} />
+        <Field label="Idade" value={record.age ? String(record.age) : null} />
+        <Field label="Pronomes" value={record.pronouns} />
         <Field label="E-mail" value={p?.email} />
         <Field label="WhatsApp" value={p?.phone} />
-        <Field label="Redes Sociais" value={p?.social_media} />
+        <Field label="Redes Sociais" value={record.social_media} />
         <Field label="Data Desejada" value={record.desired_date} />
       </Block>
 

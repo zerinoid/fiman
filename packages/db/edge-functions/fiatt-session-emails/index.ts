@@ -184,28 +184,20 @@ Deno.serve(async (req: Request) => {
 
     if (existingPerson) {
       personId = existingPerson.id
-      // Opcional: Atualizar dados pessoais da pessoa existente
+      // Atualizar dados cadastrais básicos da pessoa existente
       await supabase.from('people').update({
         full_name: payload.full_name,
         phone: payload.whatsapp,
-        pseudonym: payload.pseudonym,
-        age: payload.age,
-        pronouns: payload.pronouns,
-        social_media: payload.social_media,
         is_client: true
       }).eq('id', personId)
     } else {
-      // Inserir nova pessoa
+      // Inserir nova pessoa na tabela mestre people
       const { data: newPerson, error: personErr } = await supabase
         .from('people')
         .insert({
           full_name: payload.full_name,
           email: emailNorm,
           phone: payload.whatsapp,
-          pseudonym: payload.pseudonym,
-          age: payload.age,
-          pronouns: payload.pronouns,
-          social_media: payload.social_media,
           is_client: true
         })
         .select('id')

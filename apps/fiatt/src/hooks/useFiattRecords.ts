@@ -6,17 +6,17 @@ export type FiattClientRecord = {
   created_at: string;
   form_type: string;
   person_id: string;
-  // Personal Info (Joined)
+  // Personal Info (Joined from people)
   people: {
     full_name: string;
     email: string;
     phone: string;
-    age: number;
-    pronouns: string;
-    social_media: string;
-    pseudonym: string;
   };
-  // Detailed fields
+  // Detailed fields on fiatt_client_records
+  pseudonym?: string;
+  age?: number;
+  pronouns?: string;
+  social_media?: string;
   desired_date: string;
   body_modification_planned: boolean;
   body_modification_details: string;
@@ -91,7 +91,7 @@ export function useFiattRecords() {
       .select(`
         *,
         people (
-          full_name, email, phone, age, pronouns, social_media, pseudonym
+          full_name, email, phone
         )
       `)
       .order('created_at', { ascending: false });

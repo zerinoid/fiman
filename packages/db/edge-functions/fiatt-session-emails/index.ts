@@ -90,17 +90,30 @@ async function hashIp(ip: string): Promise<string> {
     .substring(0, 32)
 }
 
+interface TurnstileVerificationResult {
+  valid: boolean
+  missingSecret?: boolean
+  errorCodes?: string[]
+}
+
 async function verifyTurnstileToken(
   token: string,
-  secret: string,
-  remoteIp?: string
-): Promise<boolean> {
-  if (!token || !secret) return false
+  secret: string
+): Promise<TurnstileVerificationResult> {
+  if (!secret) {
+    console.error(
+      '[fiatt] TURNSTILE_SECRET environment variable is not configured in Supabase Edge Function secrets!'
+    )
+    return { valid: false, missingSecret: true }
+  }
+  if (!token) {
+    console.warn('[fiatt] Turnstile token is empty or missing from request payload')
+    return { valid: false, errorCodes: ['missing-input-response'] }
+  }
 
   const body = new FormData()
   body.append('secret', secret)
   body.append('response', token)
-  if (remoteIp) body.append('remoteip', remoteIp)
 
   try {
     const response = await fetch(
@@ -108,22 +121,29 @@ async function verifyTurnstileToken(
       { method: 'POST', body }
     )
     if (!response.ok) {
-      console.error('[fiatt] Turnstile HTTP error:', response.status)
-      return false
+      console.error(
+        '[fiatt] Turnstile HTTP error:',
+        response.status,
+        await response.text()
+      )
+      return { valid: false, errorCodes: [`http-${response.status}`] }
     }
     const data = (await response.json()) as {
       success: boolean
       'error-codes'?: string[]
+      messages?: string[]
     }
     if (!data.success) {
-      console.warn('[fiatt] Turnstile failed:', data['error-codes'])
+      console.warn('[fiatt] Turnstile failed with codes:', data['error-codes'])
+      return { valid: false, errorCodes: data['error-codes'] }
     }
-    return data.success === true
+    return { valid: true }
   } catch (error) {
     console.error('[fiatt] Turnstile exception:', error)
-    return false
+    return { valid: false, errorCodes: ['internal-exception'] }
   }
 }
+
 
 // ── Allowed option values (must match the frontend & legacy Google Forms) ────
 
@@ -560,14 +580,26 @@ Deno.serve(async (req: Request) => {
       rawPayload && typeof rawPayload === 'object'
         ? (rawPayload as Record<string, unknown>).turnstileToken
         : undefined
-    const turnstileValid = await verifyTurnstileToken(
+    const turnstileResult = await verifyTurnstileToken(
       typeof turnstileToken === 'string' ? turnstileToken : '',
-      Deno.env.get('TURNSTILE_SECRET') ?? '',
-      clientIp
+      Deno.env.get('TURNSTILE_SECRET') ?? ''
     )
-    if (!turnstileValid) {
+    if (turnstileResult.missingSecret) {
       return jsonResponse(
-        { error: 'Verificação de segurança falhou. Tente novamente.' },
+        {
+          error:
+            'Configuração de segurança do servidor incompleta (TURNSTILE_SECRET não configurado nos secrets do Supabase FIMAN).'
+        },
+        500,
+        corsHeaders
+      )
+    }
+    if (!turnstileResult.valid) {
+      return jsonResponse(
+        {
+          error: 'Verificação de segurança falhou. Tente novamente.',
+          turnstileErrors: turnstileResult.errorCodes
+        },
         403,
         corsHeaders
       )

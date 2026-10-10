@@ -13,6 +13,13 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_net" WITH SCHEMA "extensions";
+
+
+
+
+
+
 CREATE SCHEMA IF NOT EXISTS "private";
 
 
@@ -82,6 +89,16 @@ CREATE TYPE "public"."fialn_modality_type" AS ENUM (
 
 
 ALTER TYPE "public"."fialn_modality_type" OWNER TO "postgres";
+
+
+CREATE TYPE "public"."fiatt_risk_profile" AS ENUM (
+    'limite rígido',
+    'indiferente',
+    'desejável'
+);
+
+
+ALTER TYPE "public"."fiatt_risk_profile" OWNER TO "postgres";
 
 
 CREATE TYPE "public"."split_rule_type" AS ENUM (
@@ -1329,15 +1346,69 @@ ALTER VIEW "public"."fialn_students_view" OWNER TO "postgres";
 CREATE TABLE IF NOT EXISTS "public"."fiatt_client_records" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "person_id" "uuid",
-    "medical_history" "text",
-    "physiological_notes" "text",
-    "pathologies" "text",
-    "emergency_contact" "text",
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "form_type" "text",
+    "pseudonym" "text",
+    "age" integer,
+    "pronouns" "text",
+    "social_media" "text",
+    "desired_date" "text",
+    "body_modification_planned" boolean,
+    "body_modification_details" "text",
+    "identifies_as" "text",
+    "session_intensity" "text",
+    "shibari_experience" "text",
+    "pain_relation" "text",
+    "emotional_limits" "text",
+    "activities_not_desired" "text",
+    "shibari_motivation" "text",
+    "desired_activities_positions" "text",
+    "fetishes_non_conventional" "text",
+    "can_hang_upside_down" boolean,
+    "risk_blindfold" "public"."fiatt_risk_profile",
+    "risk_hair_pulling" "public"."fiatt_risk_profile",
+    "risk_breath_play" "public"."fiatt_risk_profile",
+    "risk_neck_rope" "public"."fiatt_risk_profile",
+    "risk_rope_gag" "public"."fiatt_risk_profile",
+    "risk_matanawa" "public"."fiatt_risk_profile",
+    "risk_nipple_rope" "public"."fiatt_risk_profile",
+    "risk_toe_rope" "public"."fiatt_risk_profile",
+    "medical_conditions_overview" "text",
+    "has_diabetes" boolean,
+    "has_blood_pressure_issues" boolean,
+    "has_asthma" boolean,
+    "has_epilepsy" boolean,
+    "has_osteopenia" "text",
+    "has_hemophilia" boolean,
+    "has_peripheral_neuropathy" boolean,
+    "has_joint_subluxation" boolean,
+    "has_prosthesis" boolean,
+    "has_stroke_history" boolean,
+    "has_hernia" "text",
+    "movement_restrictions" "text",
+    "neurodivergence" "text",
+    "continuous_medication" "text",
+    "surgery_or_injury" "text",
+    "allergies" "text",
+    "safeword" "text",
+    "stop_signal" "text",
+    "authorizes_media" "text",
+    "authorizes_social_media" "text",
+    "hidden_body_parts" "text",
+    "session_expectations" "text",
+    "frequency_expectations" "text",
+    "additional_info" "text",
+    "declaration_truth" "text",
+    "ip_hash" "text",
+    CONSTRAINT "fiatt_client_records_form_type_check" CHECK (("form_type" = ANY (ARRAY['privada'::"text", 'fotografica'::"text"])))
 );
 
 
 ALTER TABLE "public"."fiatt_client_records" OWNER TO "postgres";
+
+
+COMMENT ON COLUMN "public"."fiatt_client_records"."ip_hash" IS 'Truncated SHA-256 of submitter IP, used only for rate limiting public form submissions.';
+
 
 
 CREATE TABLE IF NOT EXISTS "public"."fiatt_sessions" (
@@ -1347,7 +1418,9 @@ CREATE TABLE IF NOT EXISTS "public"."fiatt_sessions" (
     "incidents" "text",
     "feedback_received" "text",
     "transaction_id" "uuid",
-    "created_at" timestamp with time zone DEFAULT "now"()
+    "created_at" timestamp with time zone DEFAULT "now"(),
+    "client_record_id" "uuid",
+    "admin_report" "text"
 );
 
 
@@ -1540,11 +1613,6 @@ ALTER TABLE ONLY "public"."fialn_student_transactions"
 
 
 ALTER TABLE ONLY "public"."fiatt_client_records"
-    ADD CONSTRAINT "fiatt_client_records_person_id_key" UNIQUE ("person_id");
-
-
-
-ALTER TABLE ONLY "public"."fiatt_client_records"
     ADD CONSTRAINT "fiatt_client_records_pkey" PRIMARY KEY ("id");
 
 
@@ -1634,6 +1702,14 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+CREATE INDEX "fiatt_client_records_ip_hash_created_idx" ON "public"."fiatt_client_records" USING "btree" ("ip_hash", "created_at");
+
+
+
+CREATE INDEX "fiatt_client_records_person_created_idx" ON "public"."fiatt_client_records" USING "btree" ("person_id", "created_at");
+
+
+
 CREATE INDEX "idx_fialn_student_profiles_confirmation_token" ON "public"."fialn_student_profiles" USING "btree" ("confirmation_token") WHERE ("confirmation_token" IS NOT NULL);
 
 
@@ -1704,6 +1780,11 @@ ALTER TABLE ONLY "public"."fialn_student_transactions"
 
 ALTER TABLE ONLY "public"."fiatt_client_records"
     ADD CONSTRAINT "fiatt_client_records_person_id_fkey" FOREIGN KEY ("person_id") REFERENCES "public"."people"("id") ON DELETE CASCADE;
+
+
+
+ALTER TABLE ONLY "public"."fiatt_sessions"
+    ADD CONSTRAINT "fiatt_sessions_client_record_id_fkey" FOREIGN KEY ("client_record_id") REFERENCES "public"."fiatt_client_records"("id") ON DELETE SET NULL;
 
 
 
@@ -1964,6 +2045,9 @@ CREATE POLICY "profiles: users read own profile" ON "public"."profiles" FOR SELE
 
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
